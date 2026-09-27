@@ -364,36 +364,11 @@ export default function DoubtSolver({ user, onRequireAuth }) {
       {/* Main Chat Canvas */}
       <div className="flex-1 glass-panel rounded-2xl p-4 flex flex-col border border-slate-200 bg-white shadow-xs overflow-hidden">
         
-        {/* Unified Controls: Subject Dropdown, Mode Dropdown & Model Engine Dropdown */}
+        {/* Unified Controls: Mode Dropdown & Model Engine Dropdown */}
         <div className="pb-3 border-b border-slate-200">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             
-            {/* 1. Enrolled Semester & Curriculum Grounding */}
-            <div>
-              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
-                Semester Curriculum
-              </label>
-              <div 
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 flex items-center justify-between font-semibold"
-                title={subjects.map(s => `${s.code}: ${s.name}`).join('\n')}
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <GraduationCap className="h-4 w-4 text-indigo-600 shrink-0" />
-                  <span className="font-bold text-slate-900">
-                    Semester {user?.semester || 5}
-                  </span>
-                  <span className="text-slate-300">•</span>
-                  <span className="text-indigo-600 font-semibold truncate text-[11px]">
-                    Auto-Subject Detection
-                  </span>
-                </div>
-                <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded-full shrink-0">
-                  {subjects.length} Subjects
-                </span>
-              </div>
-            </div>
-
-            {/* 2. Mode Selector Dropdown */}
+            {/* 1. Mode Selector Dropdown */}
             <div>
               <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
                 Explanation Mode
@@ -411,7 +386,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
               </select>
             </div>
 
-            {/* 3. AI Model Engine Dropdown (LangChain Integrated) */}
+            {/* 2. AI Model Engine Dropdown (LangChain Integrated) */}
             <div>
               <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
                 AI Model Engine
@@ -451,24 +426,6 @@ export default function DoubtSolver({ user, onRequireAuth }) {
               </button>
             )}
           </div>
-
-          {/* Semester Subjects Quick Reference Pills */}
-          {subjects.length > 0 && (
-            <div className="flex items-center gap-1.5 pt-2 mt-2 border-t border-slate-100 overflow-x-auto scrollbar-none text-[11px]">
-              <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0 flex items-center gap-1">
-                <BookOpen className="h-3 w-3 text-slate-400" /> Enrolled Subjects:
-              </span>
-              {subjects.map(s => (
-                <span 
-                  key={s.id} 
-                  title={`${s.code} - ${s.name}\n${s.syllabus_overview || ''}`}
-                  className="shrink-0 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/80 text-slate-700 font-medium cursor-help hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors text-[10px]"
-                >
-                  {s.code}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Message Thread History */}
@@ -547,12 +504,6 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                             <span className="font-semibold text-indigo-600 capitalize">
                               {msg.mode_used || selectedMode} Mode
                             </span>
-                            {msg.identified_subject && (
-                              <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-100/80 text-indigo-800 font-bold border border-indigo-200 flex items-center gap-1">
-                                <BookOpen className="h-3 w-3 text-indigo-600" />
-                                {msg.identified_subject.code} • {msg.identified_subject.name}
-                              </span>
-                            )}
                             {msg.model_used && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 font-medium">
                                 {msg.model_used}

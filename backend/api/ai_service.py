@@ -224,11 +224,9 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
             f"MANDATORY INSTRUCTIONS FOR AUTOMATIC SUBJECT IDENTIFICATION & SYLLABUS GROUNDING:\n"
             f"1. Cross-examine the student's question against the syllabus units, topics, and library study resources of the enrolled Semester {semester} subjects listed above.\n"
             f"2. Automatically determine which enrolled subject code and title this question belongs to.\n"
-            f"3. At the VERY TOP of your response, output:\n"
+            f"3. On the VERY FIRST LINE of your response, output ONLY this metadata tag:\n"
             f"   [SUBJECT_MATCH: <Subject Code> | <Subject Name> | <Specific Topic or Unit>]\n"
-            f"   ### 📚 Subject: <Subject Code> - <Subject Name>\n"
-            f"   > **Curriculum Alignment**: Semester {semester} Syllabus • Topic: <Specific Topic or Unit>\n\n"
-            f"4. Ground your explanation using the academic standards, terminology, and core units of that identified subject.\n"
+            f"4. Do NOT output any boilerplate metadata headers, curriculum alignment intro blocks, or repetitive intros. Provide your academic answer directly, grounded in the subject's curriculum.\n"
             f"5. Answer thoroughly according to the '{mode}' explanation mode.\n"
         )
     elif subject:
@@ -282,11 +280,15 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
         response_text = re.sub(r'\[SUBJECT_MATCH:[^\]]+\]\s*', '', response_text).strip()
     else:
         # Fallback: check markdown header
-        hdr_match = re.search(r'###\s*📚\s*Subject:\s*([A-Za-z0-9_-]+)(?:\s*[-|]\s*([^|\n\r]+))?(?:\s*[-|]\s*([^\n\r]+))?', response_text)
+        hdr_match = re.search(r'###\s*#*\s*📚\s*Subject:\s*([A-Za-z0-9_-]+)(?:\s*[-|]\s*([^|\n\r]+))?(?:\s*[-|]\s*([^\n\r]+))?', response_text)
         if hdr_match:
             identified_code = hdr_match.group(1).strip()
             identified_name = hdr_match.group(2).strip() if hdr_match.group(2) else None
             identified_topic = hdr_match.group(3).strip() if hdr_match.group(3) else None
+
+    # Clean any accidental redundant headers so the user gets a clean answer
+    response_text = re.sub(r'^###\s*#*\s*📚\s*Subject:[^\n]*\n*', '', response_text).strip()
+    response_text = re.sub(r'^>\s*\*\*Curriculum Alignment\*\*:[^\n]*\n*', '', response_text).strip()
 
     # Fallback search if code not explicitly tagged in header
     if not identified_code and subjects_list:
