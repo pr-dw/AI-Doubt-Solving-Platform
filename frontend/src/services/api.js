@@ -58,7 +58,19 @@ async function request(endpoint, options = {}) {
       }
     }
 
-    const data = await res.json();
+    let data;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      try {
+        data = JSON.parse(text);
+      } catch {
+        data = { detail: text ? text.slice(0, 300) : `HTTP ${res.status}` };
+      }
+    }
+
     if (!res.ok) {
       throw new Error(data.detail || data.message || Object.values(data)[0] || 'API request failed');
     }

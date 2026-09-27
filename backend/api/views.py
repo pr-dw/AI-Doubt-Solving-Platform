@@ -784,8 +784,15 @@ class ExamListView(APIView):
         question_paper_pdf = request.data.get('question_paper_pdf', '')
         answer_key_pdf = request.data.get('answer_key_pdf', '')
         questions_data = request.data.get('questions_data', [])
-
         paper_set = request.data.get('paper_set', '').strip()
+
+        if not subject_id or not title:
+            return Response({"detail": "subject_id and title are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            subject = Subject.objects.get(id=subject_id)
+        except Subject.DoesNotExist:
+            return Response({"detail": "Subject not found."}, status=status.HTTP_404_NOT_FOUND)
 
         # Handle direct PDF uploads with standardized naming
         if 'question_paper_file' in request.FILES:
@@ -822,9 +829,6 @@ class ExamListView(APIView):
                 questions_data = json.loads(questions_data)
             except Exception:
                 questions_data = []
-
-        if not subject_id or not title:
-            return Response({"detail": "subject_id and title are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         exam = Exam.objects.create(
             subject=subject,
