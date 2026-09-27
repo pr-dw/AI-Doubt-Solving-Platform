@@ -117,23 +117,32 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => handleQuickLogin('student@gmail.com', '123456', 'Student')}
               disabled={loadingRole !== null}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all cursor-pointer"
             >
               <User className="h-3.5 w-3.5 text-indigo-400" />
-              <span>Login as Student</span>
+              <span>Student</span>
+            </button>
+
+            <button
+              onClick={() => handleQuickLogin('faculty@gmail.com', '123456', 'Faculty')}
+              disabled={loadingRole !== null}
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition-all cursor-pointer"
+            >
+              <GraduationCap className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Faculty</span>
             </button>
 
             <button
               onClick={() => handleQuickLogin('admin@gmail.com', '123456', 'Admin')}
               disabled={loadingRole !== null}
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-semibold transition-all cursor-pointer"
+              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 text-xs font-semibold transition-all cursor-pointer"
             >
               <Shield className="h-3.5 w-3.5 text-purple-400" />
-              <span>Login as Admin</span>
+              <span>Admin</span>
             </button>
 
             <button
@@ -153,7 +162,7 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-purple-600/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative text-center max-w-3xl mx-auto space-y-6">
+        <div className="relative text-center max-w-4xl mx-auto space-y-6">
           
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold shadow-inner">
             <Sparkles className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
@@ -178,39 +187,41 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
             </div>
           )}
 
-          {/* Quick Sign In Cards (Student & Admin) */}
-          <div className="pt-4 max-w-2xl mx-auto">
+          {/* Quick Sign In Cards (Student, Faculty & Admin) */}
+          <div className="pt-4 max-w-4xl mx-auto">
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">
               ⚡ Instant Evaluation Access (Click to Log In Directly)
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               
               {/* Student Login Card */}
               <div 
                 onClick={() => handleQuickLogin('student@gmail.com', '123456', 'Student')}
-                className="group relative p-5 rounded-2xl glass-panel border border-indigo-500/40 hover:border-indigo-400 bg-gradient-to-b from-indigo-950/40 to-slate-900/60 cursor-pointer transition-all hover:scale-[1.02] shadow-xl text-left"
+                className="group relative p-4 rounded-2xl glass-panel border border-indigo-500/40 hover:border-indigo-400 bg-gradient-to-b from-indigo-950/40 to-slate-900/60 cursor-pointer transition-all hover:scale-[1.02] shadow-xl text-left flex flex-col justify-between"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
-                      <User className="h-4 w-4" />
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">
+                        <User className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
+                          Student Portal
+                        </h3>
+                        <span className="text-[10px] text-emerald-400 font-semibold">BCA Student</span>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
-                        Student Portal
-                      </h3>
-                      <span className="text-[10px] text-emerald-400 font-semibold">Active BCA Student</span>
-                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">
+                      Demo
+                    </span>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold">
-                    Demo
-                  </span>
-                </div>
 
-                <div className="mt-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 space-y-0.5">
-                  <div>Email: <strong className="text-indigo-300">student@gmail.com</strong></div>
-                  <div>Pass: <strong className="text-indigo-300">123456</strong></div>
+                  <div className="mt-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 space-y-0.5">
+                    <div>Email: <strong className="text-indigo-300">student@gmail.com</strong></div>
+                    <div>Pass: <strong className="text-indigo-300">123456</strong></div>
+                  </div>
                 </div>
 
                 <button 
@@ -228,31 +239,77 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
                 </button>
               </div>
 
+              {/* Faculty Login Card */}
+              <div 
+                onClick={() => handleQuickLogin('faculty@gmail.com', '123456', 'Faculty')}
+                className="group relative p-4 rounded-2xl glass-panel border border-emerald-500/40 hover:border-emerald-400 bg-gradient-to-b from-emerald-950/40 to-slate-900/60 cursor-pointer transition-all hover:scale-[1.02] shadow-xl text-left flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                        <GraduationCap className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white group-hover:text-emerald-300 transition-colors">
+                          Faculty Portal
+                        </h3>
+                        <span className="text-[10px] text-emerald-400 font-semibold">Course Mentor</span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
+                      Demo
+                    </span>
+                  </div>
+
+                  <div className="mt-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 space-y-0.5">
+                    <div>Email: <strong className="text-emerald-300">faculty@gmail.com</strong></div>
+                    <div>Pass: <strong className="text-emerald-300">123456</strong></div>
+                  </div>
+                </div>
+
+                <button 
+                  disabled={loadingRole !== null}
+                  className="mt-3 w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 transition-all cursor-pointer"
+                >
+                  {loadingRole === 'Faculty' ? (
+                    <span className="animate-spin text-sm">⟳ Signing In...</span>
+                  ) : (
+                    <>
+                      <span>Enter as Faculty</span>
+                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </div>
+
               {/* Admin Login Card */}
               <div 
                 onClick={() => handleQuickLogin('admin@gmail.com', '123456', 'Admin')}
-                className="group relative p-5 rounded-2xl glass-panel border border-purple-500/40 hover:border-purple-400 bg-gradient-to-b from-purple-950/40 to-slate-900/60 cursor-pointer transition-all hover:scale-[1.02] shadow-xl text-left"
+                className="group relative p-4 rounded-2xl glass-panel border border-purple-500/40 hover:border-purple-400 bg-gradient-to-b from-purple-950/40 to-slate-900/60 cursor-pointer transition-all hover:scale-[1.02] shadow-xl text-left flex flex-col justify-between"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
-                      <Shield className="h-4 w-4" />
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+                        <Shield className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
+                          Admin Portal
+                        </h3>
+                        <span className="text-[10px] text-purple-400 font-semibold">System Controls</span>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition-colors">
-                        Admin & Faculty Portal
-                      </h3>
-                      <span className="text-[10px] text-purple-400 font-semibold">Full System Controls</span>
-                    </div>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
+                      Demo
+                    </span>
                   </div>
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30 font-bold">
-                    Demo
-                  </span>
-                </div>
 
-                <div className="mt-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 space-y-0.5">
-                  <div>Email: <strong className="text-purple-300">admin@gmail.com</strong></div>
-                  <div>Pass: <strong className="text-purple-300">123456</strong></div>
+                  <div className="mt-3 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[11px] font-mono text-slate-300 space-y-0.5">
+                    <div>Email: <strong className="text-purple-300">admin@gmail.com</strong></div>
+                    <div>Pass: <strong className="text-purple-300">123456</strong></div>
+                  </div>
                 </div>
 
                 <button 
@@ -269,7 +326,6 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
                   )}
                 </button>
               </div>
-
             </div>
 
             <div className="mt-4 text-center">
@@ -496,7 +552,7 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
             <span>Built with React 19, Django, and Local Ollama</span>
           </div>
           <div className="text-[11px]">
-            Credentials: <code className="text-indigo-400">student@gmail.com</code> &amp; <code className="text-purple-400">admin@gmail.com</code> (Pass: <code className="text-slate-300">123456</code>)
+            Credentials: <code className="text-indigo-400">student@gmail.com</code> • <code className="text-emerald-400">faculty@gmail.com</code> • <code className="text-purple-400">admin@gmail.com</code> (Pass: <code className="text-slate-300">123456</code>)
           </div>
         </div>
       </footer>

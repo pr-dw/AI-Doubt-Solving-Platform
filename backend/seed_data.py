@@ -124,24 +124,26 @@ def run_seed():
     admin_user.save()
     print("✅ Admin user initialized: admin@gmail.com (Password: 123456)")
 
-    # 3. Create Mentor / Faculty User (Mr. Abhradip Kundu)
-    mentor, m_created = User.objects.get_or_create(
-        email="mentor.abhradip@srmcm.ac.in",
+    # 4. Create Faculty User (faculty@gmail.com / 123456)
+    faculty_user, f_created = User.objects.get_or_create(
+        email="faculty@gmail.com",
         defaults={
-            "name": "Mr. Abhradip Kundu",
-            "phone": "+91 98765 00001",
+            "name": "Prof. Abhradip Kundu",
+            "phone": "+91 98765 00019",
             "role": "faculty",
             "department": "Computer Application (BCA)",
             "semester": 5,
             "section": "A",
             "roll_number": "FAC/SRMCM/019",
-            "bio": "Assistant Professor & Project Guide at SRMCM. Guiding students in Full-Stack Python Web Development and AI Integration."
+            "bio": "Assistant Professor & Project Guide at SRMCM Lucknow. Managing curriculum, learning resources, and assessment analytics."
         }
     )
-    if m_created:
-        mentor.set_password("Password@123")
-        mentor.save()
-    print("✅ Faculty mentor initialized: mentor.abhradip@srmcm.ac.in (Password: Password@123)")
+    faculty_user.set_password("123456")
+    faculty_user.save()
+    print("✅ Faculty user initialized: faculty@gmail.com (Password: 123456)")
+
+    # 5. Create Mentor / Faculty User (Mr. Abhradip Kundu)
+    mentor = faculty_user
 
     # 4. Create Academic Records for Student
     AcademicRecord.objects.filter(user=student).delete()

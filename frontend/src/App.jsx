@@ -25,6 +25,15 @@ const STUDENT_TABS = [
   { id: 'admin', label: 'System Overview', icon: ShieldCheck },
 ];
 
+const FACULTY_TABS = [
+  { id: 'resources', label: 'Resource & Notes Management', icon: BookOpen, badge: 'Faculty' },
+  { id: 'analytics', label: 'Student Performance Metrics', icon: BarChart3 },
+  { id: 'quiz', label: 'Quiz Repository', icon: Award },
+  { id: 'roadmaps', label: 'Curriculum Roadmaps', icon: Compass },
+  { id: 'doubts', label: 'AI Doubt Solver', icon: MessageSquare, badge: '6 Modes' },
+  { id: 'admin', label: 'System Overview', icon: ShieldCheck },
+];
+
 const ADMIN_TABS = [
   { id: 'admin', label: 'System Overview & Telemetry', icon: ShieldCheck, badge: 'Admin' },
   { id: 'resources', label: 'Resource Management', icon: BookOpen },
@@ -46,6 +55,8 @@ export default function App() {
       setUser(stored);
       if (stored.role === 'admin') {
         setActiveTab('admin');
+      } else if (stored.role === 'faculty') {
+        setActiveTab('resources');
       } else {
         setActiveTab('doubts');
       }
@@ -56,6 +67,8 @@ export default function App() {
       setUser(u);
       if (u?.role === 'admin') {
         setActiveTab('admin');
+      } else if (u?.role === 'faculty') {
+        setActiveTab('resources');
       }
     };
     window.addEventListener('auth-change', handleAuthChange);
@@ -66,6 +79,8 @@ export default function App() {
     setUser(userData);
     if (userData.role === 'admin') {
       setActiveTab('admin');
+    } else if (userData.role === 'faculty') {
+      setActiveTab('resources');
     } else {
       setActiveTab('doubts');
     }
@@ -94,7 +109,7 @@ export default function App() {
     );
   }
 
-  const currentTabs = user.role === 'admin' ? ADMIN_TABS : STUDENT_TABS;
+  const currentTabs = user.role === 'admin' ? ADMIN_TABS : user.role === 'faculty' ? FACULTY_TABS : STUDENT_TABS;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-indigo-500 selection:text-white">
@@ -125,6 +140,8 @@ export default function App() {
                       isActive
                         ? user.role === 'admin'
                           ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                          : user.role === 'faculty'
+                          ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
                           : 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent'
                     }`}
@@ -135,7 +152,7 @@ export default function App() {
                       <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-full ${
                         isActive 
                           ? 'bg-black/30 text-white' 
-                          : user.role === 'admin' ? 'bg-purple-950/60 text-purple-300' : 'bg-slate-800 text-indigo-400'
+                          : user.role === 'admin' ? 'bg-purple-950/60 text-purple-300' : user.role === 'faculty' ? 'bg-emerald-950/60 text-emerald-300' : 'bg-slate-800 text-indigo-400'
                       }`}>
                         {tab.badge}
                       </span>
@@ -150,6 +167,8 @@ export default function App() {
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
                 user.role === 'admin' 
                   ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
+                  : user.role === 'faculty'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                   : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
               }`}>
                 {user.role} mode

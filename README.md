@@ -62,12 +62,13 @@
 
 For testing and demonstration, use the pre-seeded accounts:
 
-| Role | College Email | Password | Details |
+| Role | Email | Password | Details & Access |
 | :--- | :--- | :--- | :--- |
-| **Student** | `prabhat@srmcm.ac.in` | `Password@123` | BCA Sem 5, Roll: `SRMCM/BCA/2023/042`, 7-day streak |
-| **Faculty / Guide** | `mentor.abhradip@srmcm.ac.in` | `Password@123` | Assistant Professor, Faculty Guide |
+| **Student** | `student@gmail.com` | `123456` | BCA Sem 5 student portal (AI Doubt Solver, Roadmaps, Streaks, Quizzes) |
+| **Faculty** | `faculty@gmail.com` | `123456` | Course Mentor portal (Resource & Notes Management, Class Analytics, Quiz Bank) |
+| **Administrator** | `admin@gmail.com` | `123456` | System & Telemetry Controls, Student Roster, Local Ollama configs |
 
-*(The UI also features 1-click quick evaluation login buttons in the Sign In modal.)*
+*(The Landing Page and Sign-In Modal feature 1-click evaluation login buttons for all 3 roles.)*
 
 ---
 
