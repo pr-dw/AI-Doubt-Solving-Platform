@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   GraduationCap, Flame, Bell, Search, User as UserIcon, 
-  LogOut, Cpu, CheckCircle, ChevronDown, BookOpen 
+  LogOut, Cpu, CheckCircle, ChevronDown, BookOpen, Menu 
 } from 'lucide-react';
 import { api, clearAuthToken } from '../services/api';
 
-export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActiveTab }) {
+export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActiveTab, onToggleSidebar }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -66,22 +66,34 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
 
   return (
     <header className="sticky top-0 z-50 glass-panel border-b border-slate-200/90 bg-white/85 backdrop-blur-md shadow-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         
-        {/* Brand / Logo */}
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('doubts')}>
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/25 ring-1 ring-slate-200">
-            <GraduationCap className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-700 bg-clip-text text-transparent">
-                AI Doubt Solving
-              </span>
+        {/* Brand / Logo + Mobile Sidebar Toggle */}
+        <div className="flex items-center gap-3">
+          {user && (
+            <button
+              onClick={onToggleSidebar}
+              className="lg:hidden p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+              title="Toggle Navigation Menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
+
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('doubts')}>
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/25 ring-1 ring-slate-200">
+              <GraduationCap className="h-6 w-6" />
             </div>
-            <p className="text-[11px] text-slate-500 font-medium hidden md:block">
-              Intelligent Academic Assistant • Local Ollama
-            </p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-700 bg-clip-text text-transparent">
+                  AI Doubt Solving
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium hidden md:block">
+                Intelligent Academic Assistant • Local Ollama
+              </p>
+            </div>
           </div>
         </div>
 
