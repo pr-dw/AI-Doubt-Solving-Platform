@@ -80,21 +80,6 @@ const PLATFORM_PILLARS = [
 
 export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
   const [activeModeDemo, setActiveModeDemo] = useState('eli5');
-  const [loadingRole, setLoadingRole] = useState(null);
-  const [authError, setAuthError] = useState('');
-
-  const handleQuickLogin = async (email, password, roleLabel) => {
-    setLoadingRole(roleLabel);
-    setAuthError('');
-    try {
-      const res = await api.login(email, password);
-      onLoginSuccess(res.user);
-    } catch (err) {
-      setAuthError(`Failed to login as ${roleLabel}: ${err.message}`);
-    } finally {
-      setLoadingRole(null);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-500 selection:text-white overflow-x-hidden">
@@ -119,37 +104,11 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
 
           <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={() => handleQuickLogin('student@gmail.com', '123456', 'Student')}
-              disabled={loadingRole !== null}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-            >
-              <User className="h-3.5 w-3.5 text-indigo-600" />
-              <span>Student</span>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('faculty@gmail.com', '123456', 'Faculty')}
-              disabled={loadingRole !== null}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-            >
-              <GraduationCap className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Faculty</span>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin('admin@gmail.com', '123456', 'Admin')}
-              disabled={loadingRole !== null}
-              className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-            >
-              <Shield className="h-3.5 w-3.5 text-purple-600" />
-              <span>Admin</span>
-            </button>
-
-            <button
               onClick={onOpenAuthModal}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white shadow-md shadow-indigo-600/30 transition-all cursor-pointer flex items-center gap-2"
             >
-              Sign In
+              <User className="h-4 w-4" />
+              <span>Sign In to Portal</span>
             </button>
           </div>
 
@@ -157,7 +116,7 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-12 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+      <section className="relative pt-14 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         {/* Glowing backdrop elements */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-200/50 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
@@ -177,166 +136,23 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
-            A comprehensive full-stack educational tool designed for SRMCM Lucknow students. Resolve complex academic questions with 6 explanation modes, generate personalized learning roadmaps, maintain study streaks, and ace university examinations.
+            A comprehensive full-stack educational tool designed for SRMCM Lucknow students and faculty. Resolve complex academic questions with 6 explanation modes, generate personalized learning roadmaps, maintain study streaks, and ace university examinations.
           </p>
 
-          {/* Error Banner */}
-          {authError && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs max-w-md mx-auto">
-              {authError}
-            </div>
-          )}
-
-          {/* Quick Sign In Cards (Student, Faculty & Admin) */}
-          <div className="pt-4 max-w-4xl mx-auto">
-            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-3">
-              ⚡ Instant Evaluation Access (Click to Log In Directly)
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
-              {/* Student Login Card */}
-              <div 
-                onClick={() => handleQuickLogin('student@gmail.com', '123456', 'Student')}
-                className="group relative p-5 rounded-2xl glass-panel border border-indigo-200 hover:border-indigo-400 bg-white/90 cursor-pointer transition-all hover:scale-[1.02] shadow-sm hover:shadow-md text-left flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-                        <User className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                          Student Portal
-                        </h3>
-                        <span className="text-[10px] text-emerald-600 font-semibold">BCA Student</span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold">
-                      Demo
-                    </span>
-                  </div>
-
-                  <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-700 space-y-0.5">
-                    <div>Email: <strong className="text-indigo-700">student@gmail.com</strong></div>
-                    <div>Pass: <strong className="text-indigo-700">123456</strong></div>
-                  </div>
-                </div>
-
-                <button 
-                  disabled={loadingRole !== null}
-                  className="mt-3 w-full py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white flex items-center justify-center gap-1.5 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer"
-                >
-                  {loadingRole === 'Student' ? (
-                    <span className="animate-spin text-sm">⟳ Signing In...</span>
-                  ) : (
-                    <>
-                      <span>Enter as Student</span>
-                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Faculty Login Card */}
-              <div 
-                onClick={() => handleQuickLogin('faculty@gmail.com', '123456', 'Faculty')}
-                className="group relative p-5 rounded-2xl glass-panel border border-emerald-200 hover:border-emerald-400 bg-white/90 cursor-pointer transition-all hover:scale-[1.02] shadow-sm hover:shadow-md text-left flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold">
-                        <GraduationCap className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
-                          Faculty Portal
-                        </h3>
-                        <span className="text-[10px] text-emerald-600 font-semibold">Course Mentor</span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
-                      Demo
-                    </span>
-                  </div>
-
-                  <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-700 space-y-0.5">
-                    <div>Email: <strong className="text-emerald-700">faculty@gmail.com</strong></div>
-                    <div>Pass: <strong className="text-emerald-700">123456</strong></div>
-                  </div>
-                </div>
-
-                <button 
-                  disabled={loadingRole !== null}
-                  className="mt-3 w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer"
-                >
-                  {loadingRole === 'Faculty' ? (
-                    <span className="animate-spin text-sm">⟳ Signing In...</span>
-                  ) : (
-                    <>
-                      <span>Enter as Faculty</span>
-                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {/* Admin Login Card */}
-              <div 
-                onClick={() => handleQuickLogin('admin@gmail.com', '123456', 'Admin')}
-                className="group relative p-5 rounded-2xl glass-panel border border-purple-200 hover:border-purple-400 bg-white/90 cursor-pointer transition-all hover:scale-[1.02] shadow-sm hover:shadow-md text-left flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-8 w-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
-                        <Shield className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition-colors">
-                          Admin Portal
-                        </h3>
-                        <span className="text-[10px] text-purple-600 font-semibold">System Controls</span>
-                      </div>
-                    </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold">
-                      Demo
-                    </span>
-                  </div>
-
-                  <div className="mt-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-slate-700 space-y-0.5">
-                    <div>Email: <strong className="text-purple-700">admin@gmail.com</strong></div>
-                    <div>Pass: <strong className="text-purple-700">123456</strong></div>
-                  </div>
-                </div>
-
-                <button 
-                  disabled={loadingRole !== null}
-                  className="mt-3 w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-xs font-bold text-white flex items-center justify-center gap-1.5 shadow-sm shadow-purple-600/20 transition-all cursor-pointer"
-                >
-                  {loadingRole === 'Admin' ? (
-                    <span className="animate-spin text-sm">⟳ Signing In...</span>
-                  ) : (
-                    <>
-                      <span>Enter as Admin</span>
-                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-4 text-center">
-              <button
-                onClick={onOpenAuthModal}
-                className="text-xs text-slate-500 hover:text-indigo-600 font-semibold underline underline-offset-4 cursor-pointer"
-              >
-                Or sign in with custom college credentials / create a new account →
-              </button>
-            </div>
+          {/* Unified Single Login Button & CTA */}
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
+            <button
+              onClick={onOpenAuthModal}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02]"
+            >
+              <span>Sign In to Account</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
+
+          <p className="text-xs text-slate-500">
+            One login for all roles — your dashboard automatically opens based on whether your account is a <strong>Student</strong>, <strong>Faculty</strong>, or <strong>Admin</strong>.
+          </p>
 
         </div>
 

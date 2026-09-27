@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, GraduationCap, ShieldCheck, Mail, Lock, User, AlertCircle, ArrowRight, Shield } from 'lucide-react';
+import { X, GraduationCap, ShieldCheck, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
@@ -45,20 +45,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     }
   };
 
-  const loginAsRole = async (demoEmail, demoPass = '123456') => {
-    setError('');
-    setLoading(true);
-    try {
-      const res = await api.login(demoEmail, demoPass);
-      onAuthSuccess(res.user);
-      onClose();
-    } catch (err) {
-      setError(`Failed to sign in: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
       <div className="relative w-full max-w-md glass-panel rounded-3xl p-6 sm:p-8 shadow-2xl border border-slate-200 bg-white">
@@ -91,54 +77,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <span>{error}</span>
           </div>
         )}
-
-        {/* Quick Demo Access Bar */}
-        <div className="mb-5 p-3 rounded-2xl bg-slate-50 border border-indigo-200">
-          <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block mb-2">
-            ⚡ Quick 1-Click Credentials
-          </span>
-          <div className="grid grid-cols-3 gap-1.5">
-            <button
-              type="button"
-              onClick={() => loginAsRole('student@gmail.com', '123456')}
-              disabled={loading}
-              className="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-200 text-left text-xs font-semibold transition-colors cursor-pointer"
-            >
-              <div className="text-[10px] font-bold text-slate-900 flex items-center gap-1">
-                <User className="h-3 w-3 text-indigo-600" />
-                <span>Student</span>
-              </div>
-              <div className="text-[9px] text-indigo-700 font-mono truncate">student@...</div>
-              <div className="text-[8px] text-slate-500 font-mono">123456</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => loginAsRole('faculty@gmail.com', '123456')}
-              disabled={loading}
-              className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-left text-xs font-semibold transition-colors cursor-pointer"
-            >
-              <div className="text-[10px] font-bold text-slate-900 flex items-center gap-1">
-                <GraduationCap className="h-3 w-3 text-emerald-600" />
-                <span>Faculty</span>
-              </div>
-              <div className="text-[9px] text-emerald-700 font-mono truncate">faculty@...</div>
-              <div className="text-[8px] text-slate-500 font-mono">123456</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => loginAsRole('admin@gmail.com', '123456')}
-              disabled={loading}
-              className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200 text-left text-xs font-semibold transition-colors cursor-pointer"
-            >
-              <div className="text-[10px] font-bold text-slate-900 flex items-center gap-1">
-                <Shield className="h-3 w-3 text-purple-600" />
-                <span>Admin</span>
-              </div>
-              <div className="text-[9px] text-purple-700 font-mono truncate">admin@...</div>
-              <div className="text-[8px] text-slate-500 font-mono">123456</div>
-            </button>
-          </div>
-        </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3.5">
