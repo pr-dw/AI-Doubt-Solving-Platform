@@ -16,10 +16,29 @@ export const setStoredUser = (user) => {
   localStorage.setItem('user_data', JSON.stringify(user));
 };
 
+export const AI_MODELS = [
+  { id: 'gemini-1.5-flash', name: 'Google Gemini 1.5 Flash (Cloud API)', shortName: 'Gemini 1.5 Flash', provider: 'Google DeepMind', badge: 'Cloud Fast', type: 'gemini' },
+  { id: 'gemini-1.5-pro', name: 'Google Gemini 1.5 Pro (Cloud API)', shortName: 'Gemini 1.5 Pro', provider: 'Google DeepMind', badge: 'Cloud Adv', type: 'gemini' },
+  { id: 'ollama:qwen', name: 'Ollama Qwen 2.5 (Local Model)', shortName: 'Ollama Qwen 2.5', provider: 'Local / On-Device', badge: 'Local Ollama', type: 'ollama' },
+  { id: 'ollama:gemma', name: 'Ollama Gemma 2 (Local Model)', shortName: 'Ollama Gemma 2', provider: 'Local / On-Device', badge: 'Local Ollama', type: 'ollama' },
+  { id: 'gpt-4o-mini', name: 'OpenAI ChatGPT-4o Mini (Cloud API)', shortName: 'ChatGPT-4o Mini', provider: 'OpenAI', badge: 'Cloud GPT', type: 'gpt' },
+];
+
+export const getStoredAIModel = () => {
+  return localStorage.getItem('selected_ai_model') || 'gemini-1.5-flash';
+};
+
+export const setStoredAIModel = (modelId) => {
+  localStorage.setItem('selected_ai_model', modelId);
+  window.dispatchEvent(new CustomEvent('ai-model-change', { detail: modelId }));
+};
+
 async function request(endpoint, options = {}) {
   const token = getAuthToken();
+  const selectedModel = getStoredAIModel();
   const headers = {
     'Content-Type': 'application/json',
+    'X-Selected-AI-Model': selectedModel,
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers,
   };
@@ -114,10 +133,10 @@ export const api = {
   getAnalyticsReport: () => request('/analytics/report/'),
 
   // AI Doubt Solver
-  askDoubt: (query, mode = 'detailed', conversation_id = null, model = 'gemini-1.5-flash') =>
+  askDoubt: (query, mode = 'detailed', conversation_id = null, model = null) =>
     request('/ai/query/', {
       method: 'POST',
-      body: JSON.stringify({ query, mode, conversation_id, model }),
+      body: JSON.stringify({ query, mode, conversation_id, model: model || getStoredAIModel() }),
     }),
 
   getAIModels: () => request('/ai/models/'),

@@ -4,7 +4,7 @@ import {
   Award, ExternalLink, ChevronRight, Sparkles, Layers, Check, 
   RefreshCw, Sliders
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, getStoredAIModel, AI_MODELS } from '../services/api';
 
 const OFFICIAL_EXAM_TYPES = [
   { id: 'Quiz 1', label: 'Quiz 1', defaultMarks: 30, hasSets: true },
@@ -103,6 +103,18 @@ export default function FacultyExamPortal() {
     'Unit IV': 'Unit IV - Q8',
     'Unit V': 'Unit V - Q10',
   });
+
+  const [activeAIModel, setActiveAIModel] = useState(() => getStoredAIModel());
+
+  useEffect(() => {
+    const handleModelSync = (e) => {
+      if (e.detail) {
+        setActiveAIModel(e.detail);
+      }
+    };
+    window.addEventListener('ai-model-change', handleModelSync);
+    return () => window.removeEventListener('ai-model-change', handleModelSync);
+  }, []);
 
   useEffect(() => {
     loadInitialData();
@@ -208,6 +220,7 @@ export default function FacultyExamPortal() {
       formData.append('exam_type', examForm.exam_type || 'Quiz 1');
       formData.append('paper_set', examForm.paper_set || '');
       formData.append('is_answer_key', target === 'ak' ? 'true' : 'false');
+      formData.append('model', activeAIModel);
 
       const res = await api.analyzeExamPdf(formData);
 
@@ -218,7 +231,7 @@ export default function FacultyExamPortal() {
           question_paper_pdf: res.file_url,
           questions: (res.questions && res.questions.length > 0) ? res.questions : prev.questions
         }));
-        setSuccessMsg(`✓ Question Paper renamed to "${res.filename}"! Topics and units auto-analyzed from syllabus (${res.questions?.length || 0} questions).`);
+        setSuccessMsg(`✓ Question Paper renamed to "${res.filename}"! Topics and units auto-analyzed from syllabus using ${res.model_used || activeAIModel} (${res.questions?.length || 0} questions).`);
       } else {
         setAkFile({ name: res.filename });
         setExamForm(prev => ({ ...prev, answer_key_pdf: res.file_url }));
@@ -886,6 +899,14 @@ export default function FacultyExamPortal() {
                   </span>
                   {fileUploading && <span className="text-[10px] text-emerald-600 animate-pulse font-semibold">Analyzing PDF & Units...</span>}
                 </label>
+                
+                <div className="flex items-center justify-between text-[10px] text-slate-500 bg-white/80 px-2.5 py-1 rounded-lg border border-emerald-100">
+                  <span className="flex items-center gap-1 font-medium text-slate-600">
+                    <Sparkles className="h-3 w-3 text-emerald-600" />
+                    AI Engine: <strong className="text-emerald-800">{AI_MODELS.find(m => m.id === activeAIModel)?.shortName || activeAIModel}</strong>
+                  </span>
+                  <span className="text-[9px] text-slate-400">Change via top navbar</span>
+                </div>
                 
                 <input
                   type="file"

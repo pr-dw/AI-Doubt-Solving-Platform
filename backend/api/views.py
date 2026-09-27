@@ -503,7 +503,7 @@ class AIQueryView(APIView):
         query_text = request.data.get('query', '').strip()
         mode = request.data.get('mode', 'detailed')
         conversation_id = request.data.get('conversation_id')
-        model = request.data.get('model', 'qwen2.5:3b')
+        model = request.data.get('model') or request.headers.get('HTTP_X_SELECTED_AI_MODEL') or 'gemini-1.5-flash'
 
         if not query_text:
             return Response({"detail": "Query text cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
@@ -898,6 +898,8 @@ class ExamPDFAnalyzeView(APIView):
                 "is_answer_key": True
             }, status=status.HTTP_200_OK)
 
+        model = request.data.get('model') or request.headers.get('HTTP_X_SELECTED_AI_MODEL') or 'gemini-1.5-flash'
+
         # For Question Paper: Extract text using pypdf and analyze with AI
         extracted_text = extract_text_from_pdf_file(full_disk_path)
 
@@ -905,7 +907,8 @@ class ExamPDFAnalyzeView(APIView):
             pdf_text=extracted_text,
             subject=subject,
             exam_type=exam_type,
-            paper_set=paper_set
+            paper_set=paper_set,
+            model=model
         )
 
         return Response({
@@ -914,6 +917,7 @@ class ExamPDFAnalyzeView(APIView):
             "filename": standard_name,
             "exam_type": exam_type,
             "paper_set": paper_set,
+            "model_used": model,
             "extracted_text_preview": extracted_text[:300] if extracted_text else "Direct syllabus alignment",
             "questions": questions
         }, status=status.HTTP_200_OK)

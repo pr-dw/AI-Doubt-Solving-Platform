@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   GraduationCap, Flame, Bell, Search, User as UserIcon, 
-  LogOut, Cpu, CheckCircle, ChevronDown, BookOpen, Menu 
+  LogOut, Cpu, CheckCircle, ChevronDown, BookOpen, Menu, Sparkles, Bot 
 } from 'lucide-react';
-import { api, clearAuthToken } from '../services/api';
+import { api, clearAuthToken, getStoredAIModel, setStoredAIModel, AI_MODELS } from '../services/api';
 
 export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActiveTab, onToggleSidebar }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,6 +13,23 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [selectedAIModel, setSelectedAIModel] = useState(() => getStoredAIModel());
+
+  useEffect(() => {
+    const handleModelChange = (e) => {
+      if (e.detail) {
+        setSelectedAIModel(e.detail);
+      }
+    };
+    window.addEventListener('ai-model-change', handleModelChange);
+    return () => window.removeEventListener('ai-model-change', handleModelChange);
+  }, []);
+
+  const handleModelSelect = (e) => {
+    const val = e.target.value;
+    setSelectedAIModel(val);
+    setStoredAIModel(val);
+  };
 
   useEffect(() => {
     if (user) {
@@ -188,11 +205,31 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
             </div>
           )}
 
-          {/* AI Engine Status */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-[11px] text-indigo-700">
-            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-            <Cpu className="h-3.5 w-3.5 text-indigo-600" />
-            <span className="font-medium">Local AI Ready</span>
+          {/* Universal AI Model Engine Selector */}
+          <div 
+            title="Active AI Model Engine for all platform tasks (Doubt Solver, PDF Question Paper Analysis, Study Order)"
+            className="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors shadow-xs"
+          >
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="AI Model Active" />
+            {selectedAIModel.includes('gemini') ? (
+              <Sparkles className="h-3.5 w-3.5 text-indigo-600 shrink-0 animate-pulse" />
+            ) : selectedAIModel.includes('gpt') ? (
+              <Bot className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            ) : (
+              <Cpu className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+            )}
+            <select
+              id="universal-ai-model-selector"
+              value={selectedAIModel}
+              onChange={handleModelSelect}
+              className="bg-transparent text-[11px] sm:text-xs font-semibold text-slate-800 pr-1 cursor-pointer focus:outline-none max-w-[110px] sm:max-w-[180px] truncate"
+            >
+              {AI_MODELS.map((m) => (
+                <option key={m.id} value={m.id} className="text-slate-800 bg-white py-1">
+                  {m.shortName || m.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Notifications Dropdown */}

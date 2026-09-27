@@ -5,7 +5,7 @@ import {
   HelpCircle, Code2, Sigma, ListOrdered, Lightbulb, GraduationCap,
   AlertTriangle, ChevronDown, Layers, Bot, Settings
 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, getStoredAIModel, setStoredAIModel, AI_MODELS } from '../services/api';
 
 const EXPLANATION_MODES = [
   { id: 'detailed', label: 'Detailed Explanation', icon: GraduationCap, desc: 'In-depth academic concepts & theoretical principles' },
@@ -14,14 +14,6 @@ const EXPLANATION_MODES = [
   { id: 'step_by_step', label: 'Step-by-Step Derivation', icon: ListOrdered, desc: 'Rigorous calculation & logical step proofs' },
   { id: 'code', label: 'Code & Complexity', icon: Code2, desc: 'Production-ready syntax & Big-O complexity' },
   { id: 'formula', label: 'Formula & Proof', icon: Sigma, desc: 'LaTeX notation & mathematical symbol breakdowns' },
-];
-
-const AI_MODELS = [
-  { id: 'gemini-1.5-flash', name: 'Google Gemini 1.5 Flash (Cloud API)', provider: 'Google DeepMind', badge: 'Cloud Fast' },
-  { id: 'gemini-1.5-pro', name: 'Google Gemini 1.5 Pro (Cloud API)', provider: 'Google DeepMind', badge: 'Cloud Advanced' },
-  { id: 'ollama:qwen', name: 'Ollama Qwen 2.5 (Local Model)', provider: 'Local / On-Device', badge: 'Local Ollama' },
-  { id: 'ollama:gemma', name: 'Ollama Gemma 2 (Local Model)', provider: 'Local / On-Device', badge: 'Local Ollama' },
-  { id: 'gpt-4o-mini', name: 'OpenAI ChatGPT-4o Mini (Cloud API)', provider: 'OpenAI', badge: 'Cloud GPT' },
 ];
 
 const QUICK_PROMPTS = [
@@ -34,7 +26,7 @@ const QUICK_PROMPTS = [
 export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClearInitialQuery }) {
   const [subjects, setSubjects] = useState([]);
   const [selectedMode, setSelectedMode] = useState('detailed');
-  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [selectedModel, setSelectedModel] = useState(() => getStoredAIModel());
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversations, setConversations] = useState([]);
@@ -63,6 +55,16 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    const handleModelSync = (e) => {
+      if (e.detail) {
+        setSelectedModel(e.detail);
+      }
+    };
+    window.addEventListener('ai-model-change', handleModelSync);
+    return () => window.removeEventListener('ai-model-change', handleModelSync);
+  }, []);
 
   const loadSubjects = async () => {
     try {
@@ -402,8 +404,12 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
               </label>
               <select
                 value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-indigo-500 font-bold"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSelectedModel(val);
+                  setStoredAIModel(val);
+                }}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-indigo-500 font-bold cursor-pointer"
               >
                 {AI_MODELS.map(m => (
                   <option key={m.id} value={m.id}>

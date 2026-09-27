@@ -472,10 +472,10 @@ def generate_syllabus_aligned_questions(subject, exam_type, paper_set=''):
     ]
 
 
-def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set=''):
+def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set='', model='gemini-1.5-flash'):
     """
-    Examines extracted PDF text using the AI engine and automatically maps questions
-    to official syllabus units, topics, and maximum marks.
+    Examines extracted PDF text using the selected AI engine (Gemini, Ollama Qwen, ChatGPT, etc.)
+    and automatically maps questions to official syllabus units, topics, and maximum marks.
     """
     clean_text = (pdf_text or "").strip()
 
@@ -502,7 +502,7 @@ def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set=''):
         )
         try:
             import json
-            raw_response = call_ai_engine(prompt, mode='detailed', semester=subject.semester, subject=subject.name)
+            raw_response = call_ai_engine(prompt, mode='detailed', semester=subject.semester, subject=subject.name, model=model)
             # Remove any markdown code block wrappers
             cleaned = re.sub(r'^```json\s*', '', raw_response.strip(), flags=re.MULTILINE)
             cleaned = re.sub(r'^```\s*', '', cleaned, flags=re.MULTILINE)
