@@ -3,7 +3,7 @@ import {
   User, Mail, Phone, BookOpen, GraduationCap, Flame, 
   Calendar, Edit3, Save, CheckCircle2, AlertCircle, 
   Sparkles, ShieldCheck, KeyRound, Hash, Camera, 
-  Lock, Eye, EyeOff, Shield
+  Lock, Eye, EyeOff, Shield, ArrowLeft, X
 } from 'lucide-react';
 import { api, setStoredUser } from '../services/api';
 
@@ -16,14 +16,17 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Active option in Edit Details section: 'profile' or 'password'
-  const [activeTab, setActiveTab] = useState('profile');
+  // Mode states:
+  // isChangingPassword: true shows the Password Updation Form in that area
+  // isEditingBio: true enables editing of the Bio and displays the Save Bio button
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isEditingBio, setIsEditingBio] = useState(false);
 
   // Bio state
   const [bio, setBio] = useState('');
   const [avatar, setAvatar] = useState('');
 
-  // Change Password state: Current + New + Confirm
+  // Password fields
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -103,6 +106,7 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
       if (onUpdateUser) onUpdateUser(updated);
 
       setSuccessMsg('Academic bio updated successfully!');
+      setIsEditingBio(false);
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to update bio.');
@@ -144,12 +148,21 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setIsChangingPassword(false);
       setTimeout(() => setSuccessMsg(''), 5000);
     } catch (err) {
       setErrorMsg(err.message || 'Failed to change password. Please verify your current password.');
     } finally {
       setChangingPassword(false);
     }
+  };
+
+  const handleCancelPassword = () => {
+    setIsChangingPassword(false);
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setErrorMsg('');
   };
 
   if (!user) {
@@ -275,30 +288,58 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
             </div>
           </div>
 
-          {/* Quick Option Selectors */}
+          {/* Action Triggers */}
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => { setActiveTab('profile'); setErrorMsg(''); setSuccessMsg(''); }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
-                activeTab === 'profile'
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-              }`}
-            >
-              <Edit3 className="h-3.5 w-3.5" />
-              <span>Edit Details</span>
-            </button>
-            <button
-              onClick={() => { setActiveTab('password'); setErrorMsg(''); setSuccessMsg(''); }}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer border ${
-                activeTab === 'password'
-                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/20'
-                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
-              }`}
-            >
-              <KeyRound className="h-3.5 w-3.5" />
-              <span>Change Password</span>
-            </button>
+            {!isChangingPassword ? (
+              <>
+                {!isEditingBio ? (
+                  <button
+                    onClick={() => {
+                      setIsEditingBio(true);
+                      setErrorMsg('');
+                      setSuccessMsg('');
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-indigo-600/20"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                    <span>Edit Details</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsEditingBio(false);
+                      setBio(activeUser.bio || '');
+                      setErrorMsg('');
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer border border-slate-300"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span>Cancel Editing</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    setIsChangingPassword(true);
+                    setIsEditingBio(false);
+                    setErrorMsg('');
+                    setSuccessMsg('');
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+                >
+                  <KeyRound className="h-3.5 w-3.5 text-indigo-600" />
+                  <span>Change Password</span>
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleCancelPassword}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-xs"
+              >
+                <ArrowLeft className="h-3.5 w-3.5 text-slate-500" />
+                <span>Back to Profile Details</span>
+              </button>
+            )}
           </div>
 
         </div>
@@ -425,50 +466,59 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
           </div>
         </div>
 
-        {/* Right Column: Edit Details Section with Separate Options */}
+        {/* Right Column: Dynamic Area (Normally shows Profile Details, shows Password Form when clicked) */}
         <div className="lg:col-span-2">
           <div className="glass-panel rounded-2xl p-6 border border-slate-200 bg-white shadow-xs">
             
-            {/* Separate Option Selector Pills */}
-            <div className="flex items-center gap-2 p-1 bg-slate-100/90 rounded-2xl border border-slate-200 mb-6">
-              <button
-                type="button"
-                onClick={() => { setActiveTab('profile'); setErrorMsg(''); setSuccessMsg(''); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'profile'
-                    ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <User className="h-4 w-4" />
-                <span>Profile & Bio Details</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => { setActiveTab('password'); setErrorMsg(''); setSuccessMsg(''); }}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  activeTab === 'password'
-                    ? 'bg-white text-indigo-700 shadow-sm border border-slate-200/80'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <KeyRound className="h-4 w-4" />
-                <span>Change Password</span>
-              </button>
-            </div>
-
-            {/* OPTION 1: Profile & Bio Details */}
-            {activeTab === 'profile' && (
+            {/* VIEW 1: Normally Shows Profile Details */}
+            {!isChangingPassword ? (
               <div>
-                <div className="pb-4 mb-5 border-b border-slate-100">
-                  <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                    <User className="h-4 w-4 text-indigo-600" />
-                    <span>Student Profile & Bio</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    View registered contact details and customize your personal academic bio.
-                  </p>
+                <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                      <User className="h-4 w-4 text-indigo-600" />
+                      <span>Student Profile Details</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      View institutional contact information and customize your personal academic bio.
+                    </p>
+                  </div>
+
+                  {/* Edit Details Action Button in Header */}
+                  <div className="flex items-center gap-2">
+                    {!isEditingBio ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingBio(true);
+                          setErrorMsg('');
+                          setSuccessMsg('');
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                        <span>Edit Details</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+                        Editing Active
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsChangingPassword(true);
+                        setIsEditingBio(false);
+                        setErrorMsg('');
+                        setSuccessMsg('');
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
+                    >
+                      <KeyRound className="h-3.5 w-3.5 text-indigo-600" />
+                      <span>Change Password</span>
+                    </button>
+                  </div>
                 </div>
 
                 <form onSubmit={handleBioSave} className="space-y-4">
@@ -508,56 +558,98 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
 
                   </div>
 
-                  {/* Bio / Study Goals (Editable) */}
+                  {/* Bio / Study Goals (Editable only when isEditingBio is true) */}
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                      Personal Academic Bio & Goals <span className="text-indigo-600 font-normal">• Editable</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-semibold text-slate-700">
+                        Personal Academic Bio & Goals
+                      </label>
+                      {isEditingBio ? (
+                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                          Editable
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400">
+                          Click "Edit Details" to modify
+                        </span>
+                      )}
+                    </div>
+
                     <textarea
                       rows="4"
+                      disabled={!isEditingBio}
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      placeholder="Share your academic interests, focus areas, or project goals..."
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white leading-relaxed transition-colors"
+                      placeholder={isEditingBio ? "Share your academic interests, focus areas, or project goals..." : "No academic bio provided yet. Click 'Edit Details' to add your bio."}
+                      className={`w-full px-3.5 py-2.5 text-xs rounded-xl leading-relaxed transition-all ${
+                        isEditingBio
+                          ? 'bg-white border-2 border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 shadow-xs'
+                          : 'bg-slate-50 border border-slate-200 text-slate-700 cursor-default'
+                      }`}
                     />
                   </div>
 
-                  {/* Save Bio Button */}
-                  <div className="flex justify-end pt-3 border-t border-slate-100">
-                    <button
-                      type="submit"
-                      disabled={savingBio}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      {savingBio ? (
-                        <span className="animate-spin text-sm">⟳ Saving...</span>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4" />
-                          <span>Save Bio</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                  {/* Save Bio Button & Cancel Button ONLY appear after clicking Edit Details */}
+                  {isEditingBio && (
+                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsEditingBio(false);
+                          setBio(activeUser.bio || '');
+                          setErrorMsg('');
+                        }}
+                        className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={savingBio}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition-all cursor-pointer disabled:opacity-50"
+                      >
+                        {savingBio ? (
+                          <span className="animate-spin text-sm">⟳ Saving...</span>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            <span>Save Bio</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
                 </form>
               </div>
-            )}
-
-            {/* OPTION 2: Change Password (Dedicated 3-Field Flow) */}
-            {activeTab === 'password' && (
+            ) : (
+              /* VIEW 2: Shows Password Updation Form when Change Password is clicked */
               <div>
-                <div className="pb-4 mb-5 border-b border-slate-100">
-                  <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                    <KeyRound className="h-4 w-4 text-indigo-600" />
-                    <span>Change Account Password</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    To change your password, enter your current password followed by your new password and confirmation.
-                  </p>
+                <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
+                  <div>
+                    <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                      <KeyRound className="h-4 w-4 text-indigo-600" />
+                      <span>Change Account Password</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Verify your current password, then enter and confirm your new password.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleCancelPassword}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Back to Details</span>
+                  </button>
                 </div>
 
-                <form onSubmit={handlePasswordSubmit} className="space-y-4">
-                  
+                <form onSubmit={handlePasswordSubmit} autoComplete="off" className="space-y-4">
+                  {/* Hidden inputs to divert aggressive browser auto-fill away from the real inputs */}
+                  <input type="text" name="fake_user_field" className="hidden" tabIndex="-1" autoComplete="off" />
+                  <input type="password" name="fake_password_field" className="hidden" tabIndex="-1" autoComplete="off" />
+
                   {/* Current Password Field */}
                   <div>
                     <label className="text-[11px] font-semibold text-slate-700 block mb-1">
@@ -566,6 +658,13 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                     <div className="relative">
                       <input
                         type={showCurrentPw ? 'text' : 'password'}
+                        name="auth_current_security_code"
+                        autoComplete="off"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
                         placeholder="Enter your current password"
@@ -591,6 +690,13 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                     <div className="relative">
                       <input
                         type={showNewPw ? 'text' : 'password'}
+                        name="auth_new_security_code"
+                        autoComplete="new-password"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Enter your new password"
@@ -616,6 +722,13 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                     <div className="relative">
                       <input
                         type={showConfirmPw ? 'text' : 'password'}
+                        name="auth_confirm_security_code"
+                        autoComplete="new-password"
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Re-enter your new password to confirm"
@@ -648,19 +761,14 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                     )}
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                  {/* Update Password and Cancel Buttons */}
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
                     <button
                       type="button"
-                      onClick={() => {
-                        setCurrentPassword('');
-                        setNewPassword('');
-                        setConfirmPassword('');
-                        setErrorMsg('');
-                      }}
-                      className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                      onClick={handleCancelPassword}
+                      className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer border border-slate-200"
                     >
-                      Clear
+                      Cancel
                     </button>
                     <button
                       type="submit"
