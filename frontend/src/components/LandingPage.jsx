@@ -53,10 +53,10 @@ const EXPLANATION_MODES = [
 
 const PLATFORM_PILLARS = [
   {
-    icon: Compass,
-    title: 'Personalized Study Roadmaps',
-    desc: '5-step curriculum progression roadmaps tailored to each semester subject with estimated study hours.',
-    tag: 'Syllabus Aligned'
+    icon: Target,
+    title: 'Personalised Study Order (Max ROI)',
+    desc: 'Examines previous exam marks by question & question paper PDFs to rank your worst to best topics for maximum score recovery.',
+    tag: 'Exam Score Maximizer'
   },
   {
     icon: BarChart3,

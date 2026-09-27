@@ -2,7 +2,8 @@ from rest_framework import serializers
 from .models import (
     User, Subject, AcademicRecord, Resource,
     Conversation, Message, StudyGoal, Quiz,
-    QuizAttempt, Notification, Roadmap
+    QuizAttempt, Notification, Roadmap,
+    Exam, StudentExamScore
 )
 
 class UserSerializer(serializers.ModelSerializer):
@@ -114,3 +115,28 @@ class RoadmapSerializer(serializers.ModelSerializer):
     class Meta:
         model = Roadmap
         fields = '__all__'
+
+
+class ExamSerializer(serializers.ModelSerializer):
+    subject_code = serializers.CharField(source='subject.code', read_only=True)
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    uploaded_by_name = serializers.CharField(source='uploaded_by.name', read_only=True)
+
+    class Meta:
+        model = Exam
+        fields = '__all__'
+
+
+class StudentExamScoreSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.name', read_only=True)
+    student_roll = serializers.CharField(source='student.roll_number', read_only=True)
+    exam_title = serializers.CharField(source='exam.title', read_only=True)
+    exam_type = serializers.CharField(source='exam.exam_type', read_only=True)
+    subject_code = serializers.CharField(source='exam.subject.code', read_only=True)
+    subject_name = serializers.CharField(source='exam.subject.name', read_only=True)
+    total_max_marks = serializers.FloatField(source='exam.total_marks', read_only=True)
+
+    class Meta:
+        model = StudentExamScore
+        fields = '__all__'
+

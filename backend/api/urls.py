@@ -5,6 +5,7 @@ from .views import (
     SubjectListView, AcademicRecordView, AnalyticsReportView,
     AIQueryView, AIModelsView, ConversationListView, ConversationDetailView,
     ToggleBookmarkView, AISummarizeView, AIRoadmapView,
+    StudyOrderView, ExamListView, ExamDetailView, ExamScoreUploadView,
     ResourceListView, PrivateFileUploadView, StudyGoalView, ToggleStudyGoalView,
     QuizListView, QuizDetailView, SubmitQuizAttemptView,
     NotificationListView, MarkNotificationReadView,
@@ -39,6 +40,12 @@ urlpatterns = [
     path('ai/conversations/<int:pk>/bookmark/', ToggleBookmarkView.as_view(), name='toggle-bookmark'),
     path('ai/summarize/', AISummarizeView.as_view(), name='ai-summarize'),
     path('ai/roadmap/', AIRoadmapView.as_view(), name='ai-roadmap'),
+
+    # Personalised High-ROI Study Order & Exams
+    path('study-order/', StudyOrderView.as_view(), name='study-order'),
+    path('exams/', ExamListView.as_view(), name='exam-list'),
+    path('exams/<int:pk>/', ExamDetailView.as_view(), name='exam-detail'),
+    path('exams/<int:pk>/scores/', ExamScoreUploadView.as_view(), name='exam-score-upload'),
 
     # Resources
     path('resources/', ResourceListView.as_view(), name='resource-list'),

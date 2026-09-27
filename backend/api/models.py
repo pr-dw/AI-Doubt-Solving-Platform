@@ -231,3 +231,37 @@ class Roadmap(models.Model):
 
     def __str__(self):
         return f"Roadmap: {self.title} ({self.subject.code})"
+
+
+class Exam(models.Model):
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='exams')
+    title = models.CharField(max_length=255)
+    semester = models.IntegerField(default=5)
+    exam_type = models.CharField(max_length=100, default='Mid-Term Examination')
+    total_marks = models.FloatField(default=100.0)
+    exam_date = models.DateField(default=timezone.now)
+    question_paper_pdf = models.CharField(max_length=500, blank=True)
+    answer_key_pdf = models.CharField(max_length=500, blank=True)
+    questions_data = models.JSONField(default=list, blank=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.subject.code} - {self.title} ({self.total_marks} Marks)"
+
+
+class StudentExamScore(models.Model):
+    exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='student_scores')
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exam_scores')
+    total_marks_obtained = models.FloatField(default=0.0)
+    question_scores = models.JSONField(default=list, blank=True)
+    ranked_study_order = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('exam', 'student')
+
+    def __str__(self):
+        return f"{self.student.email} - {self.exam.title}: {self.total_marks_obtained}/{self.exam.total_marks}"
+

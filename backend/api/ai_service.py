@@ -315,42 +315,183 @@ def call_ollama(prompt, mode='detailed', subject=None, model=None):
 
 def generate_roadmap_content(subject_name, semester):
     """
-    Generates structured learning milestones for a subject.
+    Legacy helper maintained for backward compatibility.
     """
-    return [
-        {
-            "step": 1,
-            "title": f"Unit 1: Fundamentals of {subject_name}",
-            "description": "Foundational definitions, historical evolution, core architecture, and basic terminology.",
-            "estimated_hours": 10,
-            "status": "completed"
-        },
-        {
-            "step": 2,
-            "title": "Unit 2: Core Data Structures & Methodologies",
-            "description": "In-depth study of intermediate concepts, algorithmic representations, and schema models.",
-            "estimated_hours": 14,
-            "status": "in_progress"
-        },
-        {
-            "step": 3,
-            "title": "Unit 3: Advanced Optimization & System Design",
-            "description": "Handling concurrency, memory management, indexing, and complex problem decomposition.",
-            "estimated_hours": 16,
-            "status": "pending"
-        },
-        {
-            "step": 4,
-            "title": "Unit 4: Real-world Applications & Case Studies",
-            "description": "Analyzing industry implementations, modern frameworks, and architectural trade-offs.",
-            "estimated_hours": 12,
-            "status": "pending"
-        },
-        {
-            "step": 5,
-            "title": "Unit 5: Previous Year Questions & Comprehensive Revision",
-            "description": "Solving past 5 years university exam papers, mock viva questions, and high-frequency numericals.",
-            "estimated_hours": 10,
-            "status": "pending"
+    return []
+
+
+def extract_text_from_pdf_file(file_path):
+    """
+    Extracts plain text from a local PDF file using pypdf.
+    """
+    try:
+        from pypdf import PdfReader
+        if not os.path.exists(file_path):
+            return ""
+        reader = PdfReader(file_path)
+        text_pages = []
+        for idx, page in enumerate(reader.pages):
+            extracted = page.extract_text() or ""
+            if extracted.strip():
+                text_pages.append(f"--- Page {idx+1} ---\n{extracted.strip()}")
+        return "\n\n".join(text_pages)
+    except Exception as e:
+        logger.error(f"Failed to extract text from PDF {file_path}: {e}")
+        return ""
+
+
+def compute_personalized_study_order(student_user, subject_id=None, exam_id=None):
+    """
+    Computes an optimal, high-ROI study order prioritized from the student's worst-performing
+    topics to best-performing topics based on question-wise previous exam scores and syllabus weightage.
+    """
+    from api.models import StudentExamScore, Exam, Subject, Resource
+
+    scores_qs = StudentExamScore.objects.filter(student=student_user).select_related('exam', 'exam__subject')
+    if exam_id:
+        scores_qs = scores_qs.filter(exam_id=exam_id)
+    if subject_id:
+        scores_qs = scores_qs.filter(exam__subject_id=subject_id)
+
+    if not scores_qs.exists():
+        return {
+            "total_exams_analyzed": 0,
+            "total_marks_lost": 0,
+            "recoverable_marks_top_3": 0,
+            "quick_strategy": "No exam score records uploaded yet. Once faculty uploads your question-wise marks, your customized high-ROI study order will appear here.",
+            "ranked_topics": []
         }
-    ]
+
+    # Aggregate by topic
+    topic_data = {}
+    total_exams = scores_qs.count()
+
+    for s_record in scores_qs:
+        exam = s_record.exam
+        subject = exam.subject
+        for q in (s_record.question_scores or []):
+            topic_name = (q.get('topic') or 'General Concept').strip()
+            unit_name = q.get('unit') or 'General Unit'
+            obtained = float(q.get('marks_obtained', 0.0))
+            max_m = float(q.get('max_marks', 0.0))
+            if max_m <= 0:
+                continue
+
+            key = (subject.id, topic_name)
+            if key not in topic_data:
+                topic_data[key] = {
+                    "subject_id": subject.id,
+                    "subject_code": subject.code,
+                    "subject_name": subject.name,
+                    "topic": topic_name,
+                    "unit": unit_name,
+                    "marks_obtained": 0.0,
+                    "max_marks": 0.0,
+                    "questions_involved": [],
+                    "faculty_comments": []
+                }
+            topic_data[key]["marks_obtained"] += obtained
+            topic_data[key]["max_marks"] += max_m
+            topic_data[key]["questions_involved"].append(f"{exam.title}: {q.get('q_no', 'Q')}")
+            if q.get('faculty_comment'):
+                topic_data[key]["faculty_comments"].append(q.get('faculty_comment'))
+
+    if not topic_data:
+        return {
+            "total_exams_analyzed": total_exams,
+            "total_marks_lost": 0,
+            "recoverable_marks_top_3": 0,
+            "quick_strategy": "No question breakdown available yet in uploaded exams.",
+            "ranked_topics": []
+        }
+
+    # Process metrics and compute deficit scores
+    topic_list = []
+    total_marks_lost = 0.0
+
+    for key, data in topic_data.items():
+        obt = round(data["marks_obtained"], 1)
+        max_m = round(data["max_marks"], 1)
+        lost = round(max(0.0, max_m - obt), 1)
+        total_marks_lost += lost
+        pct = round((obt / max_m) * 100.0, 1) if max_m > 0 else 0.0
+
+        # High ROI priority formula:
+        # Heavily weight total marks lost (absolute mark boost in upcoming exam) + low percentage
+        deficit_score = (lost * 2.5) + (100.0 - pct)
+
+        if pct <= 40.0:
+            priority = "CRITICAL"
+            badge_color = "rose"
+        elif pct <= 60.0:
+            priority = "HIGH"
+            badge_color = "amber"
+        elif pct <= 75.0:
+            priority = "MEDIUM"
+            badge_color = "blue"
+        else:
+            priority = "MASTERED"
+            badge_color = "emerald"
+
+        # Check for matching study resource
+        resource = Resource.objects.filter(
+            subject_id=data["subject_id"]
+        ).filter(
+            title__icontains=data["topic"]
+        ).first() or Resource.objects.filter(subject_id=data["subject_id"]).first()
+
+        topic_list.append({
+            "subject_id": data["subject_id"],
+            "subject_code": data["subject_code"],
+            "subject_name": data["subject_name"],
+            "topic": data["topic"],
+            "unit": data["unit"],
+            "marks_obtained": obt,
+            "max_marks": max_m,
+            "marks_lost": lost,
+            "percentage": pct,
+            "deficit_score": deficit_score,
+            "priority": priority,
+            "badge_color": badge_color,
+            "recovery_potential": f"+{lost} Marks Potential",
+            "questions_involved": data["questions_involved"],
+            "faculty_comments": data["faculty_comments"],
+            "reasoning": f"Scored {obt}/{max_m} ({pct:.0f}%) on {data['topic']}. Recovering these {lost} marks will yield the largest boost in your next exam.",
+            "actionable_steps": [
+                f"Review {data['unit']} notes and high-frequency problem patterns.",
+                f"Clarify doubts on {data['topic']} in AI Doubt Solver.",
+                f"Re-solve the missed exam question: {', '.join(data['questions_involved'][:2])}."
+            ],
+            "suggested_query": f"Explain {data['topic']} in {data['subject_name']} with step-by-step exam numericals and common mistakes.",
+            "resource_title": resource.title if resource else None,
+            "resource_id": resource.id if resource else None,
+            "estimated_minutes": 45 if lost >= 5 else 30
+        })
+
+    # Sort from worst topic (most marks lost & lowest percentage) to best topic
+    topic_list.sort(key=lambda x: x["deficit_score"], reverse=True)
+
+    # Assign ranks
+    for idx, item in enumerate(topic_list):
+        item["rank"] = idx + 1
+
+    # Recoverable marks in top 3
+    top_3_gain = round(sum(t["marks_lost"] for t in topic_list[:3]), 1)
+    top_topic = topic_list[0]["topic"] if topic_list else "None"
+    second_topic = topic_list[1]["topic"] if len(topic_list) > 1 else None
+
+    quick_strategy = (
+        f"Short on time? Focus on Rank #1 ({top_topic}) and Rank #2 ({second_topic}) "
+        f"to recover up to +{top_3_gain} marks in your next exam with under 90 minutes of targeted revision!"
+        if second_topic else
+        f"Short on time? Master Rank #1 ({top_topic}) to recover up to +{top_3_gain} marks!"
+    )
+
+    return {
+        "total_exams_analyzed": total_exams,
+        "total_marks_lost": round(total_marks_lost, 1),
+        "recoverable_marks_top_3": top_3_gain,
+        "quick_strategy": quick_strategy,
+        "ranked_topics": topic_list
+    }
+

@@ -20,16 +20,20 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import (
     User, Subject, AcademicRecord, Resource,
     Conversation, Message, StudyGoal, Quiz,
-    QuizAttempt, Notification, Roadmap
+    QuizAttempt, Notification, Roadmap,
+    Exam, StudentExamScore
 )
 from .serializers import (
     UserSerializer, RegisterSerializer, SubjectSerializer,
     AcademicRecordSerializer, ResourceSerializer,
     ConversationSerializer, MessageSerializer, StudyGoalSerializer,
     QuizSerializer, QuizAttemptSerializer, NotificationSerializer,
-    RoadmapSerializer
+    RoadmapSerializer, ExamSerializer, StudentExamScoreSerializer
 )
-from .ai_service import call_ai_engine, call_ollama, generate_roadmap_content, AVAILABLE_MODELS
+from .ai_service import (
+    call_ai_engine, call_ollama, generate_roadmap_content,
+    AVAILABLE_MODELS, compute_personalized_study_order, extract_text_from_pdf_file
+)
 
 
 from django.http import HttpResponse
@@ -706,32 +710,193 @@ class AISummarizeView(APIView):
         })
 
 
-class AIRoadmapView(APIView):
+class StudyOrderView(APIView):
+    """
+    Returns the student's personalized high-ROI study order ranked from worst-performing
+    topics to best-performing topics based on question-wise previous exam scores.
+    """
     permission_classes = [permissions.IsAuthenticated]
 
+    def get(self, request):
+        user = request.user
+        subject_id = request.GET.get('subject_id')
+        exam_id = request.GET.get('exam_id')
+
+        target_user = user
+        student_id = request.GET.get('student_id')
+        if student_id and user.role in ['faculty', 'admin']:
+            try:
+                target_user = User.objects.get(id=student_id)
+            except User.DoesNotExist:
+                return Response({"detail": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        study_order = compute_personalized_study_order(target_user, subject_id=subject_id, exam_id=exam_id)
+
+        # Available exams for student
+        exams = Exam.objects.filter(student_scores__student=target_user).distinct().order_by('-exam_date')
+
+        return Response({
+            "student": {
+                "id": target_user.id,
+                "name": target_user.name or target_user.email.split('@')[0],
+                "email": target_user.email,
+                "roll_number": target_user.roll_number,
+                "semester": target_user.semester
+            },
+            "study_order": study_order,
+            "available_exams": ExamSerializer(exams, many=True).data
+        })
+
+
+class ExamListView(APIView):
+    """
+    List exams for a semester or subject, or allow faculty to create a new exam with question breakdown.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        semester = request.GET.get('semester')
+        subject_id = request.GET.get('subject_id')
+
+        queryset = Exam.objects.all().select_related('subject', 'uploaded_by').order_by('-exam_date')
+        if semester:
+            queryset = queryset.filter(semester=semester)
+        elif user.role == 'student' and user.semester:
+            queryset = queryset.filter(semester=user.semester)
+
+        if subject_id:
+            queryset = queryset.filter(subject_id=subject_id)
+
+        return Response(ExamSerializer(queryset, many=True).data)
+
     def post(self, request):
+        user = request.user
+        if user.role not in ['faculty', 'admin']:
+            return Response({"detail": "Permission denied. Only faculty or admin can create exams."}, status=status.HTTP_403_FORBIDDEN)
+
         subject_id = request.data.get('subject_id')
-        if not subject_id:
-            return Response({"detail": "subject_id is required."}, status=status.HTTP_400_BAD_REQUEST)
+        title = request.data.get('title', '').strip()
+        total_marks = request.data.get('total_marks', 100.0)
+        exam_type = request.data.get('exam_type', 'Mid-Term Examination')
+        exam_date = request.data.get('exam_date') or timezone.now().date()
+        question_paper_pdf = request.data.get('question_paper_pdf', '')
+        answer_key_pdf = request.data.get('answer_key_pdf', '')
+        questions_data = request.data.get('questions_data', [])
+
+        if not subject_id or not title:
+            return Response({"detail": "subject_id and title are required."}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             subject = Subject.objects.get(id=subject_id)
         except Subject.DoesNotExist:
             return Response({"detail": "Subject not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check existing or create
-        roadmap = Roadmap.objects.filter(user=request.user, subject=subject).first()
-        if not roadmap:
-            milestones = generate_roadmap_content(subject.name, subject.semester)
-            roadmap = Roadmap.objects.create(
-                user=request.user,
-                subject=subject,
-                title=f"Personalized Mastery Roadmap: {subject.name}",
-                overview=f"5-Step academic roadmap designed for Semester {subject.semester} students to master core theoretical concepts and ace practical viva examinations.",
-                milestones=milestones
-            )
+        exam = Exam.objects.create(
+            subject=subject,
+            title=title,
+            semester=subject.semester,
+            exam_type=exam_type,
+            total_marks=float(total_marks),
+            exam_date=exam_date,
+            question_paper_pdf=question_paper_pdf,
+            answer_key_pdf=answer_key_pdf,
+            questions_data=questions_data,
+            uploaded_by=user
+        )
 
-        return Response(RoadmapSerializer(roadmap).data)
+        return Response(ExamSerializer(exam).data, status=status.HTTP_201_CREATED)
+
+
+class ExamDetailView(APIView):
+    """
+    Returns full details for an exam, including question breakdown, PDF links,
+    and student's personal scores.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            exam = Exam.objects.select_related('subject', 'uploaded_by').get(pk=pk)
+        except Exam.DoesNotExist:
+            return Response({"detail": "Exam not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        data = ExamSerializer(exam).data
+
+        if request.user.role == 'student':
+            student_score = StudentExamScore.objects.filter(exam=exam, student=request.user).first()
+            data['my_score'] = StudentExamScoreSerializer(student_score).data if student_score else None
+        else:
+            all_scores = StudentExamScore.objects.filter(exam=exam).select_related('student')
+            data['student_scores'] = StudentExamScoreSerializer(all_scores, many=True).data
+
+        return Response(data)
+
+
+class ExamScoreUploadView(APIView):
+    """
+    Allows faculty to upload/record question-by-question marks for a student.
+    Automatically recalculates the student's personalized study order.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.role not in ['faculty', 'admin']:
+            return Response({"detail": "Permission denied. Only faculty can upload exam scores."}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            exam = Exam.objects.get(pk=pk)
+        except Exam.DoesNotExist:
+            return Response({"detail": "Exam not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        student_id = request.data.get('student_id')
+        student_email = request.data.get('student_email')
+        question_scores = request.data.get('question_scores', [])
+
+        student = None
+        if student_id:
+            student = User.objects.filter(id=student_id).first()
+        elif student_email:
+            student = User.objects.filter(email__iexact=student_email).first()
+
+        if not student:
+            return Response({"detail": "Valid student_id or student_email is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        total_obtained = sum(float(q.get('marks_obtained', 0.0)) for q in question_scores)
+
+        score_obj, created = StudentExamScore.objects.update_or_create(
+            exam=exam,
+            student=student,
+            defaults={
+                "total_marks_obtained": total_obtained,
+                "question_scores": question_scores
+            }
+        )
+
+        # Compute updated personalized study order
+        study_order = compute_personalized_study_order(student)
+        score_obj.ranked_study_order = study_order.get('ranked_topics', [])
+        score_obj.save()
+
+        Notification.objects.create(
+            user=student,
+            title=f"Exam Marks Evaluated: {exam.title} 📊",
+            message=f"Your question-wise marks for {exam.subject.code} have been uploaded. View your Personalised Study Order to see your highest-yield study priorities!",
+            notification_type="exam"
+        )
+
+        return Response(StudentExamScoreSerializer(score_obj).data, status=status.HTTP_200_OK)
+
+
+class AIRoadmapView(APIView):
+    """
+    Legacy roadmap view maintained for compatibility.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        return Response({"detail": "Roadmaps have been upgraded to Personalised Study Order."}, status=status.HTTP_200_OK)
+
 
 
 class ResourceListView(APIView):

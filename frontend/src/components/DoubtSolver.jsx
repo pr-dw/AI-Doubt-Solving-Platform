@@ -31,7 +31,7 @@ const QUICK_PROMPTS = [
   { title: 'IT Act 2000 Key Provisions', text: 'What are the core objectives and major offences under the Indian Information Technology (IT) Act 2000 regarding hacking and data privacy?' },
 ];
 
-export default function DoubtSolver({ user, onRequireAuth }) {
+export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClearInitialQuery }) {
   const [subjects, setSubjects] = useState([]);
   const [selectedMode, setSelectedMode] = useState('detailed');
   const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
@@ -42,6 +42,15 @@ export default function DoubtSolver({ user, onRequireAuth }) {
   const [messages, setMessages] = useState([]);
   const [copiedId, setCopiedId] = useState(null);
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (initialQuery) {
+      setQuery(initialQuery);
+      if (onClearInitialQuery) {
+        onClearInitialQuery();
+      }
+    }
+  }, [initialQuery]);
 
   useEffect(() => {
     loadSubjects();

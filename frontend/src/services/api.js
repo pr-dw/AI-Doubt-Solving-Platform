@@ -134,10 +134,34 @@ export const api = {
       body: JSON.stringify({ topic, subject_id }),
     }),
 
-  getRoadmap: (subject_id) =>
-    request('/ai/roadmap/', {
+  // Personalised Study Order & Exams
+  getStudyOrder: (subject_id = null, exam_id = null, student_id = null) => {
+    const params = new URLSearchParams();
+    if (subject_id) params.append('subject_id', subject_id);
+    if (exam_id) params.append('exam_id', exam_id);
+    if (student_id) params.append('student_id', student_id);
+    return request(`/study-order/?${params.toString()}`);
+  },
+
+  getExams: (subject_id = null, semester = null) => {
+    const params = new URLSearchParams();
+    if (subject_id) params.append('subject_id', subject_id);
+    if (semester) params.append('semester', semester);
+    return request(`/exams/?${params.toString()}`);
+  },
+
+  getExamDetail: (id) => request(`/exams/${id}/`),
+
+  createExam: (examData) =>
+    request('/exams/', {
       method: 'POST',
-      body: JSON.stringify({ subject_id }),
+      body: JSON.stringify(examData),
+    }),
+
+  uploadExamScores: (examId, scoreData) =>
+    request(`/exams/${examId}/scores/`, {
+      method: 'POST',
+      body: JSON.stringify(scoreData),
     }),
 
   // Resources
