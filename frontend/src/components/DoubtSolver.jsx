@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Send, BookOpen, Bookmark, BookmarkCheck, Copy, 
   Check, RefreshCw, MessageSquare, Plus, Trash2, Cpu,
-  HelpCircle, Code2, Sigma, ListOrdered, Lightbulb, GraduationCap
+  HelpCircle, Code2, Sigma, ListOrdered, Lightbulb, GraduationCap,
+  AlertTriangle
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -145,7 +146,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         {
           id: Date.now() + 2,
           sender: 'ai',
-          message_text: `⚠️ Error generating explanation: ${err.message}. Please check if the backend is running.`,
+          is_error: true,
+          message_text: err.message || 'AI engine is not communicable: Unable to connect to the reasoning service.',
           mode_used: selectedMode,
         },
       ]);
@@ -432,8 +434,12 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                 className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.sender === 'ai' && (
-                  <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shrink-0 text-xs font-bold shadow-sm shadow-indigo-600/20">
-                    <Sparkles className="h-4 w-4" />
+                  <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
+                    msg.is_error
+                      ? 'bg-rose-100 text-rose-600 border border-rose-200'
+                      : 'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-600/20'
+                  }`}>
+                    {msg.is_error ? <AlertTriangle className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
                   </div>
                 )}
 
@@ -441,35 +447,52 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                   className={`max-w-3xl rounded-2xl p-4 text-xs sm:text-sm shadow-xs ${
                     msg.sender === 'user'
                       ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-none ml-12'
-                      : 'bg-slate-50 border border-slate-200 text-slate-800 rounded-bl-none mr-8'
+                      : msg.is_error
+                        ? 'bg-rose-50/80 border border-rose-200 text-rose-900 rounded-bl-none mr-8'
+                        : 'bg-slate-50 border border-slate-200 text-slate-800 rounded-bl-none mr-8'
                   }`}
                 >
                   {/* AI Message metadata header */}
                   {msg.sender === 'ai' && (
                     <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 text-[11px] text-slate-500">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-indigo-600 capitalize">
-                          {msg.mode_used || selectedMode} Mode
-                        </span>
-                        {msg.model_used && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 font-medium">
-                            {msg.model_used}
+                        {msg.is_error ? (
+                          <span className="font-bold text-rose-600 flex items-center gap-1">
+                            Engine Communication Error
                           </span>
+                        ) : (
+                          <>
+                            <span className="font-semibold text-indigo-600 capitalize">
+                              {msg.mode_used || selectedMode} Mode
+                            </span>
+                            {msg.model_used && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 font-medium">
+                                {msg.model_used}
+                              </span>
+                            )}
+                          </>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleCopy(msg.message_text, `msg-${msg.id}`)}
-                        className="hover:text-slate-900 flex items-center gap-1 cursor-pointer"
-                        title="Copy answer"
-                      >
-                        {copiedId === `msg-${msg.id}` ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-                        <span className="text-[10px]">{copiedId === `msg-${msg.id}` ? 'Copied' : 'Copy'}</span>
-                      </button>
+                      {!msg.is_error && (
+                        <button
+                          onClick={() => handleCopy(msg.message_text, `msg-${msg.id}`)}
+                          className="hover:text-slate-900 flex items-center gap-1 cursor-pointer"
+                          title="Copy answer"
+                        >
+                          {copiedId === `msg-${msg.id}` ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+                          <span className="text-[10px]">{copiedId === `msg-${msg.id}` ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      )}
                     </div>
                   )}
 
                   {msg.sender === 'user' ? (
                     <p className="whitespace-pre-wrap">{msg.message_text}</p>
+                  ) : msg.is_error ? (
+                    <div className="space-y-1">
+                      <p className="font-semibold text-rose-900 leading-relaxed">{msg.message_text}</p>
+                      <p className="text-[11px] text-rose-600">The AI reasoning service did not return an academic response.</p>
+                    </div>
                   ) : (
                     <div>{renderFormattedText(msg.message_text)}</div>
                   )}

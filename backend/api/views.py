@@ -1,9 +1,12 @@
 import json
+import logging
 import os
 import uuid
 from datetime import date, timedelta
 from django.utils import timezone
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Q
@@ -524,8 +527,19 @@ class AIQueryView(APIView):
         )
 
         # Generate AI Response
-        ai_result = call_ollama(query_text, mode=mode, subject=subject_name, model=model)
-        ai_response_text = ai_result['text']
+        try:
+            ai_result = call_ollama(query_text, mode=mode, subject=subject_name, model=model)
+            ai_response_text = ai_result['text']
+        except Exception as e:
+            logger.error(f"AI query failed: {e}")
+            return Response(
+                {
+                    "detail": str(e),
+                    "conversation_id": conversation.id,
+                    "conversation_title": conversation.title
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
 
         # Save AI message
         ai_message = Message.objects.create(
@@ -608,7 +622,14 @@ class AISummarizeView(APIView):
                 pass
 
         summary_prompt = f"Provide a complete, high-yield chapter summary and AI revision notes for '{topic}' in the subject '{subject_name}'. Include key definitions, formulas/diagram explanations, high-frequency exam questions, and memory mnemonics."
-        result = call_ollama(summary_prompt, mode='detailed', subject=subject_name)
+        try:
+            result = call_ollama(summary_prompt, mode='detailed', subject=subject_name)
+        except Exception as e:
+            logger.error(f"AI summarize failed: {e}")
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
         return Response({
             "topic": topic,
             "subject": subject_name,
