@@ -947,6 +947,16 @@ class ExamDetailView(APIView):
 
         return Response(data)
 
+    def delete(self, request, pk):
+        if request.user.role not in ['faculty', 'admin']:
+            return Response({"detail": "Permission denied. Only faculty or admin can delete exams."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            exam = Exam.objects.get(pk=pk)
+            exam.delete()
+            return Response({"detail": "Exam deleted successfully."}, status=status.HTTP_200_OK)
+        except Exam.DoesNotExist:
+            return Response({"detail": "Exam not found."}, status=status.HTTP_404_NOT_FOUND)
+
 
 class ExamScoreUploadView(APIView):
     """

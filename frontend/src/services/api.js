@@ -170,6 +170,7 @@ export const api = {
   },
 
   getExamDetail: (id) => request(`/exams/${id}/`),
+  deleteExam: (id) => request(`/exams/${id}/`, { method: 'DELETE' }),
 
   createExam: (examData) =>
     request('/exams/', {

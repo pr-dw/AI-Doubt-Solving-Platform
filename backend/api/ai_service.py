@@ -7,6 +7,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
 import re
+import difflib
 
 logger = logging.getLogger(__name__)
 
@@ -365,22 +366,135 @@ def generate_standard_exam_pdf_filename(subject_code, exam_type, paper_set='', i
 def parse_subject_units_and_topics(syllabus_text):
     """
     Extracts dictionary of { 'Unit I': [topics...], 'Unit II': [topics...], ... }
-    from subject syllabus_overview string.
+    from subject syllabus_overview string, preserving words with hyphens (e.g. data-link, point-to-point).
     """
     if not syllabus_text:
         return {}
     unit_map = {}
-    segments = re.split(r'(Unit\s+[I|V|X]+)', syllabus_text)
-    for i in range(1, len(segments), 2):
-        u_name = segments[i].strip()
-        u_content = segments[i+1] if i + 1 < len(segments) else ''
-        # extract topics separated by commas or newlines
-        lines = u_content.replace('–', ':').replace('-', ':').split(':')
-        topic_body = lines[-1] if len(lines) > 1 else lines[0]
-        raw_topics = [t.strip() for t in re.split(r'[,;\n]', topic_body) if t.strip() and len(t.strip()) > 2]
-        if raw_topics:
-            unit_map[u_name] = raw_topics
+    lines = [line.strip() for line in syllabus_text.strip().splitlines() if line.strip()]
+    current_unit = None
+
+    for line in lines:
+        m = re.match(r'^(Unit\s+[IVX0-9]+)\s*[:–-]?\s*([^:]*?):\s*(.+)$', line, re.IGNORECASE)
+        if m:
+            current_unit = m.group(1).strip()
+            raw_topics = [t.strip().rstrip('.') for t in re.split(r'[,;\n]', m.group(3)) if t.strip() and len(t.strip()) > 2]
+            if raw_topics:
+                unit_map[current_unit] = raw_topics
+        else:
+            seg_match = re.match(r'^(Unit\s+[IVX0-9]+)', line, re.IGNORECASE)
+            if seg_match:
+                current_unit = seg_match.group(1).strip()
+                colon_idx = line.find(':')
+                if colon_idx != -1:
+                    topic_part = line[colon_idx+1:]
+                    raw_topics = [t.strip().rstrip('.') for t in re.split(r'[,;\n]', topic_part) if t.strip() and len(t.strip()) > 2]
+                    if raw_topics:
+                        unit_map[current_unit] = raw_topics
+            elif current_unit and current_unit in unit_map:
+                extra_topics = [t.strip().rstrip('.') for t in re.split(r'[,;\n]', line) if t.strip() and len(t.strip()) > 2]
+                unit_map[current_unit].extend(extra_topics)
+
+    if not unit_map:
+        segments = re.split(r'(Unit\s+[IVX0-9]+)', syllabus_text, flags=re.IGNORECASE)
+        for i in range(1, len(segments), 2):
+            u_name = segments[i].strip()
+            u_content = segments[i+1] if i + 1 < len(segments) else ''
+            colon_idx = u_content.find(':')
+            body = u_content[colon_idx+1:] if colon_idx != -1 else u_content
+            raw_topics = [t.strip().rstrip('.') for t in re.split(r'[,;\n]', body) if t.strip() and len(t.strip()) > 2]
+            if raw_topics:
+                unit_map[u_name] = raw_topics
+
     return unit_map
+
+
+def get_flattened_syllabus_topics(subject):
+    """
+    Returns an ordered list of (unit_name, topic_name) tuples extracted
+    directly from the subject's official syllabus overview.
+    """
+    unit_map = parse_subject_units_and_topics(subject.syllabus_overview or "")
+    flattened = []
+    for unit, topics in unit_map.items():
+        for topic in topics:
+            flattened.append((unit, topic))
+    return flattened
+
+
+def sanitize_question_topic_and_unit(raw_topic, raw_unit, question_text, syllabus_topics):
+    """
+    Guarantees that:
+    1. Exactly ONE canonical syllabus topic is selected (no commas, no multiple topics in one line).
+    2. The topic is chosen strictly from the official syllabus list.
+    3. The unit is matched to the official unit of that topic.
+    """
+    if not syllabus_topics:
+        cleaned_topic = (raw_topic or 'General Topic').split(',')[0].strip()
+        return cleaned_topic, raw_unit or 'Unit I'
+
+    raw_clean = (raw_topic or '').strip()
+
+    # 1. Exact match with any syllabus topic
+    for u, t in syllabus_topics:
+        if raw_clean.lower() == t.lower():
+            return t, u
+
+    # 2. Check if any syllabus topic is a substring in raw_topic
+    # Sort by length descending so longer, more specific topics match before shorter ones
+    sorted_by_len = sorted(syllabus_topics, key=lambda x: len(x[1]), reverse=True)
+    for u, t in sorted_by_len:
+        if t.lower() in raw_clean.lower():
+            return t, u
+
+    # 3. If raw_topic has comma or slash (multiple topics returned by AI), test the first chunk
+    chunks = [c.strip() for c in re.split(r'[,;/]', raw_clean) if c.strip()]
+    if len(chunks) > 1:
+        first_chunk = chunks[0]
+        for u, t in sorted_by_len:
+            if t.lower() in first_chunk.lower():
+                return t, u
+
+    # 4. Check if any syllabus topic appears in question_text
+    q_clean = (question_text or '').lower()
+    for u, t in sorted_by_len:
+        if t.lower() in q_clean:
+            return t, u
+
+    # 5. Fuzzy matching using best token overlap + difflib across syllabus
+    target = chunks[0] if chunks else raw_clean
+    combined_query = f"{target} {question_text}".lower()
+    query_tokens = set(re.findall(r'\w+', combined_query))
+
+    stop_words = {'and', 'or', 'of', 'in', 'the', 'for', 'with', 'to', 'a', 'an', 'what', 'explain', 'define', 'derive', 'layer', 'protocols', 'issues', 'system'}
+    query_tokens = query_tokens - stop_words
+
+    best_item = None
+    best_score = -1.0
+
+    for u, t in syllabus_topics:
+        score = 0.0
+        # Preferred unit bonus if raw_unit was specified and matches
+        if raw_unit and u.lower() == raw_unit.lower():
+            score += 1.5
+
+        t_tokens = (set(re.findall(r'\w+', t.lower())) - stop_words)
+        if t_tokens:
+            overlap = len(t_tokens.intersection(query_tokens))
+            score += (overlap / len(t_tokens)) * 5.0
+
+        ratio = difflib.SequenceMatcher(None, t.lower(), target.lower()).ratio()
+        score += ratio * 2.0
+
+        if score > best_score:
+            best_score = score
+            best_item = (t, u)
+
+    if best_item and best_score > 0.5:
+        return best_item[0], best_item[1]
+
+    # Fallback to the first syllabus topic
+    return syllabus_topics[0][1], syllabus_topics[0][0]
 
 
 def generate_syllabus_aligned_questions(subject, exam_type, paper_set=''):
@@ -397,11 +511,11 @@ def generate_syllabus_aligned_questions(subject, exam_type, paper_set=''):
     def get_unit_topics(u_name, fallback_list):
         return unit_map.get(u_name, fallback_list) or fallback_list
 
-    u1_topics = get_unit_topics("Unit I", ["Network Architecture", "OSI Reference Model", "Physical Layer Media", "Network Topologies", "Delay Analysis"])
-    u2_topics = get_unit_topics("Unit II", ["Sliding Window Protocols", "ALOHA Protocols", "IEEE Standards", "Error Handling", "Data Link Layer"])
-    u3_topics = get_unit_topics("Unit III", ["Routing Algorithms", "Congestion Control", "IPv4 Addressing", "IPv6 Addressing", "Point-to-Point Networks"])
-    u4_topics = get_unit_topics("Unit IV", ["Transport Layer Design", "Connection Management", "Cryptography", "TCP Window Management", "Session Layer"])
-    u5_topics = get_unit_topics("Unit V", ["Application Layer", "Electronic Mail", "File Transfer", "Virtual Terminals", "Internet Protocols"])
+    u1_topics = get_unit_topics("Unit I", ["Network structure and architecture", "OSI reference model", "Physical layer transmission media", "Network topology", "Delay analysis"])
+    u2_topics = get_unit_topics("Unit II", ["Sliding window protocols", "ALOHA protocols", "IEEE standards", "Error handling", "Data Link Layer"])
+    u3_topics = get_unit_topics("Unit III", ["Routing", "Congestion control", "IPv4 addressing", "IPv6 addressing", "Point-to-point networks"])
+    u4_topics = get_unit_topics("Unit IV", ["Transport layer design issues", "Connection management", "Cryptography", "TCP window management", "Session layer design issues"])
+    u5_topics = get_unit_topics("Unit V", ["Electronic mail", "File transfer", "Virtual terminals", "Internet and application networks", "Access and management"])
 
     is_quiz = "Quiz" in (exam_type or "")
     
@@ -448,27 +562,27 @@ def generate_syllabus_aligned_questions(subject, exam_type, paper_set=''):
 
     # Pre-End Semester Examination (100 Marks)
     return [
-        {"q_no": "Q1(a)", "max_marks": 4.0, "unit": "Unit I", "topic": u1_topics[0] if u1_topics else "Network Architecture", "question_text": f"Short question on {u1_topics[0] if u1_topics else 'Unit I'}."},
-        {"q_no": "Q1(b)", "max_marks": 4.0, "unit": "Unit I", "topic": u1_topics[1] if len(u1_topics) > 1 else "Delay Analysis", "question_text": f"Key principles of {u1_topics[1] if len(u1_topics) > 1 else 'Unit I'}."},
+        {"q_no": "Q1(a)", "max_marks": 4.0, "unit": "Unit I", "topic": u1_topics[0] if u1_topics else "Network structure and architecture", "question_text": f"Short question on {u1_topics[0] if u1_topics else 'Unit I'}."},
+        {"q_no": "Q1(b)", "max_marks": 4.0, "unit": "Unit I", "topic": u1_topics[1] if len(u1_topics) > 1 else "Delay analysis", "question_text": f"Key principles of {u1_topics[1] if len(u1_topics) > 1 else 'Unit I'}."},
         {"q_no": "Q1(c)", "max_marks": 4.0, "unit": "Unit II", "topic": u2_topics[0] if u2_topics else "Data Link Layer", "question_text": f"Short question on {u2_topics[0] if u2_topics else 'Unit II'}."},
-        {"q_no": "Q1(d)", "max_marks": 4.0, "unit": "Unit II", "topic": u2_topics[1] if len(u2_topics) > 1 else "ALOHA Protocols", "question_text": f"Key concept of {u2_topics[1] if len(u2_topics) > 1 else 'Unit II'}."},
+        {"q_no": "Q1(d)", "max_marks": 4.0, "unit": "Unit II", "topic": u2_topics[1] if len(u2_topics) > 1 else "ALOHA protocols", "question_text": f"Key concept of {u2_topics[1] if len(u2_topics) > 1 else 'Unit II'}."},
         {"q_no": "Q1(e)", "max_marks": 4.0, "unit": "Unit III", "topic": u3_topics[0] if u3_topics else "Routing", "question_text": f"Short question on {u3_topics[0] if u3_topics else 'Unit III'}."},
-        {"q_no": "Q1(f)", "max_marks": 4.0, "unit": "Unit III", "topic": u3_topics[1] if len(u3_topics) > 1 else "IPv4 Addressing", "question_text": f"Addressing and parameters in {u3_topics[1] if len(u3_topics) > 1 else 'Unit III'}."},
-        {"q_no": "Q1(g)", "max_marks": 4.0, "unit": "Unit III", "topic": u3_topics[2] if len(u3_topics) > 2 else "Congestion Control", "question_text": f"Principles of {u3_topics[2] if len(u3_topics) > 2 else 'Unit III'}."},
-        {"q_no": "Q1(h)", "max_marks": 4.0, "unit": "Unit IV", "topic": u4_topics[0] if u4_topics else "Connection Management", "question_text": f"Short question on {u4_topics[0] if u4_topics else 'Unit IV'}."},
+        {"q_no": "Q1(f)", "max_marks": 4.0, "unit": "Unit III", "topic": u3_topics[1] if len(u3_topics) > 1 else "IPv4 addressing", "question_text": f"Addressing and parameters in {u3_topics[1] if len(u3_topics) > 1 else 'Unit III'}."},
+        {"q_no": "Q1(g)", "max_marks": 4.0, "unit": "Unit III", "topic": u3_topics[2] if len(u3_topics) > 2 else "Congestion control", "question_text": f"Principles of {u3_topics[2] if len(u3_topics) > 2 else 'Unit III'}."},
+        {"q_no": "Q1(h)", "max_marks": 4.0, "unit": "Unit IV", "topic": u4_topics[0] if u4_topics else "Connection management", "question_text": f"Short question on {u4_topics[0] if u4_topics else 'Unit IV'}."},
         {"q_no": "Q1(i)", "max_marks": 4.0, "unit": "Unit IV", "topic": u4_topics[1] if len(u4_topics) > 1 else "Cryptography", "question_text": f"Algorithms in {u4_topics[1] if len(u4_topics) > 1 else 'Unit IV'}."},
-        {"q_no": "Q1(j)", "max_marks": 4.0, "unit": "Unit V", "topic": u5_topics[0] if u5_topics else "Electronic Mail", "question_text": f"Short question on {u5_topics[0] if u5_topics else 'Unit V'}."},
+        {"q_no": "Q1(j)", "max_marks": 4.0, "unit": "Unit V", "topic": u5_topics[0] if u5_topics else "Electronic mail", "question_text": f"Short question on {u5_topics[0] if u5_topics else 'Unit V'}."},
         # Units I - V Choices (12 Marks each)
-        {"q_no": "Unit I - Q2", "max_marks": 12.0, "unit": "Unit I", "topic": u1_topics[0] if u1_topics else "OSI Reference Model", "question_text": f"In-depth explanation and architectural design of {u1_topics[0] if u1_topics else 'Unit I'}.", "is_choice": True, "choice_group": "Unit I"},
-        {"q_no": "Unit I - Q3", "max_marks": 12.0, "unit": "Unit I", "topic": u1_topics[1] if len(u1_topics) > 1 else "Network Topology", "question_text": f"Comprehensive derivation and calculations for {u1_topics[1] if len(u1_topics) > 1 else 'Unit I'}.", "is_choice": True, "choice_group": "Unit I"},
-        {"q_no": "Unit II - Q4", "max_marks": 12.0, "unit": "Unit II", "topic": u2_topics[0] if u2_topics else "Sliding Window Protocols", "question_text": f"Detailed working and derivation of {u2_topics[0] if u2_topics else 'Unit II'}.", "is_choice": True, "choice_group": "Unit II"},
-        {"q_no": "Unit II - Q5", "max_marks": 12.0, "unit": "Unit II", "topic": u2_topics[1] if len(u2_topics) > 1 else "IEEE Standards", "question_text": f"Standards and protocol analysis of {u2_topics[1] if len(u2_topics) > 1 else 'Unit II'}.", "is_choice": True, "choice_group": "Unit II"},
+        {"q_no": "Unit I - Q2", "max_marks": 12.0, "unit": "Unit I", "topic": u1_topics[0] if u1_topics else "OSI reference model", "question_text": f"In-depth explanation and architectural design of {u1_topics[0] if u1_topics else 'Unit I'}.", "is_choice": True, "choice_group": "Unit I"},
+        {"q_no": "Unit I - Q3", "max_marks": 12.0, "unit": "Unit I", "topic": u1_topics[1] if len(u1_topics) > 1 else "Network topology", "question_text": f"Comprehensive derivation and calculations for {u1_topics[1] if len(u1_topics) > 1 else 'Unit I'}.", "is_choice": True, "choice_group": "Unit I"},
+        {"q_no": "Unit II - Q4", "max_marks": 12.0, "unit": "Unit II", "topic": u2_topics[0] if u2_topics else "Sliding window protocols", "question_text": f"Detailed working and derivation of {u2_topics[0] if u2_topics else 'Unit II'}.", "is_choice": True, "choice_group": "Unit II"},
+        {"q_no": "Unit II - Q5", "max_marks": 12.0, "unit": "Unit II", "topic": u2_topics[1] if len(u2_topics) > 1 else "IEEE standards", "question_text": f"Standards and protocol analysis of {u2_topics[1] if len(u2_topics) > 1 else 'Unit II'}.", "is_choice": True, "choice_group": "Unit II"},
         {"q_no": "Unit III - Q6", "max_marks": 12.0, "unit": "Unit III", "topic": u3_topics[0] if u3_topics else "Routing", "question_text": f"Algorithm analysis and comparison of {u3_topics[0] if u3_topics else 'Unit III'}.", "is_choice": True, "choice_group": "Unit III"},
-        {"q_no": "Unit III - Q7", "max_marks": 12.0, "unit": "Unit III", "topic": u3_topics[1] if len(u3_topics) > 1 else "IPv6 Addressing", "question_text": f"Datagram formats and mechanism of {u3_topics[1] if len(u3_topics) > 1 else 'Unit III'}.", "is_choice": True, "choice_group": "Unit III"},
-        {"q_no": "Unit IV - Q8", "max_marks": 12.0, "unit": "Unit IV", "topic": u4_topics[0] if u4_topics else "TCP Window Management", "question_text": f"Window management and protocol mechanisms in {u4_topics[0] if u4_topics else 'Unit IV'}.", "is_choice": True, "choice_group": "Unit IV"},
+        {"q_no": "Unit III - Q7", "max_marks": 12.0, "unit": "Unit III", "topic": u3_topics[1] if len(u3_topics) > 1 else "IPv6 addressing", "question_text": f"Datagram formats and mechanism of {u3_topics[1] if len(u3_topics) > 1 else 'Unit III'}.", "is_choice": True, "choice_group": "Unit III"},
+        {"q_no": "Unit IV - Q8", "max_marks": 12.0, "unit": "Unit IV", "topic": u4_topics[0] if u4_topics else "TCP window management", "question_text": f"Window management and protocol mechanisms in {u4_topics[0] if u4_topics else 'Unit IV'}.", "is_choice": True, "choice_group": "Unit IV"},
         {"q_no": "Unit IV - Q9", "max_marks": 12.0, "unit": "Unit IV", "topic": u4_topics[1] if len(u4_topics) > 1 else "Cryptography", "question_text": f"Cryptographic algorithms and security mechanisms in {u4_topics[1] if len(u4_topics) > 1 else 'Unit IV'}.", "is_choice": True, "choice_group": "Unit IV"},
-        {"q_no": "Unit V - Q10", "max_marks": 12.0, "unit": "Unit V", "topic": u5_topics[0] if u5_topics else "File Transfer", "question_text": f"Application protocol specifications for {u5_topics[0] if u5_topics else 'Unit V'}.", "is_choice": True, "choice_group": "Unit V"},
-        {"q_no": "Unit V - Q11", "max_marks": 12.0, "unit": "Unit V", "topic": u5_topics[1] if len(u5_topics) > 1 else "Electronic Mail", "question_text": f"Architecture and message flows of {u5_topics[1] if len(u5_topics) > 1 else 'Unit V'}.", "is_choice": True, "choice_group": "Unit V"},
+        {"q_no": "Unit V - Q10", "max_marks": 12.0, "unit": "Unit V", "topic": u5_topics[0] if u5_topics else "File transfer", "question_text": f"Application protocol specifications for {u5_topics[0] if u5_topics else 'Unit V'}.", "is_choice": True, "choice_group": "Unit V"},
+        {"q_no": "Unit V - Q11", "max_marks": 12.0, "unit": "Unit V", "topic": u5_topics[1] if len(u5_topics) > 1 else "Electronic mail", "question_text": f"Architecture and message flows of {u5_topics[1] if len(u5_topics) > 1 else 'Unit V'}.", "is_choice": True, "choice_group": "Unit V"},
     ]
 
 
@@ -476,30 +590,43 @@ def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set='', m
     """
     Examines extracted PDF text using the selected AI engine (Gemini, Ollama Qwen, ChatGPT, etc.)
     and automatically maps questions to official syllabus units, topics, and maximum marks.
+    Enforces that each question gets EXACTLY ONE official topic from the subject syllabus.
     """
     clean_text = (pdf_text or "").strip()
+    syllabus_topics = get_flattened_syllabus_topics(subject)
+    unit_map = parse_subject_units_and_topics(subject.syllabus_overview or "")
+
+    formatted_syllabus_lines = []
+    for u, topics in unit_map.items():
+        formatted_syllabus_lines.append(f"{u}:")
+        for t in topics:
+            formatted_syllabus_lines.append(f"  - {t}")
+    formatted_syllabus_text = "\n".join(formatted_syllabus_lines)
 
     if len(clean_text) > 20:
         prompt = (
             f"You are an academic examination coordinator analyzing an uploaded university exam question paper.\n"
             f"Subject: [{subject.code}] {subject.name} (Semester {subject.semester})\n"
             f"Exam Type: {exam_type} {paper_set}\n\n"
-            f"Official Subject Syllabus (Units & Topics):\n"
-            f"{subject.syllabus_overview}\n\n"
+            f"OFFICIAL SUBJECT SYLLABUS TOPICS (Choose topics ONLY from this list):\n"
+            f"{formatted_syllabus_text}\n\n"
             f"Uploaded Question Paper Text:\n"
             f"\"\"\"\n{clean_text[:4000]}\n\"\"\"\n\n"
-            f"Task:\n"
-            f"1. Read the uploaded question paper text.\n"
-            f"2. Extract every question from the paper.\n"
-            f"3. For EACH question, determine the question number (e.g., 'Part A - Q1', 'Part B - Q3(a)', etc.), maximum marks, and summarize the question.\n"
-            f"4. Map each question to the exact Unit (e.g. 'Unit I', 'Unit II', 'Unit III', 'Unit IV', 'Unit V') and the specific Topic name from the official syllabus provided above.\n"
-            f"5. If it is a choice question (e.g. in Pre-End sem where student chooses between questions), set is_choice: true and choice_group to the Unit name.\n\n"
+            f"CRITICAL RULES:\n"
+            f"1. Extract every question from the uploaded question paper text.\n"
+            f"2. For EACH question, determine the question number (e.g., 'Part A - Q1', 'Part B - Q3(a)', 'Q1(a)', 'Unit I - Q2', etc.), maximum marks, and summarize the question in 'question_text'.\n"
+            f"3. STRICT TOPIC ASSIGNMENT RULE: For EACH question, select EXACTLY ONE topic from the official syllabus topic list above that is closest to the question concept.\n"
+            f"   - NEVER include multiple topics separated by commas (DO NOT write 'Topic A, Topic B').\n"
+            f"   - DO NOT invent new topics.\n"
+            f"   - The 'topic' field MUST be a single exact topic name from the list above.\n"
+            f"   - The 'unit' field MUST be the exact Unit name containing that topic (e.g., 'Unit I', 'Unit II', etc.).\n"
+            f"4. If it is a choice question (e.g. in Pre-End sem where student chooses 1 out of 2 per unit), set is_choice: true and choice_group to the Unit name.\n\n"
             f"Required JSON Output Format (ONLY valid JSON array of objects, no markdown formatting):\n"
             f"[\n"
             f"  {{\n"
             f"    \"q_no\": \"Part A - Q1\",\n"
             f"    \"unit\": \"Unit I\",\n"
-            f"    \"topic\": \"Specific Syllabus Topic Name\",\n"
+            f"    \"topic\": \"Exact Single Syllabus Topic Name\",\n"
             f"    \"max_marks\": 5.0,\n"
             f"    \"question_text\": \"Question summary\",\n"
             f"    \"is_choice\": false,\n"
@@ -522,12 +649,23 @@ def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set='', m
                 if isinstance(parsed, list) and len(parsed) > 0:
                     sanitized = []
                     for q in parsed:
+                        raw_q_topic = str(q.get('topic', ''))
+                        raw_q_unit = str(q.get('unit', ''))
+                        q_text = str(q.get('question_text', ''))
+
+                        matched_topic, matched_unit = sanitize_question_topic_and_unit(
+                            raw_topic=raw_q_topic,
+                            raw_unit=raw_q_unit,
+                            question_text=q_text,
+                            syllabus_topics=syllabus_topics
+                        )
+
                         sanitized.append({
                             "q_no": str(q.get('q_no', f"Q{len(sanitized)+1}")),
-                            "unit": str(q.get('unit', 'Unit I')),
-                            "topic": str(q.get('topic', 'General Topic')),
+                            "unit": matched_unit,
+                            "topic": matched_topic,
                             "max_marks": float(q.get('max_marks', 5.0)),
-                            "question_text": str(q.get('question_text', '')),
+                            "question_text": q_text,
                             "is_choice": bool(q.get('is_choice', False)),
                             "choice_group": str(q.get('choice_group', ''))
                         })
