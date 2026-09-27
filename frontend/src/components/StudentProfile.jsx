@@ -77,12 +77,14 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
 
     try {
       const res = await api.uploadFile(file, 'avatar');
-      setAvatar(res.file_url);
+      // Add timestamp to ensure immediate browser refresh of the image
+      const newAvatarUrl = `${res.file_url}?t=${Date.now()}`;
+      setAvatar(newAvatarUrl);
 
-      const updatedUser = { ...(profile || user), avatar: res.file_url };
+      const updatedUser = { ...(profile || user), avatar: newAvatarUrl };
       setProfile(updatedUser);
-      setStoredUser(updatedUser);
-      if (onUpdateUser) onUpdateUser(updatedUser);
+      setStoredUser({ ...(profile || user), avatar: res.file_url });
+      if (onUpdateUser) onUpdateUser({ ...(profile || user), avatar: res.file_url });
 
       setSuccessMsg('Profile picture updated successfully!');
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -90,6 +92,9 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
       setErrorMsg(err.message || 'Failed to upload profile picture.');
     } finally {
       setUploadingAvatar(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -229,6 +234,7 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
 
               {activeUser.avatar ? (
                 <img 
+                  key={activeUser.avatar}
                   src={activeUser.avatar} 
                   alt={activeUser.name} 
                   className="h-20 w-20 rounded-2xl object-cover shadow-lg ring-4 ring-indigo-50 border border-slate-200"
@@ -291,8 +297,8 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
         </div>
       </div>
 
-      {/* 4 Academic Metric Quick Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Academic Metric Quick Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         
         {/* Streak Count */}
         <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
@@ -319,32 +325,6 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
           </div>
           <div className="text-[10px] text-indigo-600 font-medium mt-1">
             Section {activeUser.section || 'A'} • Verified Enrollment
-          </div>
-        </div>
-
-        {/* Verification Status */}
-        <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-bold uppercase">Account Status</span>
-            <ShieldCheck className="h-5 w-5 text-emerald-600" />
-          </div>
-          <div className="text-2xl font-black text-emerald-600 mt-2">Verified</div>
-          <div className="text-[10px] text-emerald-600 font-medium mt-1">
-            Institutional Registry Confirmed
-          </div>
-        </div>
-
-        {/* Member Since */}
-        <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-bold uppercase">Registration</span>
-            <Calendar className="h-5 w-5 text-purple-600" />
-          </div>
-          <div className="text-xl font-black text-slate-900 mt-2">
-            {activeUser.date_joined ? new Date(activeUser.date_joined).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '2025'}
-          </div>
-          <div className="text-[10px] text-purple-600 font-medium mt-1">
-            College Academic Portal
           </div>
         </div>
 

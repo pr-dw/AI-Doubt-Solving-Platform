@@ -255,9 +255,17 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 hover:border-slate-300 hover:bg-slate-200/60 transition-all text-left cursor-pointer"
               >
-                <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-xs text-white">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                </div>
+                {user.avatar ? (
+                  <img 
+                    src={user.avatar} 
+                    alt={user.name || 'User'} 
+                    className="h-7 w-7 rounded-lg object-cover border border-slate-200" 
+                  />
+                ) : (
+                  <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-xs text-white">
+                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                  </div>
+                )}
                 <div className="hidden sm:block">
                   <div className="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[100px]">
                     {user.name || user.email.split('@')[0]}
