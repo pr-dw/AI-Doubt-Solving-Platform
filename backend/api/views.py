@@ -810,12 +810,15 @@ class ExamListView(APIView):
         except Subject.DoesNotExist:
             return Response({"detail": "Subject not found."}, status=status.HTTP_404_NOT_FOUND)
 
+        paper_set = request.data.get('paper_set', '').strip()
+
         exam = Exam.objects.create(
             subject=subject,
             title=title,
             semester=subject.semester,
             exam_type=exam_type,
             total_marks=float(total_marks),
+            paper_set=paper_set,
             exam_date=exam_date,
             question_paper_pdf=question_paper_pdf,
             answer_key_pdf=answer_key_pdf,

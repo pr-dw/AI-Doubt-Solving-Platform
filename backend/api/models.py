@@ -239,6 +239,7 @@ class Exam(models.Model):
     semester = models.IntegerField(default=5)
     exam_type = models.CharField(max_length=100, default='Mid-Term Examination')
     total_marks = models.FloatField(default=100.0)
+    paper_set = models.CharField(max_length=20, blank=True, default='')  # 'Set A', 'Set B', 'Set C', 'Set D', 'Set E', or '' for Pre-End
     exam_date = models.DateField(default=timezone.now)
     question_paper_pdf = models.CharField(max_length=500, blank=True)
     answer_key_pdf = models.CharField(max_length=500, blank=True)

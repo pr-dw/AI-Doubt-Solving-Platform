@@ -372,6 +372,14 @@ def compute_personalized_study_order(student_user, subject_id=None, exam_id=None
         for q in (s_record.question_scores or []):
             topic_name = (q.get('topic') or 'General Concept').strip()
             unit_name = q.get('unit') or 'General Unit'
+            # If question was a non-attempted optional choice, skip it
+            if q.get('attempted') is False or q.get('is_choice_omitted') is True:
+                continue
+
+            # If student entered null or empty for marks_obtained, skip
+            if q.get('marks_obtained') is None or q.get('marks_obtained') == '':
+                continue
+
             obtained = float(q.get('marks_obtained', 0.0))
             max_m = float(q.get('max_marks', 0.0))
             if max_m <= 0:
@@ -392,9 +400,11 @@ def compute_personalized_study_order(student_user, subject_id=None, exam_id=None
                 }
             topic_data[key]["marks_obtained"] += obtained
             topic_data[key]["max_marks"] += max_m
-            topic_data[key]["questions_involved"].append(f"{exam.title}: {q.get('q_no', 'Q')}")
-            if q.get('faculty_comment'):
-                topic_data[key]["faculty_comments"].append(q.get('faculty_comment'))
+            set_str = f" ({exam.paper_set})" if exam.paper_set else ""
+            topic_data[key]["questions_involved"].append(f"{exam.title}{set_str}: {q.get('q_no', 'Q')}")
+            note = q.get('faculty_notes') or q.get('faculty_comment') or q.get('faculty_feedback')
+            if note and str(note).strip():
+                topic_data[key]["faculty_comments"].append(str(note).strip())
 
     if not topic_data:
         return {
