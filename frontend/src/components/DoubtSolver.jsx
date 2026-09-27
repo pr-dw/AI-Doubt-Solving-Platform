@@ -201,8 +201,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         const code = lines.slice(1).join('\n') || lines[0];
 
         return (
-          <div key={index} className="my-3 rounded-xl overflow-hidden border border-slate-700 bg-slate-900/90 font-mono text-xs">
-            <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-800/80 border-b border-slate-700 text-slate-400">
+          <div key={index} className="my-3 rounded-xl overflow-hidden border border-slate-700 bg-slate-900 font-mono text-xs shadow-xs">
+            <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-800 border-b border-slate-700 text-slate-400">
               <span className="text-[11px] font-semibold uppercase">{language || 'code'}</span>
               <button
                 onClick={() => handleCopy(code, `code-${index}`)}
@@ -224,14 +224,14 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         <div key={index} className="space-y-2">
           {part.split('\n\n').map((para, pIdx) => {
             if (para.startsWith('### ')) {
-              return <h3 key={pIdx} className="text-base font-bold text-indigo-300 mt-4 mb-2">{para.replace('### ', '')}</h3>;
+              return <h3 key={pIdx} className="text-base font-bold text-indigo-700 mt-4 mb-2">{para.replace('### ', '')}</h3>;
             }
             if (para.startsWith('#### ')) {
-              return <h4 key={pIdx} className="text-sm font-semibold text-slate-200 mt-3 mb-1">{para.replace('#### ', '')}</h4>;
+              return <h4 key={pIdx} className="text-sm font-semibold text-slate-800 mt-3 mb-1">{para.replace('#### ', '')}</h4>;
             }
             if (para.startsWith('> ')) {
               return (
-                <blockquote key={pIdx} className="border-l-4 border-indigo-500 pl-3 py-1 my-2 text-xs italic text-indigo-200/90 bg-indigo-950/20 rounded-r-lg">
+                <blockquote key={pIdx} className="border-l-4 border-indigo-500 pl-3 py-1 my-2 text-xs italic text-indigo-900 bg-indigo-50 rounded-r-lg">
                   {para.replace('> ', '')}
                 </blockquote>
               );
@@ -239,12 +239,12 @@ export default function DoubtSolver({ user, onRequireAuth }) {
             // Parse bold **text**
             const boldFormatted = para.split(/(\*\*.*?\*\*)/g).map((chunk, cIdx) => {
               if (chunk.startsWith('**') && chunk.endsWith('**')) {
-                return <strong key={cIdx} className="font-bold text-white">{chunk.slice(2, -2)}</strong>;
+                return <strong key={cIdx} className="font-bold text-slate-900">{chunk.slice(2, -2)}</strong>;
               }
               return chunk;
             });
 
-            return <p key={pIdx} className="text-xs sm:text-sm leading-relaxed text-slate-300">{boldFormatted}</p>;
+            return <p key={pIdx} className="text-xs sm:text-sm leading-relaxed text-slate-700">{boldFormatted}</p>;
           })}
         </div>
       );
@@ -255,26 +255,26 @@ export default function DoubtSolver({ user, onRequireAuth }) {
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-8.5rem)]">
       
       {/* Left Sidebar: Conversations & History */}
-      <div className="w-full lg:w-72 glass-panel rounded-2xl p-3 flex flex-col shrink-0 border border-slate-800">
+      <div className="w-full lg:w-72 glass-panel rounded-2xl p-3 flex flex-col shrink-0 border border-slate-200 bg-white shadow-xs">
         <button
           onClick={startNewConversation}
-          className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white flex items-center justify-center gap-2 shadow-md shadow-indigo-600/20 transition-all cursor-pointer mb-3"
+          className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white flex items-center justify-center gap-2 shadow-sm shadow-indigo-600/20 transition-all cursor-pointer mb-3"
         >
           <Plus className="h-4 w-4" />
           <span>New Doubt Session</span>
         </button>
 
-        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
           <span>Previous Doubts</span>
-          <span className="text-indigo-400 font-bold">{conversations.length}</span>
+          <span className="text-indigo-600 font-bold">{conversations.length}</span>
         </div>
 
         <div className="flex-1 overflow-y-auto space-y-1.5 mt-2 pr-1">
           {conversations.length === 0 ? (
-            <div className="text-center py-8 text-xs text-slate-500">
-              <MessageSquare className="h-8 w-8 mx-auto text-slate-600 mb-2 opacity-50" />
+            <div className="text-center py-8 text-xs text-slate-400">
+              <MessageSquare className="h-8 w-8 mx-auto text-slate-300 mb-2" />
               <p>No doubt history yet.</p>
-              <p className="text-[10px] text-slate-600 mt-1">Ask your first question!</p>
+              <p className="text-[10px] text-slate-400 mt-1">Ask your first question!</p>
             </div>
           ) : (
             conversations.map(c => (
@@ -283,8 +283,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                 onClick={() => loadConversationDetail(c.id)}
                 className={`group p-2.5 rounded-xl cursor-pointer text-xs transition-all flex items-center justify-between gap-2 border ${
                   currentConversation?.id === c.id 
-                    ? 'bg-indigo-600/20 border-indigo-500/40 text-indigo-200' 
-                    : 'bg-slate-900/50 border-slate-800/80 text-slate-300 hover:bg-slate-800/70'
+                    ? 'bg-indigo-50 border-indigo-300 text-indigo-900 font-medium' 
+                    : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
                 }`}
               >
                 <div className="truncate flex-1">
@@ -299,14 +299,14 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                   <button
                     onClick={(e) => { e.stopPropagation(); handleToggleBookmark(c.id); }}
                     title="Bookmark conversation"
-                    className="p-1 hover:text-amber-400 text-slate-400"
+                    className="p-1 hover:text-amber-500 text-slate-400 cursor-pointer"
                   >
-                    {c.is_bookmarked ? <BookmarkCheck className="h-3.5 w-3.5 text-amber-400" /> : <Bookmark className="h-3.5 w-3.5" />}
+                    {c.is_bookmarked ? <BookmarkCheck className="h-3.5 w-3.5 text-amber-500" /> : <Bookmark className="h-3.5 w-3.5" />}
                   </button>
                   <button
                     onClick={(e) => handleDeleteConversation(e, c.id)}
                     title="Delete thread"
-                    className="p-1 hover:text-rose-400 text-slate-400"
+                    className="p-1 hover:text-rose-600 text-slate-400 cursor-pointer"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -317,29 +317,29 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         </div>
 
         {/* Local AI Model Specs Footer */}
-        <div className="pt-3 border-t border-slate-800/80 mt-2 px-2 text-[10px] text-slate-500 flex items-center justify-between">
+        <div className="pt-3 border-t border-slate-100 mt-2 px-2 text-[10px] text-slate-500 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Cpu className="h-3.5 w-3.5 text-indigo-400" />
+            <Cpu className="h-3.5 w-3.5 text-indigo-600" />
             <span>Qwen2.5 / Llama 3.2</span>
           </div>
-          <span className="text-emerald-400 font-semibold">On-Device Privacy</span>
+          <span className="text-emerald-600 font-semibold">On-Device Privacy</span>
         </div>
       </div>
 
       {/* Main Chat Canvas */}
-      <div className="flex-1 glass-panel rounded-2xl p-4 flex flex-col border border-slate-800 overflow-hidden">
+      <div className="flex-1 glass-panel rounded-2xl p-4 flex flex-col border border-slate-200 bg-white shadow-xs overflow-hidden">
         
         {/* Controls: Mode Selector & Subject Selector */}
-        <div className="pb-3 border-b border-slate-800 space-y-3">
+        <div className="pb-3 border-b border-slate-200 space-y-3">
           
           {/* Top row: Subject & Bookmark */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-400">Subject:</span>
+              <span className="text-xs font-semibold text-slate-600">Subject:</span>
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
-                className="px-3 py-1.5 text-xs rounded-xl bg-slate-900 border border-slate-700 text-slate-200 focus:outline-none focus:border-indigo-500 font-medium"
+                className="px-3 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
               >
                 {subjects.map(s => (
                   <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
@@ -350,13 +350,13 @@ export default function DoubtSolver({ user, onRequireAuth }) {
             {currentConversation && (
               <button
                 onClick={() => handleToggleBookmark(currentConversation.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                   currentConversation.is_bookmarked
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-amber-400'
+                    ? 'bg-amber-50 text-amber-700 border-amber-300'
+                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-amber-600'
                 }`}
               >
-                {currentConversation.is_bookmarked ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
+                {currentConversation.is_bookmarked ? <BookmarkCheck className="h-3.5 w-3.5 text-amber-500" /> : <Bookmark className="h-3.5 w-3.5" />}
                 <span>{currentConversation.is_bookmarked ? 'Saved for Revision' : 'Bookmark Doubt'}</span>
               </button>
             )}
@@ -374,11 +374,11 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                   title={m.desc}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'bg-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-slate-800'
+                      ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border border-slate-200'
                   }`}
                 >
-                  <Icon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : m.color}`} />
+                  <Icon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-slate-500'}`} />
                   <span>{m.label}</span>
                 </button>
               );
@@ -391,19 +391,19 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 max-w-lg mx-auto">
-              <div className="h-16 w-16 rounded-3xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-4">
-                <Sparkles className="h-8 w-8 animate-pulse" />
+              <div className="h-16 w-16 rounded-3xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 mb-4 shadow-xs">
+                <Sparkles className="h-8 w-8" />
               </div>
-              <h3 className="text-lg font-bold text-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">
                 Ask Any Academic Doubt
               </h3>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                 Powered by local Ollama AI models. Choose between 6 specialized explanation modes: from ELI5 analogies to step-by-step mathematical proofs and code walkthroughs.
               </p>
 
               {/* Recommended Quick Question Chips */}
               <div className="w-full mt-6 text-left">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
                   Suggested Exam Questions (SRMCM BCA):
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -411,12 +411,12 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                     <div
                       key={idx}
                       onClick={() => handleAskDoubt(null, qp.text)}
-                      className="p-2.5 rounded-xl bg-slate-900/80 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/40 cursor-pointer transition-all group"
+                      className="p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 cursor-pointer transition-all group"
                     >
-                      <div className="text-[11px] font-semibold text-indigo-400 group-hover:text-indigo-300">
+                      <div className="text-[11px] font-semibold text-indigo-700 group-hover:text-indigo-900">
                         {qp.title}
                       </div>
-                      <div className="text-[10px] text-slate-400 line-clamp-1 mt-0.5">
+                      <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
                         {qp.text}
                       </div>
                     </div>
@@ -432,37 +432,37 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                 className={`flex gap-3 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.sender === 'ai' && (
-                  <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shrink-0 text-xs font-bold shadow-md shadow-indigo-600/20">
+                  <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shrink-0 text-xs font-bold shadow-sm shadow-indigo-600/20">
                     <Sparkles className="h-4 w-4" />
                   </div>
                 )}
 
                 <div
-                  className={`max-w-3xl rounded-2xl p-4 text-xs sm:text-sm shadow-sm ${
+                  className={`max-w-3xl rounded-2xl p-4 text-xs sm:text-sm shadow-xs ${
                     msg.sender === 'user'
                       ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-none ml-12'
-                      : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-bl-none mr-8'
+                      : 'bg-slate-50 border border-slate-200 text-slate-800 rounded-bl-none mr-8'
                   }`}
                 >
                   {/* AI Message metadata header */}
                   {msg.sender === 'ai' && (
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-[11px] text-slate-400">
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 text-[11px] text-slate-500">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-indigo-400 capitalize">
+                        <span className="font-semibold text-indigo-600 capitalize">
                           {msg.mode_used || selectedMode} Mode
                         </span>
                         {msg.model_used && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 font-medium">
                             {msg.model_used}
                           </span>
                         )}
                       </div>
                       <button
                         onClick={() => handleCopy(msg.message_text, `msg-${msg.id}`)}
-                        className="hover:text-white flex items-center gap-1 cursor-pointer"
+                        className="hover:text-slate-900 flex items-center gap-1 cursor-pointer"
                         title="Copy answer"
                       >
-                        {copiedId === `msg-${msg.id}` ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                        {copiedId === `msg-${msg.id}` ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
                         <span className="text-[10px]">{copiedId === `msg-${msg.id}` ? 'Copied' : 'Copy'}</span>
                       </button>
                     </div>
@@ -476,7 +476,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                 </div>
 
                 {msg.sender === 'user' && (
-                  <div className="h-8 w-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 shrink-0 text-xs font-bold">
+                  <div className="h-8 w-8 rounded-xl bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-700 shrink-0 text-xs font-bold">
                     {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                   </div>
                 )}
@@ -490,8 +490,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
               <div className="h-8 w-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shrink-0 text-xs font-bold">
                 <Sparkles className="h-4 w-4 animate-spin" />
               </div>
-              <div className="glass-card px-4 py-3 rounded-2xl rounded-bl-none text-xs text-indigo-300 flex items-center gap-2 border border-indigo-500/20">
-                <span className="h-2 w-2 rounded-full bg-indigo-400 animate-ping" />
+              <div className="glass-card px-4 py-3 rounded-2xl rounded-bl-none text-xs text-indigo-700 flex items-center gap-2 border border-indigo-200 bg-white shadow-xs">
+                <span className="h-2 w-2 rounded-full bg-indigo-500 animate-ping" />
                 <span>Generating academic solution via local model...</span>
               </div>
             </div>
@@ -501,7 +501,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         </div>
 
         {/* Input Bar */}
-        <form onSubmit={handleAskDoubt} className="pt-3 border-t border-slate-800">
+        <form onSubmit={handleAskDoubt} className="pt-3 border-t border-slate-200">
           <div className="relative flex items-center">
             <textarea
               rows={2}
@@ -514,7 +514,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                   handleAskDoubt(e);
                 }
               }}
-              className="w-full pl-4 pr-24 py-2.5 text-xs sm:text-sm rounded-2xl bg-slate-900 border border-slate-700/80 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none"
+              className="w-full pl-4 pr-24 py-2.5 text-xs sm:text-sm rounded-2xl bg-slate-50 border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:bg-white resize-none"
             />
             <button
               type="submit"
@@ -526,8 +526,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
             </button>
           </div>
           <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5 px-2">
-            <span>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">Enter ↵</kbd> to submit</span>
-            <span>Mode: <strong className="text-indigo-400">{EXPLANATION_MODES.find(m => m.id === selectedMode)?.label}</strong></span>
+            <span>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-mono">Enter ↵</kbd> to submit</span>
+            <span>Mode: <strong className="text-indigo-600">{EXPLANATION_MODES.find(m => m.id === selectedMode)?.label}</strong></span>
           </div>
         </form>
 
