@@ -33,7 +33,6 @@ const QUICK_PROMPTS = [
 
 export default function DoubtSolver({ user, onRequireAuth }) {
   const [subjects, setSubjects] = useState([]);
-  const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedMode, setSelectedMode] = useState('detailed');
   const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
   const [query, setQuery] = useState('');
@@ -60,9 +59,6 @@ export default function DoubtSolver({ user, onRequireAuth }) {
     try {
       const data = await api.getSubjects();
       setSubjects(data);
-      if (data.length > 0 && !selectedSubject) {
-        setSelectedSubject(data[0].id);
-      }
     } catch (err) {
       console.error(err);
     }
@@ -99,9 +95,6 @@ export default function DoubtSolver({ user, onRequireAuth }) {
       const data = await api.getConversationDetail(id);
       setCurrentConversation(data);
       setMessages(data.messages || []);
-      if (data.subject) {
-        setSelectedSubject(data.subject);
-      }
       if (data.mode) {
         setSelectedMode(data.mode);
       }
@@ -142,7 +135,6 @@ export default function DoubtSolver({ user, onRequireAuth }) {
       const res = await api.askDoubt(
         textToSend,
         selectedMode,
-        selectedSubject || null,
         currentConversation?.id || null,
         selectedModel
       );
@@ -153,6 +145,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         message_text: res.ai_response,
         mode_used: res.mode,
         model_used: res.model_used,
+        identified_subject: res.identified_subject,
+        identified_topic: res.identified_topic,
         source: res.source,
         timestamp: new Date().toISOString(),
       };
@@ -161,7 +155,12 @@ export default function DoubtSolver({ user, onRequireAuth }) {
 
       // If new thread was created, refresh conversation list
       if (!currentConversation) {
-        setCurrentConversation({ id: res.conversation_id, title: res.conversation_title });
+        setCurrentConversation({ 
+          id: res.conversation_id, 
+          title: res.conversation_title,
+          subject_code: res.identified_subject?.code,
+          subject_name: res.identified_subject?.name
+        });
         loadConversations();
       }
     } catch (err) {
@@ -369,20 +368,29 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         <div className="pb-3 border-b border-slate-200">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             
-            {/* 1. Subject Selector Dropdown */}
+            {/* 1. Enrolled Semester & Curriculum Grounding */}
             <div>
               <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
-                Academic Subject
+                Semester Curriculum
               </label>
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-indigo-500 font-semibold"
+              <div 
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 flex items-center justify-between font-semibold"
+                title={subjects.map(s => `${s.code}: ${s.name}`).join('\n')}
               >
-                {subjects.map(s => (
-                  <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
-                ))}
-              </select>
+                <div className="flex items-center gap-1.5 truncate">
+                  <GraduationCap className="h-4 w-4 text-indigo-600 shrink-0" />
+                  <span className="font-bold text-slate-900">
+                    Semester {user?.semester || 5}
+                  </span>
+                  <span className="text-slate-300">•</span>
+                  <span className="text-indigo-600 font-semibold truncate text-[11px]">
+                    Auto-Subject Detection
+                  </span>
+                </div>
+                <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                  {subjects.length} Subjects
+                </span>
+              </div>
             </div>
 
             {/* 2. Mode Selector Dropdown */}
@@ -443,6 +451,24 @@ export default function DoubtSolver({ user, onRequireAuth }) {
               </button>
             )}
           </div>
+
+          {/* Semester Subjects Quick Reference Pills */}
+          {subjects.length > 0 && (
+            <div className="flex items-center gap-1.5 pt-2 mt-2 border-t border-slate-100 overflow-x-auto scrollbar-none text-[11px]">
+              <span className="text-[10px] uppercase font-bold text-slate-400 shrink-0 flex items-center gap-1">
+                <BookOpen className="h-3 w-3 text-slate-400" /> Enrolled Subjects:
+              </span>
+              {subjects.map(s => (
+                <span 
+                  key={s.id} 
+                  title={`${s.code} - ${s.name}\n${s.syllabus_overview || ''}`}
+                  className="shrink-0 px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200/80 text-slate-700 font-medium cursor-help hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors text-[10px]"
+                >
+                  {s.code}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Message Thread History */}
@@ -521,6 +547,12 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                             <span className="font-semibold text-indigo-600 capitalize">
                               {msg.mode_used || selectedMode} Mode
                             </span>
+                            {msg.identified_subject && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-100/80 text-indigo-800 font-bold border border-indigo-200 flex items-center gap-1">
+                                <BookOpen className="h-3 w-3 text-indigo-600" />
+                                {msg.identified_subject.code} • {msg.identified_subject.name}
+                              </span>
+                            )}
                             {msg.model_used && (
                               <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 font-medium">
                                 {msg.model_used}

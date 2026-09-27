@@ -6,7 +6,48 @@ from langchain_ollama import ChatOllama
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
+import re
+
 logger = logging.getLogger(__name__)
+
+
+def get_semester_syllabus_context(semester=5, department=None):
+    """
+    Fetches the enrolled semester subjects and their associated study library resources
+    (lecture notes, previous year solved papers, answer keys) to build a rich academic syllabus grounding context.
+    """
+    try:
+        from api.models import Subject, Resource
+        qs = Subject.objects.filter(semester=semester)
+        if department:
+            dept_qs = qs.filter(department__icontains=department)
+            if dept_qs.exists():
+                qs = dept_qs
+        if not qs.exists():
+            qs = Subject.objects.all()
+
+        curriculum_blocks = []
+        subjects_list = list(qs)
+        for s in subjects_list:
+            resources = Resource.objects.filter(subject=s)
+            res_list = []
+            for r in resources:
+                res_list.append(f"  * [{r.get_resource_type_display()}] {r.title}: {r.description}")
+            res_str = "\n".join(res_list) if res_list else "  * Standard college reference textbook & unit notes"
+
+            block = (
+                f"- SUBJECT: [{s.code}] {s.name} (Semester {s.semester})\n"
+                f"  Syllabus Overview: {s.syllabus_overview or 'Core departmental subject'}\n"
+                f"  Syllabus Units & Topics: {', '.join(s.recommended_topics) if s.recommended_topics else 'Comprehensive unit curriculum'}\n"
+                f"  Library Resources & Reference Materials:\n{res_str}"
+            )
+            curriculum_blocks.append(block)
+
+        return "\n\n".join(curriculum_blocks), subjects_list
+    except Exception as e:
+        logger.warning(f"Could not build semester syllabus context: {e}")
+        return "", []
+
 
 SYSTEM_PROMPTS = {
     'detailed': (
@@ -156,16 +197,41 @@ def get_langchain_model(model_name: str, custom_api_key: str = None):
         ), f"Ollama ({resolved_tag})"
 
 
-def call_ai_engine(prompt, mode='detailed', subject=None, model='gemini-1.5-flash', custom_api_key=None):
+def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject=None, model='gemini-1.5-flash', custom_api_key=None):
     """
     Executes reasoning pipeline using LangChain.
     Selects between Google Gemini, Ollama Qwen, Ollama Gemma, or OpenAI ChatGPT.
+    Automatically retrieves the student's enrolled semester syllabus and library resources
+    to ground the answer and identify the relevant subject.
     Raises RuntimeError if the selected provider or service is unreachable.
     """
     llm, resolved_model_label = get_langchain_model(model, custom_api_key=custom_api_key)
 
+    curriculum_context = ""
+    subjects_list = []
+    if semester:
+        curriculum_context, subjects_list = get_semester_syllabus_context(semester=semester, department=department)
+
     system_instruction = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS['detailed'])
-    if subject:
+
+    if curriculum_context:
+        system_instruction += (
+            f"\n\n======================================================\n"
+            f"STUDENT ENROLLED CURRICULUM (SEMESTER {semester}):\n"
+            f"The student is enrolled in Semester {semester} with the following subjects, syllabus overviews, and study library resources:\n\n"
+            f"{curriculum_context}\n"
+            f"======================================================\n"
+            f"MANDATORY INSTRUCTIONS FOR AUTOMATIC SUBJECT IDENTIFICATION & SYLLABUS GROUNDING:\n"
+            f"1. Cross-examine the student's question against the syllabus units, topics, and library study resources of the enrolled Semester {semester} subjects listed above.\n"
+            f"2. Automatically determine which enrolled subject code and title this question belongs to.\n"
+            f"3. At the VERY TOP of your response, output:\n"
+            f"   [SUBJECT_MATCH: <Subject Code> | <Subject Name> | <Specific Topic or Unit>]\n"
+            f"   ### 📚 Subject: <Subject Code> - <Subject Name>\n"
+            f"   > **Curriculum Alignment**: Semester {semester} Syllabus • Topic: <Specific Topic or Unit>\n\n"
+            f"4. Ground your explanation using the academic standards, terminology, and core units of that identified subject.\n"
+            f"5. Answer thoroughly according to the '{mode}' explanation mode.\n"
+        )
+    elif subject:
         system_instruction += f"\nAcademic Subject Context: {subject}."
 
     messages = [
@@ -202,10 +268,41 @@ def call_ai_engine(prompt, mode='detailed', subject=None, model='gemini-1.5-flas
     if not response_text:
         raise RuntimeError(f"AI engine ({resolved_model_label}) returned an empty response.")
 
+    # Parse identified subject metadata
+    identified_code = None
+    identified_name = None
+    identified_topic = None
+
+    match = re.search(r'\[SUBJECT_MATCH:\s*([^\|\]]+)\|\s*([^\|\]]+)(?:\|\s*([^\]]+))?\]', response_text)
+    if match:
+        identified_code = match.group(1).strip()
+        identified_name = match.group(2).strip()
+        identified_topic = match.group(3).strip() if match.group(3) else None
+        # Clean the internal tag so student only sees the clean markdown
+        response_text = re.sub(r'\[SUBJECT_MATCH:[^\]]+\]\s*', '', response_text).strip()
+    else:
+        # Fallback: check markdown header
+        hdr_match = re.search(r'###\s*📚\s*Subject:\s*([A-Za-z0-9_-]+)(?:\s*[-|]\s*([^|\n\r]+))?(?:\s*[-|]\s*([^\n\r]+))?', response_text)
+        if hdr_match:
+            identified_code = hdr_match.group(1).strip()
+            identified_name = hdr_match.group(2).strip() if hdr_match.group(2) else None
+            identified_topic = hdr_match.group(3).strip() if hdr_match.group(3) else None
+
+    # Fallback search if code not explicitly tagged in header
+    if not identified_code and subjects_list:
+        for s in subjects_list:
+            if s.code.lower() in response_text[:350].lower() or s.name.lower() in response_text[:350].lower():
+                identified_code = s.code
+                identified_name = s.name
+                break
+
     return {
         "success": True,
         "text": response_text,
         "model": resolved_model_label,
+        "identified_code": identified_code,
+        "identified_name": identified_name,
+        "identified_topic": identified_topic,
         "source": "langchain"
     }
 

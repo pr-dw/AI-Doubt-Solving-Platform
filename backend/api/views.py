@@ -410,7 +410,22 @@ class SubjectListView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        subjects = Subject.objects.all().order_by('code')
+        user = request.user
+        semester = request.GET.get('semester')
+        if not semester and user.is_authenticated and hasattr(user, 'semester') and user.semester:
+            semester = user.semester
+
+        if semester:
+            try:
+                sem_int = int(semester)
+                subjects = Subject.objects.filter(semester=sem_int).order_by('code')
+                if not subjects.exists():
+                    subjects = Subject.objects.all().order_by('code')
+            except (ValueError, TypeError):
+                subjects = Subject.objects.all().order_by('code')
+        else:
+            subjects = Subject.objects.all().order_by('code')
+
         return Response(SubjectSerializer(subjects, many=True).data)
 
 
@@ -482,22 +497,15 @@ class AIQueryView(APIView):
         user = request.user
         query_text = request.data.get('query', '').strip()
         mode = request.data.get('mode', 'detailed')
-        subject_id = request.data.get('subject_id')
         conversation_id = request.data.get('conversation_id')
-        model = request.data.get('model', 'qwen2.5:latest')
+        model = request.data.get('model', 'qwen2.5:3b')
 
         if not query_text:
             return Response({"detail": "Query text cannot be empty."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Subject context
-        subject_obj = None
-        subject_name = None
-        if subject_id:
-            try:
-                subject_obj = Subject.objects.get(id=subject_id)
-                subject_name = subject_obj.name
-            except Subject.DoesNotExist:
-                pass
+        # Profile Semester & Department context (enrolled curriculum)
+        user_semester = getattr(user, 'semester', 5) or 5
+        user_dept = getattr(user, 'department', '')
 
         # Handle conversation thread
         if conversation_id:
@@ -506,16 +514,14 @@ class AIQueryView(APIView):
             except Conversation.DoesNotExist:
                 conversation = Conversation.objects.create(
                     user=user,
-                    title=query_text[:50] + "...",
-                    mode=mode,
-                    subject=subject_obj
+                    title=query_text[:50] + ("..." if len(query_text) > 50 else ""),
+                    mode=mode
                 )
         else:
             conversation = Conversation.objects.create(
                 user=user,
                 title=query_text[:50] + ("..." if len(query_text) > 50 else ""),
-                mode=mode,
-                subject=subject_obj
+                mode=mode
             )
 
         # Save user message
@@ -526,10 +532,15 @@ class AIQueryView(APIView):
             mode_used=mode
         )
 
-        # Generate AI Response
-        custom_api_key = request.data.get('api_key')
+        # Generate AI Response grounded in semester syllabus & library resources
         try:
-            ai_result = call_ai_engine(query_text, mode=mode, subject=subject_name, model=model, custom_api_key=custom_api_key)
+            ai_result = call_ai_engine(
+                query_text,
+                mode=mode,
+                semester=user_semester,
+                department=user_dept,
+                model=model
+            )
             ai_response_text = ai_result['text']
         except Exception as e:
             logger.error(f"AI query failed: {e}")
@@ -541,6 +552,23 @@ class AIQueryView(APIView):
                 },
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
+
+        # Auto-match identified subject to Subject model
+        identified_code = ai_result.get('identified_code')
+        matched_subject_obj = None
+        if identified_code:
+            matched_subject_obj = Subject.objects.filter(code__iexact=identified_code).first()
+
+        # If not matched by code, try matching by name
+        if not matched_subject_obj and ai_result.get('identified_name'):
+            matched_subject_obj = Subject.objects.filter(name__icontains=ai_result['identified_name']).first()
+
+        if matched_subject_obj:
+            conversation.subject = matched_subject_obj
+            # Tag subject into conversation title if not already tagged
+            if not conversation.title.startswith(f"[{matched_subject_obj.code}]"):
+                conversation.title = f"[{matched_subject_obj.code}] {query_text[:40]}" + ("..." if len(query_text) > 40 else "")
+            conversation.save()
 
         # Save AI message
         ai_message = Message.objects.create(
@@ -554,11 +582,22 @@ class AIQueryView(APIView):
         # Update conversation timestamp
         conversation.save()
 
+        identified_subject_data = None
+        if matched_subject_obj:
+            identified_subject_data = {
+                "id": matched_subject_obj.id,
+                "code": matched_subject_obj.code,
+                "name": matched_subject_obj.name,
+                "semester": matched_subject_obj.semester
+            }
+
         return Response({
             "conversation_id": conversation.id,
             "conversation_title": conversation.title,
             "user_query": query_text,
             "ai_response": ai_response_text,
+            "identified_subject": identified_subject_data,
+            "identified_topic": ai_result.get('identified_topic'),
             "mode": mode,
             "model_used": ai_result['model'],
             "source": ai_result.get('source', 'local'),
