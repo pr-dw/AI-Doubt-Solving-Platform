@@ -114,11 +114,13 @@ export const api = {
   getAnalyticsReport: () => request('/analytics/report/'),
 
   // AI Doubt Solver
-  askDoubt: (query, mode = 'detailed', subject_id = null, conversation_id = null, model = 'qwen2.5:latest') =>
+  askDoubt: (query, mode = 'detailed', subject_id = null, conversation_id = null, model = 'gemini-1.5-flash', api_key = null) =>
     request('/ai/query/', {
       method: 'POST',
-      body: JSON.stringify({ query, mode, subject_id, conversation_id, model }),
+      body: JSON.stringify({ query, mode, subject_id, conversation_id, model, api_key }),
     }),
+
+  getAIModels: () => request('/ai/models/'),
 
   getConversations: () => request('/ai/conversations/'),
   getConversationDetail: (id) => request(`/ai/conversations/${id}/`),

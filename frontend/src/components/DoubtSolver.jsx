@@ -3,17 +3,25 @@ import {
   Sparkles, Send, BookOpen, Bookmark, BookmarkCheck, Copy, 
   Check, RefreshCw, MessageSquare, Plus, Trash2, Cpu,
   HelpCircle, Code2, Sigma, ListOrdered, Lightbulb, GraduationCap,
-  AlertTriangle
+  AlertTriangle, Key, ChevronDown, Layers, Bot, Settings
 } from 'lucide-react';
 import { api } from '../services/api';
 
 const EXPLANATION_MODES = [
-  { id: 'detailed', label: 'Detailed Explanation', icon: GraduationCap, color: 'text-indigo-400', desc: 'In-depth academic concepts & theory' },
-  { id: 'assist', label: 'Assist Mode', icon: HelpCircle, color: 'text-amber-400', desc: 'Guided hints & Socratic problem solving' },
-  { id: 'eli5', label: "Explain Like I'm 5", icon: Lightbulb, color: 'text-emerald-400', desc: 'Simple analogies & everyday examples' },
-  { id: 'step_by_step', label: 'Step-by-Step', icon: ListOrdered, color: 'text-blue-400', desc: 'Rigorous calculation & derivation' },
-  { id: 'code', label: 'Code Explanation', icon: Code2, color: 'text-cyan-400', desc: 'Syntax, complexity & edge cases' },
-  { id: 'formula', label: 'Formula & Proof', icon: Sigma, color: 'text-purple-400', desc: 'Mathematical equations & notation' },
+  { id: 'detailed', label: 'Detailed Explanation', icon: GraduationCap, desc: 'In-depth academic concepts & theoretical principles' },
+  { id: 'assist', label: 'Assist Mode (Socratic)', icon: HelpCircle, desc: 'Guided hints & critical checkpoint questions' },
+  { id: 'eli5', label: "Explain Like I'm 5 (ELI5)", icon: Lightbulb, desc: 'Everyday analogies & simple conceptual metaphors' },
+  { id: 'step_by_step', label: 'Step-by-Step Derivation', icon: ListOrdered, desc: 'Rigorous calculation & logical step proofs' },
+  { id: 'code', label: 'Code & Complexity', icon: Code2, desc: 'Production-ready syntax & Big-O complexity' },
+  { id: 'formula', label: 'Formula & Proof', icon: Sigma, desc: 'LaTeX notation & mathematical symbol breakdowns' },
+];
+
+const AI_MODELS = [
+  { id: 'gemini-1.5-flash', name: 'Google Gemini 1.5 Flash (Cloud API)', provider: 'Google DeepMind', badge: 'Cloud Fast' },
+  { id: 'gemini-1.5-pro', name: 'Google Gemini 1.5 Pro (Cloud API)', provider: 'Google DeepMind', badge: 'Cloud Advanced' },
+  { id: 'ollama:qwen', name: 'Ollama Qwen 2.5 (Local Model)', provider: 'Local / On-Device', badge: 'Local Ollama' },
+  { id: 'ollama:gemma', name: 'Ollama Gemma 2 (Local Model)', provider: 'Local / On-Device', badge: 'Local Ollama' },
+  { id: 'gpt-4o-mini', name: 'OpenAI ChatGPT-4o Mini (Cloud API)', provider: 'OpenAI', badge: 'Cloud GPT' },
 ];
 
 const QUICK_PROMPTS = [
@@ -27,6 +35,9 @@ export default function DoubtSolver({ user, onRequireAuth }) {
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedMode, setSelectedMode] = useState('detailed');
+  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [customApiKey, setCustomApiKey] = useState(localStorage.getItem('user_gemini_api_key') || '');
+  const [showKeyModal, setShowKeyModal] = useState(false);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversations, setConversations] = useState([]);
@@ -37,6 +48,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
 
   useEffect(() => {
     loadSubjects();
+    loadModels();
     if (user) {
       loadConversations();
     }
@@ -52,6 +64,20 @@ export default function DoubtSolver({ user, onRequireAuth }) {
       setSubjects(data);
       if (data.length > 0 && !selectedSubject) {
         setSelectedSubject(data[0].id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadModels = async () => {
+    try {
+      const data = await api.getAIModels();
+      if (data.default_model) {
+        // Keep current or select recommended default
+        if (!selectedModel) {
+          setSelectedModel(data.default_model);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -120,7 +146,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         selectedMode,
         selectedSubject || null,
         currentConversation?.id || null,
-        'qwen2.5:latest'
+        selectedModel,
+        customApiKey || null
       );
 
       const aiMsg = {
@@ -154,6 +181,16 @@ export default function DoubtSolver({ user, onRequireAuth }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSaveApiKey = (key) => {
+    setCustomApiKey(key);
+    if (key.trim()) {
+      localStorage.setItem('user_gemini_api_key', key.trim());
+    } else {
+      localStorage.removeItem('user_gemini_api_key');
+    }
+    setShowKeyModal(false);
   };
 
   const handleCopy = (text, id) => {
@@ -253,6 +290,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
     });
   };
 
+  const activeModelMeta = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0];
+
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-8.5rem)]">
       
@@ -318,30 +357,40 @@ export default function DoubtSolver({ user, onRequireAuth }) {
           )}
         </div>
 
-        {/* Local AI Model Specs Footer */}
+        {/* Dynamic Model Architecture Footer */}
         <div className="pt-3 border-t border-slate-100 mt-2 px-2 text-[10px] text-slate-500 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <Cpu className="h-3.5 w-3.5 text-indigo-600" />
-            <span>Qwen2.5 / Llama 3.2</span>
+          <div className="flex items-center gap-1.5 truncate">
+            {selectedModel.includes('gemini') ? (
+              <Sparkles className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+            ) : selectedModel.includes('gpt') ? (
+              <Bot className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+            ) : (
+              <Cpu className="h-3.5 w-3.5 text-purple-600 shrink-0" />
+            )}
+            <span className="truncate font-semibold text-slate-700">{activeModelMeta.name.split('(')[0]}</span>
           </div>
-          <span className="text-emerald-600 font-semibold">On-Device Privacy</span>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+            LangChain
+          </span>
         </div>
       </div>
 
       {/* Main Chat Canvas */}
       <div className="flex-1 glass-panel rounded-2xl p-4 flex flex-col border border-slate-200 bg-white shadow-xs overflow-hidden">
         
-        {/* Controls: Mode Selector & Subject Selector */}
-        <div className="pb-3 border-b border-slate-200 space-y-3">
-          
-          {/* Top row: Subject & Bookmark */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-600">Subject:</span>
+        {/* Unified Controls: Subject Dropdown, Mode Dropdown & Model Engine Dropdown */}
+        <div className="pb-3 border-b border-slate-200">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+            
+            {/* 1. Subject Selector Dropdown */}
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
+                Academic Subject
+              </label>
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
-                className="px-3 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-indigo-500 font-medium"
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-indigo-500 font-semibold"
               >
                 {subjects.map(s => (
                   <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
@@ -349,44 +398,77 @@ export default function DoubtSolver({ user, onRequireAuth }) {
               </select>
             </div>
 
+            {/* 2. Mode Selector Dropdown */}
+            <div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
+                Explanation Mode
+              </label>
+              <select
+                value={selectedMode}
+                onChange={(e) => setSelectedMode(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-indigo-700 focus:outline-none focus:border-indigo-500 font-bold"
+              >
+                {EXPLANATION_MODES.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 3. AI Model Engine Dropdown (LangChain Integrated) */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold uppercase text-slate-500">
+                  AI Model Engine
+                </label>
+                {(selectedModel.includes('gemini') || selectedModel.includes('gpt')) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowKeyModal(true)}
+                    className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+                    title="Configure Custom API Key"
+                  >
+                    <Key className="h-3 w-3" />
+                    <span>{customApiKey ? 'Key Set' : 'Set Key'}</span>
+                  </button>
+                )}
+              </div>
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-indigo-500 font-bold"
+              >
+                {AI_MODELS.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+          </div>
+
+          {/* Sub-bar: Active Mode description & Bookmark trigger */}
+          <div className="flex items-center justify-between pt-2.5 mt-1 text-[11px] text-slate-500">
+            <span className="truncate pr-2">
+              💡 {EXPLANATION_MODES.find(m => m.id === selectedMode)?.desc}
+            </span>
+
             {currentConversation && (
               <button
                 onClick={() => handleToggleBookmark(currentConversation.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
                   currentConversation.is_bookmarked
                     ? 'bg-amber-50 text-amber-700 border-amber-300'
                     : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-amber-600'
                 }`}
               >
                 {currentConversation.is_bookmarked ? <BookmarkCheck className="h-3.5 w-3.5 text-amber-500" /> : <Bookmark className="h-3.5 w-3.5" />}
-                <span>{currentConversation.is_bookmarked ? 'Saved for Revision' : 'Bookmark Doubt'}</span>
+                <span>{currentConversation.is_bookmarked ? 'Saved' : 'Save Session'}</span>
               </button>
             )}
           </div>
-
-          {/* Explanation Modes Row (6 Modes as per spec) */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-            {EXPLANATION_MODES.map(m => {
-              const Icon = m.icon;
-              const isSelected = selectedMode === m.id;
-              return (
-                <button
-                  key={m.id}
-                  onClick={() => setSelectedMode(m.id)}
-                  title={m.desc}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30'
-                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 border border-slate-200'
-                  }`}
-                >
-                  <Icon className={`h-3.5 w-3.5 ${isSelected ? 'text-white' : 'text-slate-500'}`} />
-                  <span>{m.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
         </div>
 
         {/* Message Thread History */}
@@ -400,7 +482,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
                 Ask Any Academic Doubt
               </h3>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                Powered by local Ollama AI models. Choose between 6 specialized explanation modes: from ELI5 analogies to step-by-step mathematical proofs and code walkthroughs.
+                Powered by LangChain. Seamlessly swap reasoning backends between <strong>Google Gemini API</strong>, <strong>Ollama Qwen 2.5</strong>, <strong>Ollama Gemma 2</strong>, or <strong>OpenAI ChatGPT</strong>.
               </p>
 
               {/* Recommended Quick Question Chips */}
@@ -435,8 +517,8 @@ export default function DoubtSolver({ user, onRequireAuth }) {
               >
                 {msg.sender === 'ai' && (
                   <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
-                    msg.is_error
-                      ? 'bg-rose-100 text-rose-600 border border-rose-200'
+                    msg.is_error 
+                      ? 'bg-rose-100 text-rose-600 border border-rose-200' 
                       : 'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-600/20'
                   }`}>
                     {msg.is_error ? <AlertTriangle className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
@@ -515,7 +597,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
               </div>
               <div className="glass-card px-4 py-3 rounded-2xl rounded-bl-none text-xs text-indigo-700 flex items-center gap-2 border border-indigo-200 bg-white shadow-xs">
                 <span className="h-2 w-2 rounded-full bg-indigo-500 animate-ping" />
-                <span>Generating academic solution via local model...</span>
+                <span>Invoking {activeModelMeta.name} via LangChain engine...</span>
               </div>
             </div>
           )}
@@ -528,7 +610,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
           <div className="relative flex items-center">
             <textarea
               rows={2}
-              placeholder={`Ask your doubt in ${EXPLANATION_MODES.find(m => m.id === selectedMode)?.label}... (e.g. "How does Dijkstra's algorithm find the shortest path?")`}
+              placeholder={`Ask your doubt in ${EXPLANATION_MODES.find(m => m.id === selectedMode)?.label} using ${activeModelMeta.name.split('(')[0]}...`}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -550,11 +632,66 @@ export default function DoubtSolver({ user, onRequireAuth }) {
           </div>
           <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5 px-2">
             <span>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-mono">Enter ↵</kbd> to submit</span>
-            <span>Mode: <strong className="text-indigo-600">{EXPLANATION_MODES.find(m => m.id === selectedMode)?.label}</strong></span>
+            <div className="flex items-center gap-2">
+              <span>Mode: <strong className="text-indigo-600">{EXPLANATION_MODES.find(m => m.id === selectedMode)?.label}</strong></span>
+              <span>•</span>
+              <span>Model: <strong className="text-purple-600">{activeModelMeta.name.split('(')[0]}</strong></span>
+            </div>
           </div>
         </form>
 
       </div>
+
+      {/* Optional Custom API Key Modal */}
+      {showKeyModal && (
+        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Key className="h-4 w-4 text-indigo-600" />
+                <span>Configure Custom API Key</span>
+              </h4>
+              <button
+                onClick={() => setShowKeyModal(false)}
+                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              If your backend does not have a global API key set in <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-indigo-600">backend/.env</code>, you can provide your own Gemini or OpenAI API key here. It will be stored locally in your browser session.
+            </p>
+            <div>
+              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
+                API Key
+              </label>
+              <input
+                type="password"
+                value={customApiKey}
+                onChange={(e) => setCustomApiKey(e.target.value)}
+                placeholder="AIzaSy... or sk-..."
+                className="w-full px-3.5 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleSaveApiKey('')}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100"
+              >
+                Clear Key
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveApiKey(customApiKey)}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30"
+              >
+                Save Key
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

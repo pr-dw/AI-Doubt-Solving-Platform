@@ -3,7 +3,7 @@ from .views import (
     RootView, HealthCheckView, RegisterView, LoginView, UserProfileView,
     ChangePasswordView,
     SubjectListView, AcademicRecordView, AnalyticsReportView,
-    AIQueryView, ConversationListView, ConversationDetailView,
+    AIQueryView, AIModelsView, ConversationListView, ConversationDetailView,
     ToggleBookmarkView, AISummarizeView, AIRoadmapView,
     ResourceListView, PrivateFileUploadView, StudyGoalView, ToggleStudyGoalView,
     QuizListView, QuizDetailView, SubmitQuizAttemptView,
@@ -32,6 +32,7 @@ urlpatterns = [
     path('analytics/report/', AnalyticsReportView.as_view(), name='analytics-report'),
 
     # AI Doubt Solver & Assistant
+    path('ai/models/', AIModelsView.as_view(), name='ai-models'),
     path('ai/query/', AIQueryView.as_view(), name='ai-query'),
     path('ai/conversations/', ConversationListView.as_view(), name='conversation-list'),
     path('ai/conversations/<int:pk>/', ConversationDetailView.as_view(), name='conversation-detail'),

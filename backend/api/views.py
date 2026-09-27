@@ -29,7 +29,7 @@ from .serializers import (
     QuizSerializer, QuizAttemptSerializer, NotificationSerializer,
     RoadmapSerializer
 )
-from .ai_service import call_ollama, generate_roadmap_content
+from .ai_service import call_ai_engine, call_ollama, generate_roadmap_content, AVAILABLE_MODELS
 
 
 from django.http import HttpResponse
@@ -527,8 +527,9 @@ class AIQueryView(APIView):
         )
 
         # Generate AI Response
+        custom_api_key = request.data.get('api_key')
         try:
-            ai_result = call_ollama(query_text, mode=mode, subject=subject_name, model=model)
+            ai_result = call_ai_engine(query_text, mode=mode, subject=subject_name, model=model, custom_api_key=custom_api_key)
             ai_response_text = ai_result['text']
         except Exception as e:
             logger.error(f"AI query failed: {e}")
@@ -562,6 +563,34 @@ class AIQueryView(APIView):
             "model_used": ai_result['model'],
             "source": ai_result.get('source', 'local'),
             "message_id": ai_message.id
+        })
+
+
+class AIModelsView(APIView):
+    """
+    Returns available AI model providers (Gemini, Ollama Qwen/Gemma, ChatGPT)
+    and their configuration status.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        has_gemini = bool(getattr(settings, 'GEMINI_API_KEY', ''))
+        has_openai = bool(getattr(settings, 'OPENAI_API_KEY', ''))
+
+        models_data = []
+        for m in AVAILABLE_MODELS:
+            item = dict(m)
+            if 'google' in item['provider'].lower():
+                item['is_configured'] = has_gemini
+            elif 'openai' in item['provider'].lower():
+                item['is_configured'] = has_openai
+            else:
+                item['is_configured'] = True
+            models_data.append(item)
+
+        return Response({
+            "models": models_data,
+            "default_model": "gemini-1.5-flash" if has_gemini else "ollama:qwen"
         })
 
 

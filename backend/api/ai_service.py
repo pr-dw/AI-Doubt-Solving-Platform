@@ -1,7 +1,10 @@
-import requests
-import json
+import os
 import logging
 from django.conf import settings
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_ollama import ChatOllama
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
 logger = logging.getLogger(__name__)
 
@@ -49,68 +52,167 @@ SYSTEM_PROMPTS = {
     )
 }
 
-def call_ollama(prompt, mode='detailed', subject=None, model=None):
+AVAILABLE_MODELS = [
+    {
+        "id": "gemini-1.5-flash",
+        "name": "Google Gemini 1.5 Flash",
+        "provider": "Google DeepMind",
+        "badge": "Fast Cloud",
+        "type": "cloud"
+    },
+    {
+        "id": "gemini-1.5-pro",
+        "name": "Google Gemini 1.5 Pro",
+        "provider": "Google DeepMind",
+        "badge": "Reasoning Cloud",
+        "type": "cloud"
+    },
+    {
+        "id": "ollama:qwen",
+        "name": "Ollama Qwen 2.5",
+        "provider": "Alibaba / Local",
+        "badge": "On-Device",
+        "type": "local"
+    },
+    {
+        "id": "ollama:gemma",
+        "name": "Ollama Gemma 2",
+        "provider": "Google / Local",
+        "badge": "On-Device",
+        "type": "local"
+    },
+    {
+        "id": "gpt-4o-mini",
+        "name": "OpenAI ChatGPT-4o Mini",
+        "provider": "OpenAI",
+        "badge": "Cloud",
+        "type": "cloud"
+    }
+]
+
+def get_langchain_model(model_name: str, custom_api_key: str = None):
     """
-    Calls the local Ollama AI instance.
-    Raises RuntimeError if the AI engine is unreachable or cannot respond.
-    No mock fallback responses are used.
+    Factory function resolving model identifier to an initialized LangChain ChatModel.
+    Supports Google Gemini, Ollama Qwen, Ollama Gemma, and OpenAI ChatGPT.
     """
-    selected_model = model or getattr(settings, 'OLLAMA_DEFAULT_MODEL', 'qwen2.5:latest')
-    base_url = getattr(settings, 'OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+    model_str = (model_name or "").lower().strip()
+    ollama_base = getattr(settings, 'OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+
+    # 1. Google Gemini Models (e.g. gemini-1.5-flash, gemini-1.5-pro, gemini)
+    if 'gemini' in model_str:
+        gemini_key = custom_api_key or getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '') or os.environ.get('GOOGLE_API_KEY', '')
+        if not gemini_key:
+            raise RuntimeError(
+                "AI engine not communicable: Google Gemini API key is missing. "
+                "Please configure GEMINI_API_KEY in backend/.env to use Gemini models."
+            )
+        resolved_name = model_name if model_name in ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-flash'] else 'gemini-1.5-flash'
+        return ChatGoogleGenerativeAI(
+            model=resolved_name,
+            google_api_key=gemini_key,
+            temperature=0.4
+        ), f"Gemini ({resolved_name})"
+
+    # 2. Ollama Gemma Model
+    elif 'gemma' in model_str:
+        resolved_tag = "gemma2:latest"
+        return ChatOllama(
+            model=resolved_tag,
+            base_url=ollama_base,
+            temperature=0.4
+        ), f"Ollama ({resolved_tag})"
+
+    # 3. Ollama Qwen Model
+    elif 'qwen' in model_str:
+        resolved_tag = "qwen2.5:latest"
+        return ChatOllama(
+            model=resolved_tag,
+            base_url=ollama_base,
+            temperature=0.4
+        ), f"Ollama ({resolved_tag})"
+
+    # 4. OpenAI ChatGPT Models (e.g. gpt-4o-mini, gpt-4o, chatgpt)
+    elif 'gpt' in model_str or 'chatgpt' in model_str or 'openai' in model_str:
+        openai_key = custom_api_key or getattr(settings, 'OPENAI_API_KEY', '') or os.environ.get('OPENAI_API_KEY', '')
+        if not openai_key:
+            raise RuntimeError(
+                "AI engine not communicable: OpenAI API key is missing. "
+                "Please configure OPENAI_API_KEY in backend/.env to use ChatGPT models."
+            )
+        resolved_name = model_name if 'gpt' in model_name else 'gpt-4o-mini'
+        return ChatOpenAI(
+            model=resolved_name,
+            api_key=openai_key,
+            temperature=0.4
+        ), f"OpenAI ({resolved_name})"
+
+    # Default fallback: Ollama Qwen
+    else:
+        resolved_tag = model_name or "qwen2.5:latest"
+        return ChatOllama(
+            model=resolved_tag,
+            base_url=ollama_base,
+            temperature=0.4
+        ), f"Ollama ({resolved_tag})"
+
+
+def call_ai_engine(prompt, mode='detailed', subject=None, model='gemini-1.5-flash', custom_api_key=None):
+    """
+    Executes reasoning pipeline using LangChain.
+    Selects between Google Gemini, Ollama Qwen, Ollama Gemma, or OpenAI ChatGPT.
+    Raises RuntimeError if the selected provider or service is unreachable.
+    """
+    llm, resolved_model_label = get_langchain_model(model, custom_api_key=custom_api_key)
+
     system_instruction = SYSTEM_PROMPTS.get(mode, SYSTEM_PROMPTS['detailed'])
-    
     if subject:
         system_instruction += f"\nAcademic Subject Context: {subject}."
 
-    full_prompt = f"{system_instruction}\n\nStudent Doubt / Query:\n{prompt}\n\nAcademic Response:"
+    messages = [
+        SystemMessage(content=system_instruction),
+        HumanMessage(content=prompt)
+    ]
 
     try:
-        response = requests.post(
-            f"{base_url}/api/generate",
-            json={
-                "model": selected_model,
-                "prompt": full_prompt,
-                "stream": False,
-                "options": {
-                    "temperature": 0.4,
-                    "top_p": 0.9,
-                }
-            },
-            timeout=25
-        )
-    except requests.exceptions.ConnectionError:
-        raise RuntimeError(
-            f"AI engine not communicable: Unable to connect to Ollama service at {base_url}. "
-            "Please ensure the Ollama service is running on the server."
-        )
-    except requests.exceptions.Timeout:
-        raise RuntimeError(
-            f"AI engine not communicable: Request timed out. "
-            f"The model '{selected_model}' did not respond within 25 seconds."
-        )
+        response = llm.invoke(messages)
     except Exception as e:
-        raise RuntimeError(f"AI engine not communicable: {str(e)}")
+        err_str = str(e)
+        if "Connection refused" in err_str or "Failed to establish a new connection" in err_str:
+            raise RuntimeError(
+                f"AI engine not communicable: Unable to connect to local Ollama service at http://127.0.0.1:11434. "
+                "Please ensure the Ollama service is running on the server."
+            )
+        elif "API_KEY_INVALID" in err_str or "Invalid API key" in err_str or "401" in err_str:
+            raise RuntimeError(
+                f"AI engine not communicable: Invalid API key for {resolved_model_label}. Please check your credentials."
+            )
+        elif "RESOURCE_EXHAUSTED" in err_str or "429" in err_str:
+            raise RuntimeError(
+                f"AI engine not communicable: Rate limit or quota exceeded for {resolved_model_label}. Please try again shortly."
+            )
+        else:
+            raise RuntimeError(f"AI engine not communicable: {err_str}")
 
-    if response.status_code != 200:
-        error_msg = response.text
-        try:
-            err_json = response.json()
-            error_msg = err_json.get("error", response.text)
-        except Exception:
-            pass
-        raise RuntimeError(f"AI engine error ({response.status_code}): {error_msg}")
-
-    data = response.json()
-    response_text = data.get("response", "").strip()
+    # Extract text from LangChain response
+    response_text = response.content if hasattr(response, 'content') else str(response)
+    if isinstance(response_text, list):
+        response_text = "".join([c.get('text', '') if isinstance(c, dict) else str(c) for c in response_text])
+    
+    response_text = response_text.strip()
     if not response_text:
-        raise RuntimeError("AI engine returned an empty response.")
+        raise RuntimeError(f"AI engine ({resolved_model_label}) returned an empty response.")
 
     return {
         "success": True,
         "text": response_text,
-        "model": selected_model,
-        "source": "ollama_local"
+        "model": resolved_model_label,
+        "source": "langchain"
     }
+
+# Backward compatibility alias
+def call_ollama(prompt, mode='detailed', subject=None, model=None):
+    return call_ai_engine(prompt, mode=mode, subject=subject, model=model or 'gemini-1.5-flash')
+
 
 def generate_roadmap_content(subject_name, semester):
     """
