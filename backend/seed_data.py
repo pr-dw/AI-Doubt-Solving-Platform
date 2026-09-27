@@ -87,18 +87,21 @@ def run_seed():
     student, s_created = User.objects.get_or_create(
         email="student@gmail.com",
         defaults={
-            "name": "Prabhat (Student)",
+            "name": "Student Scholar",
             "phone": "+91 98765 43210",
             "role": "student",
             "department": "Computer Application (BCA)",
             "semester": 5,
             "section": "A",
-            "roll_number": "SRMCM/BCA/2023/042",
+            "roll_number": "2023/BCA/042",
             "streak_count": 8,
             "longest_streak": 14,
-            "bio": "BCA Final Year Student at SRMCM Lucknow. Solving doubts with AI."
+            "bio": "BCA Final Year Student. Solving doubts with AI."
         }
     )
+    student.name = "Student Scholar"
+    student.roll_number = "2023/BCA/042"
+    student.bio = "BCA Final Year Student. Solving doubts with AI."
     student.set_password("123456")
     student.save()
     print("✅ Student user initialized: student@gmail.com (Password: 123456)")
@@ -107,18 +110,20 @@ def run_seed():
     admin_user, a_created = User.objects.get_or_create(
         email="admin@gmail.com",
         defaults={
-            "name": "Dr. Administrator",
+            "name": "System Administrator",
             "phone": "+91 98765 00000",
             "role": "admin",
             "department": "Department Administration",
             "semester": 0,
             "section": "ADM",
-            "roll_number": "ADMIN/SRMCM/001",
+            "roll_number": "ADMIN/001",
             "is_staff": True,
             "is_superuser": True,
             "bio": "Academic Administrator managing courses, students, and local Ollama deployments."
         }
     )
+    admin_user.name = "System Administrator"
+    admin_user.roll_number = "ADMIN/001"
     admin_user.set_password("123456")
     admin_user.is_staff = True
     admin_user.save()
@@ -128,21 +133,23 @@ def run_seed():
     faculty_user, f_created = User.objects.get_or_create(
         email="faculty@gmail.com",
         defaults={
-            "name": "Prof. Abhradip Kundu",
+            "name": "Faculty Mentor",
             "phone": "+91 98765 00019",
             "role": "faculty",
             "department": "Computer Application (BCA)",
             "semester": 5,
             "section": "A",
-            "roll_number": "FAC/SRMCM/019",
-            "bio": "Assistant Professor & Project Guide at SRMCM Lucknow. Managing curriculum, learning resources, and assessment analytics."
+            "roll_number": "FAC/019",
+            "bio": "Course Faculty & Academic Mentor. Managing curriculum, learning resources, and assessment analytics."
         }
     )
+    faculty_user.name = "Faculty Mentor"
+    faculty_user.roll_number = "FAC/019"
+    faculty_user.bio = "Course Faculty & Academic Mentor. Managing curriculum, learning resources, and assessment analytics."
     faculty_user.set_password("123456")
     faculty_user.save()
     print("✅ Faculty user initialized: faculty@gmail.com (Password: 123456)")
 
-    # 5. Create Mentor / Faculty User (Mr. Abhradip Kundu)
     mentor = faculty_user
 
     # 4. Create Academic Records for Student
@@ -175,35 +182,35 @@ def run_seed():
             "code": "BCA-501",
             "resource_type": "notes",
             "description": "Comprehensive notes with step-by-step tree rotation diagrams and Big-O derivations for balanced search trees.",
-            "file_url": "https://srmcm.ac.in/resources/bca501-unit3-avl-trees.pdf"
+            "file_url": "https://academic.repo/resources/bca501-unit3-avl-trees.pdf"
         },
         {
             "title": "Operating Systems: 2024 End Semester Solved Question Paper",
             "code": "BCA-502",
             "resource_type": "paper",
             "description": "Previous year exam paper with complete model solutions for Banker's Algorithm, semaphore synchronizations, and page replacement.",
-            "file_url": "https://srmcm.ac.in/resources/bca502-pyq-2024-solved.pdf"
+            "file_url": "https://academic.repo/resources/bca502-pyq-2024-solved.pdf"
         },
         {
             "title": "DBMS: 3NF vs BCNF Normalization Cheatsheet & Answer Key",
             "code": "BCA-503",
             "resource_type": "key",
             "description": "Quick reference guide demonstrating functional dependency closures and lossless join decomposition with solved examples.",
-            "file_url": "https://srmcm.ac.in/resources/bca503-normalization-cheatsheet.pdf"
+            "file_url": "https://academic.repo/resources/bca503-normalization-cheatsheet.pdf"
         },
         {
             "title": "Computer Networks: Subnet Masking & CIDR Calculation Workbook",
             "code": "BCA-504",
             "resource_type": "reference",
             "description": "Practical calculation exercises for IPv4 Classless Inter-Domain Routing, broadcast addresses, and routing tables.",
-            "file_url": "https://srmcm.ac.in/resources/bca504-cidr-workbook.pdf"
+            "file_url": "https://academic.repo/resources/bca504-cidr-workbook.pdf"
         },
         {
             "title": "Web Technologies: Modern React 19 & JWT Auth Reference Architecture",
             "code": "BCA-505",
             "resource_type": "notes",
             "description": "Full guide detailing secure token storage, Axios interceptors, Argon2 hashing, and Tailwind CSS design patterns.",
-            "file_url": "https://srmcm.ac.in/resources/bca505-react-jwt-guide.pdf"
+            "file_url": "https://academic.repo/resources/bca505-react-jwt-guide.pdf"
         }
     ]
     for res in resources_data:
@@ -328,12 +335,12 @@ def run_seed():
         },
         {
             "title": "New Study Material: AVL Trees & Graph Traversals 📚",
-            "message": "Mr. Abhradip Kundu has uploaded Unit 3 comprehensive lecture notes for Data Structures & Algorithms.",
+            "message": "Faculty has uploaded Unit 3 comprehensive lecture notes for Data Structures & Algorithms.",
             "type": "note"
         },
         {
             "title": "🔥 7-Day Study Streak Unlocked!",
-            "message": "Awesome work, Prabhat! You have maintained a 7-day active study streak. Solve 1 question today to keep it burning.",
+            "message": "Awesome work! You have maintained a 7-day active study streak. Solve 1 question today to keep it burning.",
             "type": "streak"
         },
         {

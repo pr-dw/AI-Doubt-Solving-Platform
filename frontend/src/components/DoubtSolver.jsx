@@ -404,7 +404,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
               {/* Recommended Quick Question Chips */}
               <div className="w-full mt-6 text-left">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
-                  Suggested Exam Questions (SRMCM BCA):
+                  Suggested Exam Questions (BCA Curriculum):
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {QUICK_PROMPTS.map((qp, idx) => (

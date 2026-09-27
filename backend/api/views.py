@@ -189,8 +189,8 @@ class RootView(APIView):
                     </div>
 
                     <div class="footer">
-                        <span>Author: <strong>Prabhat</strong> (BCA Final Year)</span>
-                        <span>Mentor: <strong>Mr. Abhradip Kundu</strong> • SRMCM</span>
+                        <span>AI Doubt Solving Platform API</span>
+                        <span>Django REST Framework • Ollama Engine</span>
                     </div>
                 </div>
             </body>
@@ -202,7 +202,6 @@ class RootView(APIView):
             "service": "AI Doubt Solving Platform API",
             "status": "healthy",
             "version": "1.0.0",
-            "author": "Prabhat (BCA SRMCM Lucknow)",
             "frontend_url": "http://127.0.0.1:5173/",
             "endpoints": {
                 "health": "/api/health/",

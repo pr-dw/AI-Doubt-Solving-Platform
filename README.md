@@ -1,10 +1,6 @@
 # AI Doubt Solving Platform 🎓
 
-> **A Comprehensive Full-Stack Educational Tool** designed to enhance academic productivity, streamline student learning, and provide instant AI-driven doubt resolution.
->
-> **Project Author:** Prabhat (BCA Final Year, SRMCM Lucknow)  
-> **Mentor & Project Guide:** Mr. Abhradip Kundu (Assistant Professor, SRMCM)  
-> **Head of Department:** Dr. Santosh Kumar Dwivedi  
+> **A Comprehensive Full-Stack Educational Tool** designed to enhance academic productivity, streamline student learning, and provide instant AI-driven doubt resolution with local LLM integration and personalized study management.
 
 ---
 

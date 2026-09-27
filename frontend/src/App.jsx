@@ -218,11 +218,11 @@ export default function App() {
           <div className="flex items-center gap-2">
             <GraduationCap className="h-4 w-4 text-indigo-600" />
             <span className="font-semibold text-slate-700">
-              AI Doubt Solving Platform — SRMCM Lucknow
+              AI Doubt Solving Platform
             </span>
           </div>
           <div className="text-[11px] text-slate-500">
-            Author: <strong className="text-slate-800">Prabhat</strong> • Mentor: <strong className="text-slate-800">Mr. Abhradip Kundu</strong>
+            Intelligent Academic Assistant • Built with React & Django
           </div>
         </div>
       </footer>

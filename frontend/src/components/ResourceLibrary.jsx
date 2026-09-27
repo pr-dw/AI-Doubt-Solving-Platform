@@ -61,7 +61,7 @@ export default function ResourceLibrary({ user }) {
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold mb-3">
             <BookOpen className="h-3.5 w-3.5" />
-            <span>SRMCM Lucknow Academic Repository</span>
+            <span>Academic Course Repository</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Curated Subject Notes, Solved PYQs & Answer Keys
@@ -198,7 +198,7 @@ export default function ResourceLibrary({ user }) {
                 <div className="font-semibold mb-1">Document Details:</div>
                 <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
                   <li>Resource Type: <strong className="text-slate-900 capitalize">{previewResource.resource_type}</strong></li>
-                  <li>Institution: <strong className="text-slate-900">SRMCM Lucknow (BCA Curriculum)</strong></li>
+                  <li>Curriculum: <strong className="text-slate-900">BCA Standard Curriculum</strong></li>
                   <li>Format: <strong className="text-slate-900">PDF Document / Verified Course Handout</strong></li>
                 </ul>
               </div>

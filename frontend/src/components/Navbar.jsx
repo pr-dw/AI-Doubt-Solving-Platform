@@ -78,9 +78,6 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
               <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-700 bg-clip-text text-transparent">
                 AI Doubt Solving
               </span>
-              <span className="hidden sm:inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                SRMCM
-              </span>
             </div>
             <p className="text-[11px] text-slate-500 font-medium hidden md:block">
               Intelligent Academic Assistant • Local Ollama
@@ -266,7 +263,7 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
                     <p className="text-xs font-bold text-slate-800">{user.name}</p>
                     <p className="text-[11px] text-slate-500">{user.email}</p>
                     <div className="mt-2 text-[10px] text-slate-700 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                      <div>Roll: <span className="text-indigo-600 font-mono font-medium">{user.roll_number || 'SRMCM/BCA/2023/042'}</span></div>
+                      <div>Roll: <span className="text-indigo-600 font-mono font-medium">{user.roll_number || '2023/BCA/042'}</span></div>
                       <div>Dept: {user.department}</div>
                     </div>
                   </div>

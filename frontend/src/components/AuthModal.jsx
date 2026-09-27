@@ -63,10 +63,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <GraduationCap className="h-7 w-7" />
           </div>
           <h2 className="text-xl font-bold text-slate-900">
-            {isRegister ? 'Student College Registration' : 'Sign In to Portal'}
+            {isRegister ? 'Student Registration' : 'Sign In to Portal'}
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            AI Doubt Solving Platform • SRMCM Lucknow
+            Intelligent Academic Portal • AI Doubt Solver
           </p>
         </div>
 
@@ -89,7 +89,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Prabhat"
+                    placeholder="e.g. Alex"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white"
@@ -103,7 +103,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                   <input
                     type="text"
                     required
-                    placeholder="SRMCM/BCA/2023/..."
+                    placeholder="2024/BCA/..."
                     value={rollNumber}
                     onChange={(e) => setRollNumber(e.target.value)}
                     className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white font-mono"

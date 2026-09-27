@@ -51,7 +51,7 @@ export default function AdminPanel({ user }) {
             <Users className="h-5 w-5 text-indigo-600" />
           </div>
           <div className="text-3xl font-black text-slate-900 mt-2">{stats?.total_students || 1}</div>
-          <div className="text-[10px] text-emerald-600 font-medium mt-1">SRMCM BCA Cohort</div>
+          <div className="text-[10px] text-emerald-600 font-medium mt-1">Active BCA Cohort</div>
         </div>
 
         <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
@@ -83,7 +83,7 @@ export default function AdminPanel({ user }) {
       </div>
 
       {/* Local AI Architecture & Ollama Configuration */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 max-w-3xl">
         
         {/* Local AI Engine Status */}
         <div className="glass-panel rounded-2xl p-6 border border-slate-200 bg-white shadow-xs space-y-4">
@@ -122,50 +122,6 @@ export default function AdminPanel({ user }) {
             </div>
           </div>
         </div>
-
-        {/* Project Authors & Guide Credits */}
-        <div className="glass-panel rounded-2xl p-6 border border-slate-200 bg-white shadow-xs space-y-4">
-          <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-purple-600" />
-            <span>Academic Project Credentials</span>
-          </h3>
-
-          <div className="space-y-3 text-xs text-slate-700">
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
-              <div>
-                <div className="text-[11px] text-slate-500">Student Developer</div>
-                <div className="font-bold text-slate-900">Prabhat</div>
-                <div className="text-[10px] text-indigo-700 font-mono">BCA Final Year • SRMCM Lucknow</div>
-              </div>
-              <span className="text-[10px] px-2 py-1 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 font-semibold">
-                Author
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
-              <div>
-                <div className="text-[11px] text-slate-500">Mentor & Project Guide</div>
-                <div className="font-bold text-slate-900">Mr. Abhradip Kundu</div>
-                <div className="text-[10px] text-purple-700">Assistant Professor, SRMCM</div>
-              </div>
-              <span className="text-[10px] px-2 py-1 rounded bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
-                Faculty Guide
-              </span>
-            </div>
-
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex justify-between items-center">
-              <div>
-                <div className="text-[11px] text-slate-500">Head of Department (HoD)</div>
-                <div className="font-bold text-slate-900">Dr. Santosh Kumar Dwivedi</div>
-                <div className="text-[10px] text-slate-600">Department of Computer Application</div>
-              </div>
-              <span className="text-[10px] px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 font-semibold">
-                HoD
-              </span>
-            </div>
-          </div>
-        </div>
-
       </div>
 
     </div>

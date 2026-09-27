@@ -96,9 +96,6 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
               <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-700 bg-clip-text text-transparent">
                 AI Doubt Solving Platform
               </span>
-              <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                SRMCM Lucknow
-              </span>
             </div>
           </div>
 
@@ -136,7 +133,7 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
-            A comprehensive full-stack educational tool designed for SRMCM Lucknow students and faculty. Resolve complex academic questions with 6 explanation modes, generate personalized learning roadmaps, maintain study streaks, and ace university examinations.
+            A comprehensive full-stack educational tool designed for students and educators. Resolve complex academic questions with 6 explanation modes, generate personalized learning roadmaps, maintain study streaks, and ace university examinations.
           </p>
 
           {/* Unified Single Login Button & CTA */}
@@ -325,38 +322,6 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
         </div>
       </section>
 
-      {/* Institutional Credentials & Credits */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto w-full text-center">
-        <div className="glass-panel rounded-3xl p-8 border border-slate-200 bg-white shadow-xs">
-          <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Academic Project Validation</span>
-          <h3 className="text-2xl font-bold text-slate-900 mt-2">
-            AI Doubt Solving Platform — SRMCM Lucknow
-          </h3>
-          <p className="text-xs sm:text-sm text-slate-500 mt-2 max-w-xl mx-auto">
-            Developed as a Bachelor of Computer Application (BCA) Final Year Project under academic supervision.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 text-left">
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-[10px] text-slate-500 uppercase font-semibold">Author & Developer</div>
-              <div className="font-bold text-sm text-slate-900 mt-1">Prabhat</div>
-              <div className="text-[11px] text-indigo-600 font-mono">BCA Final Year • SRMCM</div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-[10px] text-slate-500 uppercase font-semibold">Project Mentor & Guide</div>
-              <div className="font-bold text-sm text-slate-900 mt-1">Mr. Abhradip Kundu</div>
-              <div className="text-[11px] text-purple-600">Assistant Professor, SRMCM</div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-              <div className="text-[10px] text-slate-500 uppercase font-semibold">Head of Department</div>
-              <div className="font-bold text-sm text-slate-900 mt-1">Dr. Santosh Kumar Dwivedi</div>
-              <div className="text-[11px] text-slate-600">Computer Application Dept.</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="mt-auto border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-600">
