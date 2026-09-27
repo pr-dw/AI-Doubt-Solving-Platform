@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   GraduationCap, Sparkles, Shield, User, ArrowRight, CheckCircle2, 
   Flame, BookOpen, Compass, BarChart3, Award, Cpu, Code2, Sigma, 
-  HelpCircle, Lightbulb, ListOrdered, Lock, Layers, Play 
+  HelpCircle, Lightbulb, ListOrdered, Lock, Layers, Play, Target
 } from 'lucide-react';
 import { api } from '../services/api';
 
