@@ -196,6 +196,12 @@ export const api = {
       body: JSON.stringify(examData),
     }),
 
+  updateExam: (id, examData) =>
+    request(`/exams/${id}/`, {
+      method: 'PUT',
+      body: JSON.stringify(examData),
+    }),
+
   uploadExamScores: (examId, scoreData) =>
     request(`/exams/${examId}/scores/`, {
       method: 'POST',

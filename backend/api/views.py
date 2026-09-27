@@ -957,6 +957,45 @@ class ExamDetailView(APIView):
 
         return Response(data)
 
+    def put(self, request, pk):
+        if request.user.role not in ['faculty', 'admin']:
+            return Response({"detail": "Permission denied. Only faculty or admin can edit exams."}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            exam = Exam.objects.get(pk=pk)
+        except Exam.DoesNotExist:
+            return Response({"detail": "Exam not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        title = request.data.get('title')
+        total_marks = request.data.get('total_marks')
+        exam_date = request.data.get('exam_date')
+        paper_set = request.data.get('paper_set')
+        questions_data = request.data.get('questions_data')
+        question_paper_pdf = request.data.get('question_paper_pdf')
+        answer_key_pdf = request.data.get('answer_key_pdf')
+
+        if title is not None:
+            exam.title = title
+        if total_marks is not None:
+            exam.total_marks = float(total_marks)
+        if exam_date is not None:
+            exam.exam_date = exam_date
+        if paper_set is not None:
+            exam.paper_set = paper_set
+        if question_paper_pdf is not None:
+            exam.question_paper_pdf = question_paper_pdf
+        if answer_key_pdf is not None:
+            exam.answer_key_pdf = answer_key_pdf
+        if questions_data is not None:
+            if isinstance(questions_data, str):
+                try:
+                    questions_data = json.loads(questions_data)
+                except Exception:
+                    pass
+            exam.questions_data = questions_data
+
+        exam.save()
+        return Response(ExamSerializer(exam).data, status=status.HTTP_200_OK)
+
     def delete(self, request, pk):
         if request.user.role not in ['faculty', 'admin']:
             return Response({"detail": "Permission denied. Only faculty or admin can delete exams."}, status=status.HTTP_403_FORBIDDEN)

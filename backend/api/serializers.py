@@ -129,6 +129,7 @@ class ExamSerializer(serializers.ModelSerializer):
 
 class StudentExamScoreSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.name', read_only=True)
+    student_email = serializers.EmailField(source='student.email', read_only=True)
     student_roll = serializers.CharField(source='student.roll_number', read_only=True)
     exam_title = serializers.CharField(source='exam.title', read_only=True)
     exam_type = serializers.CharField(source='exam.exam_type', read_only=True)

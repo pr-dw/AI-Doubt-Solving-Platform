@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   FileText, Upload, Plus, Trash2, CheckCircle2, AlertTriangle, 
   Award, ExternalLink, ChevronRight, Sparkles, Layers, Check, 
-  RefreshCw, Sliders, ArrowRight, Save
+  RefreshCw, Sliders, ArrowRight, Save, Edit3, Clock, Users
 } from 'lucide-react';
 import { api, getStoredAIModel, AI_MODELS } from '../services/api';
 
@@ -56,12 +56,14 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
   const [akFile, setAkFile] = useState(null);
   const [fileUploading, setFileUploading] = useState(false);
   const [examSavedSuccess, setExamSavedSuccess] = useState(null);
+  const [editingExamId, setEditingExamId] = useState(null);
 
   // Student Marks Form State
   const [selectedExamId, setSelectedExamId] = useState('');
   const [selectedStudentEmail, setSelectedStudentEmail] = useState('');
   const [studentQuestionScores, setStudentQuestionScores] = useState([]);
   const [evaluatedStudyOrder, setEvaluatedStudyOrder] = useState(null);
+  const [examStudentScores, setExamStudentScores] = useState([]);
 
   // For Pre-End Choice Questions Tracking: { 'Unit I': 'Unit I - Q2', 'Unit II': 'Unit II - Q4', ... }
   const [unitChoices, setUnitChoices] = useState({
@@ -104,21 +106,78 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
         setExamForm(prev => ({ ...prev, subject_id: subjData[0].id }));
       }
 
+      const firstEmail = studentData?.[0]?.email || '';
+      if (firstEmail) {
+        setSelectedStudentEmail(firstEmail);
+      }
+
       if (examData?.length > 0) {
         const firstExam = examData[0];
         setSelectedExamId(firstExam.id);
-        initializeQuestionScoresForExam(firstExam);
+        loadExamDetailsAndScores(firstExam.id, firstEmail, examData);
       } else {
         setSelectedExamId('');
         setStudentQuestionScores([]);
       }
-
-      if (studentData?.length > 0) {
-        setSelectedStudentEmail(studentData[0].email);
-      }
     } catch (err) {
       console.error('Failed to load portal data:', err);
       setErrorMsg('Failed to load subjects or exams.');
+    }
+  };
+
+  const loadExamDetailsAndScores = async (examId, studentEmail, currentExamsList = exams) => {
+    if (!examId) {
+      setExamStudentScores([]);
+      return;
+    }
+    try {
+      const detail = await api.getExamDetail(examId);
+      const scores = detail.student_scores || [];
+      setExamStudentScores(scores);
+
+      const targetEmail = studentEmail || selectedStudentEmail;
+      const foundExam = detail || (currentExamsList || []).find(e => String(e.id) === String(examId));
+      if (foundExam) {
+        populateScoresForStudent(foundExam, scores, targetEmail);
+      }
+    } catch (err) {
+      console.error('Error fetching exam detail and scores:', err);
+    }
+  };
+
+  const populateScoresForStudent = (examObj, scores, studentEmail) => {
+    if (!examObj || !examObj.questions_data) {
+      setStudentQuestionScores([]);
+      return;
+    }
+    const emailNorm = (studentEmail || '').trim().toLowerCase();
+    const existing = (scores || []).find(s => 
+      (s.student_email || '').toLowerCase() === emailNorm ||
+      (s.student?.email || '').toLowerCase() === emailNorm
+    );
+
+    if (existing && existing.question_scores?.length > 0) {
+      const populated = examObj.questions_data.map(q => {
+        const foundScore = existing.question_scores.find(sq => sq.q_no === q.q_no || sq.q_number === q.q_no);
+        return {
+          q_no: q.q_no,
+          max_marks: q.max_marks || 5,
+          marks_obtained: foundScore && foundScore.marks_obtained !== undefined ? foundScore.marks_obtained : '',
+          unit: q.unit || 'Unit I',
+          topic: q.topic || 'General Topic',
+          question_text: q.question_text || '',
+          is_choice: !!q.is_choice,
+          choice_group: q.choice_group || null,
+          faculty_notes: foundScore?.faculty_notes || ''
+        };
+      });
+      setStudentQuestionScores(populated);
+      if (existing.ranked_study_order) {
+        setEvaluatedStudyOrder(existing.ranked_study_order);
+      }
+    } else {
+      initializeQuestionScoresForExam(examObj);
+      setEvaluatedStudyOrder(null);
     }
   };
 
@@ -144,11 +203,14 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
   const handleExamChange = (examId) => {
     setSelectedExamId(examId);
     setEvaluatedStudyOrder(null);
-    const found = exams.find(e => String(e.id) === String(examId));
-    if (found) {
-      initializeQuestionScoresForExam(found);
-    } else {
-      setStudentQuestionScores([]);
+    loadExamDetailsAndScores(examId, selectedStudentEmail);
+  };
+
+  const handleStudentEmailChange = (newEmail) => {
+    setSelectedStudentEmail(newEmail);
+    const currExam = exams.find(e => String(e.id) === String(selectedExamId));
+    if (currExam) {
+      populateScoresForStudent(currExam, examStudentScores, newEmail);
     }
   };
 
@@ -241,9 +303,9 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
     }));
   };
 
-  // STEP 1 FINALE: Save Exam Paper and Questions to Database
+  // STEP 1 FINALE: Save Exam Paper and Questions to Database (Create or Edit)
   const handleSaveExamPaper = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
     setExamSavedSuccess(null);
@@ -272,20 +334,27 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
         questions_data: examForm.questions
       };
 
-      const created = await api.createExam(payload);
+      let targetExam;
+      if (editingExamId) {
+        targetExam = await api.updateExam(editingExamId, payload);
+        setSuccessMsg(`Exam paper "${targetExam.title}" blueprint successfully updated with ${targetExam.questions_data?.length || 0} questions!`);
+        setEditingExamId(null);
+      } else {
+        targetExam = await api.createExam(payload);
+        setSuccessMsg(`Exam paper "${targetExam.title}" successfully saved with ${targetExam.questions_data?.length || 0} questions to database!`);
+      }
+
       const updatedExams = await api.getExams();
       setExams(updatedExams || []);
-      setSelectedExamId(created.id);
-      initializeQuestionScoresForExam(created);
+      setSelectedExamId(targetExam.id);
+      loadExamDetailsAndScores(targetExam.id, selectedStudentEmail, updatedExams);
 
       setExamSavedSuccess({
-        examId: created.id,
-        examTitle: created.title,
-        qCount: created.questions_data?.length || 0,
-        pdfUrl: created.question_paper_pdf
+        examId: targetExam.id,
+        examTitle: targetExam.title,
+        qCount: targetExam.questions_data?.length || 0,
+        pdfUrl: targetExam.question_paper_pdf
       });
-
-      setSuccessMsg(`Exam paper "${created.title}" successfully saved with ${created.questions_data?.length || 0} questions to database!`);
     } catch (err) {
       console.error('Failed to save exam paper:', err);
       setErrorMsg(err.message || 'Failed to save exam paper.');
@@ -294,13 +363,47 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
     }
   };
 
+  const handleLoadExistingForEdit = (ex) => {
+    setEditingExamId(ex.id);
+    setExamSavedSuccess(null);
+    setExamForm({
+      subject_id: ex.subject?.id || ex.subject_id || (subjects[0]?.id || ''),
+      title: ex.title,
+      exam_type: ex.exam_type,
+      paper_set: ex.paper_set || '',
+      total_marks: ex.total_marks,
+      exam_date: ex.exam_date || new Date().toISOString().split('T')[0],
+      question_paper_pdf: ex.question_paper_pdf || '',
+      answer_key_pdf: ex.answer_key_pdf || '',
+      questions: (ex.questions_data || []).map((q, idx) => ({
+        id: idx + 1,
+        q_no: q.q_no || `Q${idx + 1}`,
+        unit: q.unit || 'Unit I',
+        topic: q.topic || '',
+        max_marks: q.max_marks || 5,
+        question_text: q.question_text || '',
+        is_choice: !!q.is_choice,
+        choice_group: q.choice_group || null
+      }))
+    });
+    setSuccessMsg(`Loaded "${ex.title} ${ex.paper_set ? `(${ex.paper_set})` : ''}" into editor for updating.`);
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingExamId(null);
+    handleResetUploadForm();
+    setSuccessMsg('Exited exam edit mode.');
+  };
+
   const handleResetUploadForm = () => {
     setExamSavedSuccess(null);
+    setEditingExamId(null);
     setQpFile(null);
     setAkFile(null);
     setExamForm(prev => ({
       ...prev,
-      paper_set: prev.exam_type.startsWith('Quiz') ? 'Set B' : '',
+      paper_set: prev.exam_type.startsWith('Quiz') ? 'Set A' : '',
       question_paper_pdf: '',
       answer_key_pdf: '',
       questions: []
@@ -409,6 +512,8 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
       const result = await api.uploadExamScores(selectedExamId, payload);
       setSuccessMsg(`Marks successfully saved for ${selectedStudentEmail}! (${result.total_marks_obtained}/${totalAttemptableMax} marks)`);
 
+      await loadExamDetailsAndScores(selectedExamId, selectedStudentEmail);
+
       const studyOrderRes = await api.getStudyOrder(null, null, selectedStudentEmail);
       if (studyOrderRes?.study_order) {
         setEvaluatedStudyOrder(studyOrderRes.study_order);
@@ -421,67 +526,35 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
     }
   };
 
+  const studentScoreMap = useMemo(() => {
+    const map = {};
+    (examStudentScores || []).forEach(score => {
+      const email = (score.student_email || score.student?.email || '').toLowerCase();
+      if (email) map[email] = score;
+    });
+    return map;
+  }, [examStudentScores]);
+
+  const currentStudentScore = studentScoreMap[(selectedStudentEmail || '').toLowerCase()];
+  const isCurrentStudentGraded = !!currentStudentScore;
+
+  const existingExamForSelection = useMemo(() => {
+    if (!examForm.subject_id || !examForm.exam_type) return null;
+    const hasSets = OFFICIAL_EXAM_TYPES.find(t => t.id === examForm.exam_type)?.hasSets;
+    return exams.find(e => 
+      String(e.subject?.id || e.subject_id) === String(examForm.subject_id) &&
+      e.exam_type === examForm.exam_type &&
+      (hasSets ? e.paper_set === examForm.paper_set : true)
+    );
+  }, [exams, examForm.subject_id, examForm.exam_type, examForm.paper_set]);
+
+  const subjectExams = useMemo(() => {
+    if (!examForm.subject_id) return [];
+    return exams.filter(e => String(e.subject?.id || e.subject_id) === String(examForm.subject_id));
+  }, [exams, examForm.subject_id]);
+
   return (
     <div className="space-y-6">
-      
-      {/* Top Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-emerald-900 via-teal-900 to-slate-900 text-white p-7 sm:p-9 shadow-xl border border-emerald-500/20">
-        <div className="relative z-10 max-w-3xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-semibold">
-            <Award className="h-3.5 w-3.5" />
-            <span>Official University Examination Evaluation Portal</span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Quiz 1-3 & Pre-End Semester Examinations
-          </h1>
-
-          <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
-            Upload question paper PDFs, auto-extract and match questions directly with official syllabus topics, save exam blueprints, and enter question-wise student marks whenever you want.
-          </p>
-
-          {/* Sub-Navigation Pills */}
-          <div className="flex flex-wrap gap-2 pt-2">
-            <button
-              onClick={() => switchTab('upload-paper')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeSubTab === 'upload-paper'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 font-black'
-                  : 'bg-white/10 hover:bg-white/15 text-white'
-              }`}
-            >
-              <Upload className="h-4 w-4" />
-              <span>1. Upload & Save Exam Paper</span>
-            </button>
-
-            <button
-              onClick={() => switchTab('record-marks')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeSubTab === 'record-marks'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 font-black'
-                  : 'bg-white/10 hover:bg-white/15 text-white'
-              }`}
-            >
-              <FileText className="h-4 w-4" />
-              <span>2. Score Students</span>
-            </button>
-
-            <button
-              onClick={() => switchTab('exam-list')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-                activeSubTab === 'exam-list'
-                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 font-black'
-                  : 'bg-white/10 hover:bg-white/15 text-white'
-              }`}
-            >
-              <Layers className="h-4 w-4" />
-              <span>3. Uploaded Exams ({exams.length})</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="absolute right-0 top-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-      </div>
 
       {/* Global Status Notifications */}
       {successMsg && (
@@ -559,6 +632,80 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
               </div>
             )}
 
+            {/* Active Edit Mode Notification */}
+            {editingExamId && (
+              <div className="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-indigo-200 text-indigo-900 shrink-0">
+                    <Edit3 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-xs uppercase tracking-wider text-indigo-950">Editing Existing Exam Blueprint</span>
+                      <span className="px-2 py-0.5 rounded-md bg-indigo-200 text-indigo-950 text-[10px] font-black">
+                        ID #{editingExamId}
+                      </span>
+                    </div>
+                    <p className="text-xs text-indigo-800 mt-0.5">
+                      You are editing <strong>{examForm.title} {examForm.paper_set ? `(${examForm.paper_set})` : ''}</strong>. Modifying questions or topics below will update the saved blueprint directly.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="px-3 py-1.5 rounded-xl bg-indigo-200 hover:bg-indigo-300 text-indigo-950 text-xs font-bold transition-all cursor-pointer shrink-0"
+                >
+                  Cancel Edit / Upload New
+                </button>
+              </div>
+            )}
+
+            {/* Already Uploaded Paper Detected Notification */}
+            {existingExamForSelection && !editingExamId && (
+              <div className="p-4 rounded-2xl bg-amber-50/90 border border-amber-300/80 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-amber-200 text-amber-950 shrink-0 mt-0.5">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-extrabold text-xs uppercase tracking-wider text-amber-950">Paper Already Uploaded</span>
+                      <span className="px-2 py-0.5 rounded-md bg-amber-200 text-amber-950 text-[10px] font-black">
+                        {existingExamForSelection.paper_set ? `${existingExamForSelection.exam_type} (${existingExamForSelection.paper_set})` : existingExamForSelection.exam_type}
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-800 mt-0.5">
+                      This paper already exists in the database with <strong>{existingExamForSelection.questions_data?.length || 0} questions</strong> ({existingExamForSelection.total_marks} Marks, Date: {existingExamForSelection.exam_date}).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => handleLoadExistingForEdit(existingExamForSelection)}
+                    className="px-3 py-1.5 rounded-xl bg-amber-900 text-white text-xs font-bold hover:bg-amber-800 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                    <span>Edit Questions</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedExamId(existingExamForSelection.id);
+                      loadExamDetailsAndScores(existingExamForSelection.id, selectedStudentEmail);
+                      switchTab('record-marks');
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-500 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <span>Score Students</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Form Step 1: Metadata */}
             <div className="space-y-4">
               <div className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 flex items-center gap-1.5">
@@ -614,6 +761,106 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
                       Standard Exam (No Sets)
                     </div>
                   )}
+                </div>
+              </div>
+
+              {/* Subject Exam Paper Status Overview */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Layers className="h-4 w-4 text-emerald-600" />
+                    <span>Exam Papers Status for Current Subject</span>
+                  </span>
+                  <span className="text-[11px] font-semibold text-slate-500">
+                    {subjectExams.length} Papers Configured
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                  {OFFICIAL_EXAM_TYPES.map(type => {
+                    if (type.hasSets) {
+                      return (
+                        <div key={type.id} className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-1.5">
+                          <div className="text-[11px] font-bold text-slate-700">{type.label}</div>
+                          <div className="flex flex-wrap gap-1">
+                            {QUESTION_PAPER_SETS.map(setName => {
+                              const matchedExam = subjectExams.find(e => e.exam_type === type.id && e.paper_set === setName);
+                              const isSelected = examForm.exam_type === type.id && examForm.paper_set === setName;
+                              return (
+                                <button
+                                  key={setName}
+                                  type="button"
+                                  onClick={() => {
+                                    if (matchedExam) {
+                                      handleLoadExistingForEdit(matchedExam);
+                                    } else {
+                                      setEditingExamId(null);
+                                      setExamForm(prev => ({
+                                        ...prev,
+                                        exam_type: type.id,
+                                        title: type.label,
+                                        paper_set: setName,
+                                        total_marks: type.defaultMarks
+                                      }));
+                                    }
+                                  }}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all ${
+                                    matchedExam
+                                      ? isSelected
+                                        ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
+                                        : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+                                      : isSelected
+                                        ? 'bg-slate-800 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                                  }`}
+                                  title={matchedExam ? `Uploaded with ${matchedExam.questions_data?.length || 0} Qs. Click to edit.` : 'Click to prepare upload.'}
+                                >
+                                  {matchedExam ? <Check className="h-3 w-3 text-emerald-600" /> : <Plus className="h-2.5 w-2.5 text-slate-400" />}
+                                  <span>{setName}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      const matchedExam = subjectExams.find(e => e.exam_type === type.id);
+                      const isSelected = examForm.exam_type === type.id;
+                      return (
+                        <div key={type.id} className="p-2.5 rounded-xl bg-white border border-slate-200 space-y-1.5">
+                          <div className="text-[11px] font-bold text-slate-700">{type.label}</div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (matchedExam) {
+                                handleLoadExistingForEdit(matchedExam);
+                              } else {
+                                setEditingExamId(null);
+                                setExamForm(prev => ({
+                                  ...prev,
+                                  exam_type: type.id,
+                                  title: type.label,
+                                  paper_set: '',
+                                  total_marks: type.defaultMarks
+                                }));
+                              }
+                            }}
+                            className={`w-full px-2.5 py-1.5 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all ${
+                              matchedExam
+                                ? isSelected
+                                ? 'bg-emerald-600 text-white ring-2 ring-emerald-400'
+                                : 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+                                : isSelected
+                                ? 'bg-slate-800 text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 border border-slate-200'
+                            }`}
+                          >
+                            {matchedExam ? <Check className="h-3 w-3" /> : <Plus className="h-2.5 w-2.5" />}
+                            <span>{matchedExam ? `Uploaded (${matchedExam.questions_data?.length || 0} Qs)` : 'Not Uploaded Yet'}</span>
+                          </button>
+                        </div>
+                      );
+                    }
+                  })}
                 </div>
               </div>
 
@@ -805,7 +1052,7 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      <span>Save Exam Paper & Questions</span>
+                      <span>{editingExamId ? 'Update Exam Blueprint & Questions' : 'Save Exam Paper & Questions'}</span>
                     </>
                   )}
                 </button>
@@ -871,26 +1118,87 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
                 {students.length > 0 ? (
                   <select
                     value={selectedStudentEmail}
-                    onChange={(e) => setSelectedStudentEmail(e.target.value)}
+                    onChange={(e) => handleStudentEmailChange(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   >
-                    {students.map(st => (
-                      <option key={st.id} value={st.email}>
-                        {st.name || st.email} — Roll: {st.roll_number || 'N/A'} ({st.email})
-                      </option>
-                    ))}
+                    {students.map(st => {
+                      const score = studentScoreMap[st.email.toLowerCase()];
+                      return (
+                        <option key={st.id} value={st.email}>
+                          {score 
+                            ? `✓ [Graded: ${score.total_marks_obtained}/${currentSelectedExam?.total_marks || 30}M] ${st.name || st.email} — Roll: ${st.roll_number || 'N/A'}` 
+                            : `⏳ [Not Graded] ${st.name || st.email} — Roll: ${st.roll_number || 'N/A'} (${st.email})`
+                          }
+                        </option>
+                      );
+                    })}
                   </select>
                 ) : (
                   <input
                     type="email"
                     placeholder="Enter student email (e.g. student@gmail.com)"
                     value={selectedStudentEmail}
-                    onChange={(e) => setSelectedStudentEmail(e.target.value)}
+                    onChange={(e) => handleStudentEmailChange(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 )}
               </div>
             </div>
+
+            {/* Student Class Grading Progress Roster */}
+            {students.length > 0 && currentSelectedExam && (
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-emerald-600" />
+                    <span className="text-xs font-bold text-slate-800">
+                      Class Grading Progress: <strong className="text-emerald-700">{Object.keys(studentScoreMap).length} of {students.length} Graded</strong>
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      ({Math.round(((Object.keys(studentScoreMap).length) / (students.length || 1)) * 100)}%)
+                    </span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-slate-500">
+                    Click any student chip below to grade or edit
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {students.map(st => {
+                    const score = studentScoreMap[st.email.toLowerCase()];
+                    const isSelected = selectedStudentEmail.toLowerCase() === st.email.toLowerCase();
+                    return (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => handleStudentEmailChange(st.email)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-900 text-white ring-2 ring-emerald-500 shadow-xs'
+                            : score
+                              ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {score ? (
+                          <CheckCircle2 className={`h-3.5 w-3.5 ${isSelected ? 'text-emerald-400' : 'text-emerald-600'}`} />
+                        ) : (
+                          <Clock className={`h-3.5 w-3.5 ${isSelected ? 'text-slate-400' : 'text-slate-400'}`} />
+                        )}
+                        <span>{st.name || st.email.split('@')[0]}</span>
+                        {score && (
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-black ${
+                            isSelected ? 'bg-white/20 text-white' : 'bg-emerald-200 text-emerald-950'
+                          }`}>
+                            {score.total_marks_obtained}M
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Empty State when no exams exist */}
             {exams.length === 0 ? (
@@ -916,6 +1224,41 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
             ) : (
               <form onSubmit={handleSubmitStudentMarks} className="space-y-6">
                 
+                {/* Active Grading Mode Notification */}
+                {isCurrentStudentGraded ? (
+                  <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-xl bg-emerald-200 text-emerald-900 shrink-0">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-xs uppercase tracking-wider text-emerald-900">Marks Already Uploaded — Edit Mode Active</span>
+                          <span className="px-2 py-0.5 rounded-md bg-emerald-200 text-emerald-950 text-[10px] font-black">
+                            Current Score: {currentStudentScore.total_marks_obtained} / {currentSelectedExam?.total_marks || 30} Marks
+                          </span>
+                        </div>
+                        <p className="text-xs text-emerald-800 mt-0.5">
+                          Previous marks for <strong>{selectedStudentEmail}</strong> are pre-loaded below. You can edit any question marks and click <strong>"Update Student Marks"</strong> to save changes and recalculate their study order.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold text-emerald-800 bg-white px-3 py-1 rounded-xl border border-emerald-200 shrink-0">
+                      Editing Existing Record
+                    </span>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-800 flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-slate-200 text-slate-700 shrink-0">
+                      <Clock className="h-4 w-4" />
+                    </div>
+                    <div className="text-xs">
+                      <span className="font-extrabold text-slate-900">Fresh Grading Mode: </span>
+                      <span><strong>{selectedStudentEmail}</strong> has not been graded yet for this exam. Enter marks for each question below.</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Pre-End Choice Selector Banner */}
                 {isPreEndSem && (
                   <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3">
@@ -1060,7 +1403,12 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
-                        <span>Save Student Marks & Generate Study Order</span>
+                        <span>
+                          {isCurrentStudentGraded
+                            ? 'Update Student Marks & Recalculate Study Order'
+                            : 'Save Student Marks & Generate Study Order'
+                          }
+                        </span>
                       </>
                     )}
                   </button>

@@ -29,9 +29,9 @@ const STUDENT_TABS = [
 ];
 
 const FACULTY_TABS = [
-  { id: 'faculty-upload', label: '1. Upload Exam Paper', icon: Upload, badge: 'AI Mapping' },
-  { id: 'faculty-score', label: '2. Score Students', icon: FileText, badge: 'Grading' },
-  { id: 'faculty-exams', label: '3. Uploaded Exams', icon: Layers },
+  { id: 'faculty-upload', label: 'Upload Exam Paper', icon: Upload, badge: 'AI Mapping' },
+  { id: 'faculty-score', label: 'Score Students', icon: FileText, badge: 'Grading' },
+  { id: 'faculty-exams', label: 'Uploaded Exams', icon: Layers },
   { id: 'resources', label: 'Study Materials & Notes', icon: BookOpen },
   { id: 'analytics', label: 'Performance Analytics', icon: BarChart3 },
 ];
