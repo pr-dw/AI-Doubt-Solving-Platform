@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, GraduationCap, ShieldCheck, Mail, Lock, User, BookOpen, AlertCircle, ArrowRight } from 'lucide-react';
+import { X, GraduationCap, ShieldCheck, Mail, Lock, User, AlertCircle, ArrowRight, Shield } from 'lucide-react';
 import { api } from '../services/api';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
@@ -39,21 +39,21 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         onClose();
       }
     } catch (err) {
-      setError(err.message || 'Authentication failed. Please check your credentials.');
+      setError(err.message || 'Authentication failed. Please verify your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
-  const loginAsDemo = async (demoEmail) => {
+  const loginAsRole = async (demoEmail, demoPass = '123456') => {
     setError('');
     setLoading(true);
     try {
-      const res = await api.login(demoEmail, 'Password@123');
+      const res = await api.login(demoEmail, demoPass);
       onAuthSuccess(res.user);
       onClose();
     } catch (err) {
-      setError(`Failed to sign in as demo user: ${err.message}`);
+      setError(`Failed to sign in: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             <GraduationCap className="h-7 w-7" />
           </div>
           <h2 className="text-xl font-bold text-slate-100">
-            {isRegister ? 'Student College Registration' : 'Student & Faculty Portal'}
+            {isRegister ? 'Student College Registration' : 'Sign In to Portal'}
           </h2>
           <p className="text-xs text-slate-400 mt-1">
             AI Doubt Solving Platform • SRMCM Lucknow
@@ -93,34 +93,42 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
         )}
 
         {/* Quick Demo Access Bar */}
-        <div className="mb-5 p-3 rounded-2xl bg-slate-900/90 border border-indigo-500/20">
+        <div className="mb-5 p-3 rounded-2xl bg-slate-900/90 border border-indigo-500/30">
           <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-2">
-            ⚡ Quick 1-Click Evaluation Logins
+            ⚡ Quick 1-Click Credentials
           </span>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => loginAsDemo('prabhat@srmcm.ac.in')}
+              onClick={() => loginAsRole('student@gmail.com', '123456')}
               disabled={loading}
-              className="px-2.5 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 border border-indigo-500/30 text-left text-xs font-semibold flex items-center justify-between transition-colors"
+              className="px-2.5 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-200 border border-indigo-500/30 text-left text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer"
             >
               <div>
-                <div className="text-[11px] font-bold">Prabhat (Student)</div>
-                <div className="text-[9px] text-indigo-400">BCA Sem 5 • 7d Streak</div>
+                <div className="text-[11px] font-bold text-white flex items-center gap-1">
+                  <User className="h-3 w-3 text-indigo-400" />
+                  <span>Student Login</span>
+                </div>
+                <div className="text-[9px] text-indigo-300 font-mono">student@gmail.com</div>
+                <div className="text-[8px] text-slate-400 font-mono">Pass: 123456</div>
               </div>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
             </button>
             <button
               type="button"
-              onClick={() => loginAsDemo('mentor.abhradip@srmcm.ac.in')}
+              onClick={() => loginAsRole('admin@gmail.com', '123456')}
               disabled={loading}
-              className="px-2.5 py-1.5 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border border-purple-500/30 text-left text-xs font-semibold flex items-center justify-between transition-colors"
+              className="px-2.5 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-200 border border-purple-500/30 text-left text-xs font-semibold flex items-center justify-between transition-colors cursor-pointer"
             >
               <div>
-                <div className="text-[11px] font-bold">Mr. Abhradip Kundu</div>
-                <div className="text-[9px] text-purple-400">Project Mentor / Faculty</div>
+                <div className="text-[11px] font-bold text-white flex items-center gap-1">
+                  <Shield className="h-3 w-3 text-purple-400" />
+                  <span>Admin Login</span>
+                </div>
+                <div className="text-[9px] text-purple-300 font-mono">admin@gmail.com</div>
+                <div className="text-[8px] text-slate-400 font-mono">Pass: 123456</div>
               </div>
-              <ArrowRight className="h-3.5 w-3.5 shrink-0" />
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-purple-400" />
             </button>
           </div>
         </div>
@@ -136,7 +144,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Prabhat Kumar"
+                    placeholder="e.g. Prabhat"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500"
@@ -173,13 +181,13 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
           )}
 
           <div>
-            <label className="text-[11px] font-semibold text-slate-300 block mb-1">College Email Address</label>
+            <label className="text-[11px] font-semibold text-slate-300 block mb-1">Email Address</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <input
                 type="email"
                 required
-                placeholder="student@srmcm.ac.in"
+                placeholder="student@gmail.com or admin@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500"
@@ -194,7 +202,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               <input
                 type="password"
                 required
-                placeholder="••••••••"
+                placeholder="••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-slate-200 focus:outline-none focus:border-indigo-500"
@@ -212,7 +220,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             ) : (
               <>
                 <ShieldCheck className="h-4 w-4" />
-                <span>{isRegister ? 'Complete Registration' : 'Sign In Securely (JWT)'}</span>
+                <span>{isRegister ? 'Complete Registration' : 'Sign In Securely'}</span>
               </>
             )}
           </button>
@@ -233,7 +241,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
             </p>
           ) : (
             <p>
-              New SRMCM student?{' '}
+              New student?{' '}
               <button 
                 type="button"
                 onClick={() => { setIsRegister(true); setError(''); }}

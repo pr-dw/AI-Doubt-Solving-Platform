@@ -83,26 +83,46 @@ def run_seed():
         subjects_dict[data["code"]] = subj
     print(f"✅ Loaded {len(subjects_dict)} academic subjects.")
 
-    # 2. Create Demo Student User (Prabhat)
+    # 2. Create Student User (student@gmail.com / 123456)
     student, s_created = User.objects.get_or_create(
-        email="prabhat@srmcm.ac.in",
+        email="student@gmail.com",
         defaults={
-            "name": "Prabhat",
+            "name": "Prabhat (Student)",
             "phone": "+91 98765 43210",
             "role": "student",
             "department": "Computer Application (BCA)",
             "semester": 5,
             "section": "A",
             "roll_number": "SRMCM/BCA/2023/042",
-            "streak_count": 7,
-            "longest_streak": 12,
-            "bio": "BCA Final Year Student at SRMCM Lucknow. Working on AI Doubt Solving Platform project under mentor Mr. Abhradip Kundu."
+            "streak_count": 8,
+            "longest_streak": 14,
+            "bio": "BCA Final Year Student at SRMCM Lucknow. Solving doubts with AI."
         }
     )
-    if s_created:
-        student.set_password("Password@123")
-        student.save()
-    print("✅ Student user initialized: prabhat@srmcm.ac.in (Password: Password@123)")
+    student.set_password("123456")
+    student.save()
+    print("✅ Student user initialized: student@gmail.com (Password: 123456)")
+
+    # 3. Create Administrator User (admin@gmail.com / 123456)
+    admin_user, a_created = User.objects.get_or_create(
+        email="admin@gmail.com",
+        defaults={
+            "name": "Dr. Administrator",
+            "phone": "+91 98765 00000",
+            "role": "admin",
+            "department": "Department Administration",
+            "semester": 0,
+            "section": "ADM",
+            "roll_number": "ADMIN/SRMCM/001",
+            "is_staff": True,
+            "is_superuser": True,
+            "bio": "Academic Administrator managing courses, students, and local Ollama deployments."
+        }
+    )
+    admin_user.set_password("123456")
+    admin_user.is_staff = True
+    admin_user.save()
+    print("✅ Admin user initialized: admin@gmail.com (Password: 123456)")
 
     # 3. Create Mentor / Faculty User (Mr. Abhradip Kundu)
     mentor, m_created = User.objects.get_or_create(
