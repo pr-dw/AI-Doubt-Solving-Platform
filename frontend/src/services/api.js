@@ -190,16 +190,22 @@ export const api = {
   },
 
   analyzeExamPdf: async (formData) => {
-    const token = getStoredAuthToken();
-    const headers = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE_URL}/exams/analyze-pdf/`, {
+    const token = getAuthToken();
+    const selectedModel = getStoredAIModel();
+    if (!formData.has('model')) {
+      formData.append('model', selectedModel);
+    }
+    const headers = {
+      'X-Selected-AI-Model': selectedModel,
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+    const res = await fetch(`${BASE_URL}/exams/analyze-pdf/`, {
       method: 'POST',
       headers,
       body: formData,
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.detail || 'Failed to analyze exam PDF.');
+    if (!res.ok) throw new Error(data.detail || data.message || 'Failed to analyze exam PDF.');
     return data;
   },
 

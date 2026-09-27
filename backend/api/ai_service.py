@@ -479,7 +479,7 @@ def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set='', m
     """
     clean_text = (pdf_text or "").strip()
 
-    if len(clean_text) > 40:
+    if len(clean_text) > 20:
         prompt = (
             f"You are an academic examination coordinator analyzing an uploaded university exam question paper.\n"
             f"Subject: [{subject.code}] {subject.name} (Semester {subject.semester})\n"
@@ -487,8 +487,13 @@ def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set='', m
             f"Official Subject Syllabus (Units & Topics):\n"
             f"{subject.syllabus_overview}\n\n"
             f"Uploaded Question Paper Text:\n"
-            f"\"\"\"\n{clean_text[:3500]}\n\"\"\"\n\n"
-            f"Task: Identify every question in the paper and map it to its exact syllabus Unit and Topic.\n"
+            f"\"\"\"\n{clean_text[:4000]}\n\"\"\"\n\n"
+            f"Task:\n"
+            f"1. Read the uploaded question paper text.\n"
+            f"2. Extract every question from the paper.\n"
+            f"3. For EACH question, determine the question number (e.g., 'Part A - Q1', 'Part B - Q3(a)', etc.), maximum marks, and summarize the question.\n"
+            f"4. Map each question to the exact Unit (e.g. 'Unit I', 'Unit II', 'Unit III', 'Unit IV', 'Unit V') and the specific Topic name from the official syllabus provided above.\n"
+            f"5. If it is a choice question (e.g. in Pre-End sem where student chooses between questions), set is_choice: true and choice_group to the Unit name.\n\n"
             f"Required JSON Output Format (ONLY valid JSON array of objects, no markdown formatting):\n"
             f"[\n"
             f"  {{\n"
@@ -496,23 +501,37 @@ def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set='', m
             f"    \"unit\": \"Unit I\",\n"
             f"    \"topic\": \"Specific Syllabus Topic Name\",\n"
             f"    \"max_marks\": 5.0,\n"
-            f"    \"question_text\": \"Question summary\"\n"
+            f"    \"question_text\": \"Question summary\",\n"
+            f"    \"is_choice\": false,\n"
+            f"    \"choice_group\": \"\"\n"
             f"  }}\n"
             f"]"
         )
         try:
             import json
-            raw_response = call_ai_engine(prompt, mode='detailed', semester=subject.semester, subject=subject.name, model=model)
+            ai_result = call_ai_engine(prompt, mode='detailed', semester=subject.semester, subject=subject.name, model=model)
+            raw_response = ai_result.get('text', '') if isinstance(ai_result, dict) else str(ai_result)
+
             # Remove any markdown code block wrappers
-            cleaned = re.sub(r'^```json\s*', '', raw_response.strip(), flags=re.MULTILINE)
-            cleaned = re.sub(r'^```\s*', '', cleaned, flags=re.MULTILINE)
+            cleaned = re.sub(r'^```(?:json)?\s*', '', raw_response.strip(), flags=re.MULTILINE)
             cleaned = re.sub(r'```$', '', cleaned.strip())
 
             match = re.search(r'\[\s*\{.*\}\s*\]', cleaned, re.DOTALL)
             if match:
                 parsed = json.loads(match.group(0))
                 if isinstance(parsed, list) and len(parsed) > 0:
-                    return parsed
+                    sanitized = []
+                    for q in parsed:
+                        sanitized.append({
+                            "q_no": str(q.get('q_no', f"Q{len(sanitized)+1}")),
+                            "unit": str(q.get('unit', 'Unit I')),
+                            "topic": str(q.get('topic', 'General Topic')),
+                            "max_marks": float(q.get('max_marks', 5.0)),
+                            "question_text": str(q.get('question_text', '')),
+                            "is_choice": bool(q.get('is_choice', False)),
+                            "choice_group": str(q.get('choice_group', ''))
+                        })
+                    return sanitized
         except Exception as e:
             logger.warning(f"AI question paper analysis failed, falling back to syllabus alignment: {e}")
 
