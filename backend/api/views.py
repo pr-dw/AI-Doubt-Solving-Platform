@@ -32,7 +32,8 @@ from .serializers import (
 )
 from .ai_service import (
     call_ai_engine, call_ollama, generate_roadmap_content,
-    AVAILABLE_MODELS, compute_personalized_study_order, extract_text_from_pdf_file
+    AVAILABLE_MODELS, compute_personalized_study_order, extract_text_from_pdf_file,
+    generate_standard_exam_pdf_filename, analyze_question_paper_with_ai
 )
 
 
@@ -784,15 +785,35 @@ class ExamListView(APIView):
         answer_key_pdf = request.data.get('answer_key_pdf', '')
         questions_data = request.data.get('questions_data', [])
 
-        # Handle direct PDF uploads
+        paper_set = request.data.get('paper_set', '').strip()
+
+        # Handle direct PDF uploads with standardized naming
         if 'question_paper_file' in request.FILES:
             qp_file = request.FILES['question_paper_file']
-            saved_qp = default_storage.save(f"exams/qp_{uuid.uuid4().hex[:8]}_{qp_file.name}", ContentFile(qp_file.read()))
+            std_qp_name = generate_standard_exam_pdf_filename(
+                subject_code=subject.code,
+                exam_type=exam_type,
+                paper_set=paper_set,
+                is_answer_key=False
+            )
+            rel_qp = os.path.join('exams', std_qp_name)
+            if default_storage.exists(rel_qp):
+                default_storage.delete(rel_qp)
+            saved_qp = default_storage.save(rel_qp, ContentFile(qp_file.read()))
             question_paper_pdf = f"{settings.MEDIA_URL}{saved_qp}"
 
         if 'answer_key_file' in request.FILES:
             ak_file = request.FILES['answer_key_file']
-            saved_ak = default_storage.save(f"exams/ak_{uuid.uuid4().hex[:8]}_{ak_file.name}", ContentFile(ak_file.read()))
+            std_ak_name = generate_standard_exam_pdf_filename(
+                subject_code=subject.code,
+                exam_type=exam_type,
+                paper_set=paper_set,
+                is_answer_key=True
+            )
+            rel_ak = os.path.join('exams', std_ak_name)
+            if default_storage.exists(rel_ak):
+                default_storage.delete(rel_ak)
+            saved_ak = default_storage.save(rel_ak, ContentFile(ak_file.read()))
             answer_key_pdf = f"{settings.MEDIA_URL}{saved_ak}"
 
         # Handle questions_data if serialized as JSON string in multipart form
@@ -804,13 +825,6 @@ class ExamListView(APIView):
 
         if not subject_id or not title:
             return Response({"detail": "subject_id and title are required."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            subject = Subject.objects.get(id=subject_id)
-        except Subject.DoesNotExist:
-            return Response({"detail": "Subject not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        paper_set = request.data.get('paper_set', '').strip()
 
         exam = Exam.objects.create(
             subject=subject,
@@ -827,6 +841,82 @@ class ExamListView(APIView):
         )
 
         return Response(ExamSerializer(exam).data, status=status.HTTP_201_CREATED)
+
+
+class ExamPDFAnalyzeView(APIView):
+    """
+    Analyzes an uploaded Question Paper or Answer Key PDF:
+    1. Renames the PDF cleanly according to subject code, exam type, and set (e.g. NBCA-501_Quiz_1_Set_A.pdf).
+    2. Saves it directly into backend media/exams/ storage.
+    3. Uses pypdf & AI engine grounded in the subject's official syllabus to extract question numbers,
+       maximum marks, units, and topic tags.
+    4. Returns the file_url, standard filename, and auto-populated question breakdown.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        if request.user.role not in ['faculty', 'admin']:
+            return Response({"detail": "Permission denied. Only faculty or admin can analyze exam PDFs."}, status=status.HTTP_403_FORBIDDEN)
+
+        uploaded_file = request.FILES.get('file')
+        subject_id = request.data.get('subject_id')
+        exam_type = request.data.get('exam_type', 'Quiz 1')
+        paper_set = request.data.get('paper_set', '')
+        is_answer_key = request.data.get('is_answer_key', 'false').lower() in ['true', '1']
+
+        if not uploaded_file:
+            return Response({"detail": "PDF file is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            subject = Subject.objects.get(id=subject_id)
+        except (Subject.DoesNotExist, ValueError):
+            subject = Subject.objects.filter(code='NBCA-501').first()
+
+        # Generate standardized filename based on subject, exam type, set
+        standard_name = generate_standard_exam_pdf_filename(
+            subject_code=subject.code if subject else 'NBCA-501',
+            exam_type=exam_type,
+            paper_set=paper_set,
+            is_answer_key=is_answer_key
+        )
+
+        relative_path = os.path.join('exams', standard_name)
+        if default_storage.exists(relative_path):
+            default_storage.delete(relative_path)
+            
+        saved_path = default_storage.save(relative_path, ContentFile(uploaded_file.read()))
+        file_url = f"{settings.MEDIA_URL}{saved_path}"
+        full_disk_path = default_storage.path(saved_path)
+
+        # If it's an answer key, return the standardized URL
+        if is_answer_key:
+            return Response({
+                "message": f"Answer Key PDF uploaded and saved as {standard_name}.",
+                "file_url": file_url,
+                "filename": standard_name,
+                "is_answer_key": True
+            }, status=status.HTTP_200_OK)
+
+        # For Question Paper: Extract text using pypdf and analyze with AI
+        extracted_text = extract_text_from_pdf_file(full_disk_path)
+
+        questions = analyze_question_paper_with_ai(
+            pdf_text=extracted_text,
+            subject=subject,
+            exam_type=exam_type,
+            paper_set=paper_set
+        )
+
+        return Response({
+            "message": f"Question paper analyzed! Found and mapped {len(questions)} syllabus questions.",
+            "file_url": file_url,
+            "filename": standard_name,
+            "exam_type": exam_type,
+            "paper_set": paper_set,
+            "extracted_text_preview": extracted_text[:300] if extracted_text else "Direct syllabus alignment",
+            "questions": questions
+        }, status=status.HTTP_200_OK)
 
 
 class ExamDetailView(APIView):

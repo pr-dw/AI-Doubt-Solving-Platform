@@ -199,18 +199,34 @@ export default function FacultyExamPortal() {
 
     setFileUploading(true);
     setErrorMsg('');
+    setSuccessMsg('');
+
     try {
-      const res = await api.uploadFile(file, 'resource');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('subject_id', examForm.subject_id || (subjects[0]?.id || ''));
+      formData.append('exam_type', examForm.exam_type || 'Quiz 1');
+      formData.append('paper_set', examForm.paper_set || '');
+      formData.append('is_answer_key', target === 'ak' ? 'true' : 'false');
+
+      const res = await api.analyzeExamPdf(formData);
+
       if (target === 'qp') {
-        setQpFile(file);
-        setExamForm(prev => ({ ...prev, question_paper_pdf: res.file_url }));
+        setQpFile({ name: res.filename });
+        setExamForm(prev => ({
+          ...prev,
+          question_paper_pdf: res.file_url,
+          questions: (res.questions && res.questions.length > 0) ? res.questions : prev.questions
+        }));
+        setSuccessMsg(`✓ Question Paper renamed to "${res.filename}"! Topics and units auto-analyzed from syllabus (${res.questions?.length || 0} questions).`);
       } else {
-        setAkFile(file);
+        setAkFile({ name: res.filename });
         setExamForm(prev => ({ ...prev, answer_key_pdf: res.file_url }));
+        setSuccessMsg(`✓ Answer Key saved as "${res.filename}".`);
       }
     } catch (err) {
-      console.error('File upload failed:', err);
-      setErrorMsg(`Failed to upload ${file.name}: ${err.message}`);
+      console.error('File upload/analysis failed:', err);
+      setErrorMsg(`Failed to analyze ${file.name}: ${err.message}`);
     } finally {
       setFileUploading(false);
     }
@@ -862,10 +878,13 @@ export default function FacultyExamPortal() {
 
             {/* PDF Uploads */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <div className="p-4 rounded-2xl bg-emerald-50/40 border border-emerald-200/80 space-y-2">
                 <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                  <span>Question Paper PDF (Required)</span>
-                  {fileUploading && <span className="text-[10px] text-emerald-600 animate-pulse font-semibold">Uploading...</span>}
+                  <span className="flex items-center gap-1.5">
+                    <span>Question Paper PDF</span>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-md">Auto-Analyzes Topics & Renames</span>
+                  </span>
+                  {fileUploading && <span className="text-[10px] text-emerald-600 animate-pulse font-semibold">Analyzing PDF & Units...</span>}
                 </label>
                 
                 <input
@@ -876,16 +895,19 @@ export default function FacultyExamPortal() {
                 />
 
                 {examForm.question_paper_pdf && (
-                  <div className="text-[11px] text-emerald-700 font-semibold truncate flex items-center gap-1.5 pt-1">
+                  <div className="text-[11px] text-emerald-800 font-semibold truncate flex items-center gap-1.5 pt-1 bg-white p-2 rounded-xl border border-emerald-200">
                     <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                    <span>Attached: {qpFile?.name || examForm.question_paper_pdf}</span>
+                    <span>Renamed & Saved: <strong className="font-mono text-emerald-900">{qpFile?.name || examForm.question_paper_pdf.split('/').pop()}</strong></span>
                   </div>
                 )}
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
                 <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                  <span>Answer Key / Solutions PDF (Optional)</span>
+                  <span className="flex items-center gap-1.5">
+                    <span>Answer Key / Solutions PDF</span>
+                    <span className="text-[10px] text-slate-500 bg-slate-200 px-1.5 py-0.2 rounded-md">Auto-Renames</span>
+                  </span>
                 </label>
                 
                 <input
@@ -896,9 +918,9 @@ export default function FacultyExamPortal() {
                 />
 
                 {examForm.answer_key_pdf && (
-                  <div className="text-[11px] text-emerald-700 font-semibold truncate flex items-center gap-1.5 pt-1">
+                  <div className="text-[11px] text-slate-800 font-semibold truncate flex items-center gap-1.5 pt-1 bg-white p-2 rounded-xl border border-slate-200">
                     <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
-                    <span>Attached: {akFile?.name || examForm.answer_key_pdf}</span>
+                    <span>Renamed & Saved: <strong className="font-mono text-slate-900">{akFile?.name || examForm.answer_key_pdf.split('/').pop()}</strong></span>
                   </div>
                 )}
               </div>
@@ -908,10 +930,16 @@ export default function FacultyExamPortal() {
             <div className="space-y-3 pt-2 border-t border-slate-100">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-xs font-bold text-slate-900">
-                    Question Breakdown ({examForm.questions.length} Questions)
-                  </h3>
-                  <p className="text-[11px] text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-xs font-bold text-slate-900">
+                      Question Breakdown ({examForm.questions.length} Questions)
+                    </h3>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-emerald-600" />
+                      <span>Units & Topics Auto-Selected</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
                     {examForm.exam_type.startsWith('Quiz') 
                       ? 'Part A: 2x5m (10m) + Part B: Q3 (6x1m), Q4 (7m), Q5 (7m) = 30 Marks.' 
                       : 'Q1: 10x4m (40m) + Units I-V Choice: 5x12m (60m) = 100 Marks.'

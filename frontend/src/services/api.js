@@ -170,6 +170,20 @@ export const api = {
     return request(`/students/?${params.toString()}`);
   },
 
+  analyzeExamPdf: async (formData) => {
+    const token = getStoredAuthToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE_URL}/exams/analyze-pdf/`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || 'Failed to analyze exam PDF.');
+    return data;
+  },
+
   // Resources
   getResources: (subject = '', type = '', query = '') => {
     const params = new URLSearchParams();

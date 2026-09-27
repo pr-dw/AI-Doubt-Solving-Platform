@@ -5,7 +5,7 @@ from .views import (
     SubjectListView, AcademicRecordView, AnalyticsReportView,
     AIQueryView, AIModelsView, ConversationListView, ConversationDetailView,
     ToggleBookmarkView, AISummarizeView, AIRoadmapView,
-    StudyOrderView, ExamListView, ExamDetailView, ExamScoreUploadView,
+    StudyOrderView, ExamListView, ExamDetailView, ExamScoreUploadView, ExamPDFAnalyzeView,
     StudentListView,
     ResourceListView, PrivateFileUploadView, StudyGoalView, ToggleStudyGoalView,
     QuizListView, QuizDetailView, SubmitQuizAttemptView,
@@ -45,6 +45,7 @@ urlpatterns = [
     # Personalised High-ROI Study Order & Exams
     path('study-order/', StudyOrderView.as_view(), name='study-order'),
     path('exams/', ExamListView.as_view(), name='exam-list'),
+    path('exams/analyze-pdf/', ExamPDFAnalyzeView.as_view(), name='exam-pdf-analyze'),
     path('exams/<int:pk>/', ExamDetailView.as_view(), name='exam-detail'),
     path('exams/<int:pk>/scores/', ExamScoreUploadView.as_view(), name='exam-score-upload'),
     path('students/', StudentListView.as_view(), name='student-list'),
