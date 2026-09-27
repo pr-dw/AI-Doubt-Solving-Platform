@@ -3,7 +3,7 @@ import {
   Sparkles, Send, BookOpen, Bookmark, BookmarkCheck, Copy, 
   Check, RefreshCw, MessageSquare, Plus, Trash2, Cpu,
   HelpCircle, Code2, Sigma, ListOrdered, Lightbulb, GraduationCap,
-  AlertTriangle, Key, ChevronDown, Layers, Bot, Settings
+  AlertTriangle, ChevronDown, Layers, Bot, Settings
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -36,8 +36,6 @@ export default function DoubtSolver({ user, onRequireAuth }) {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedMode, setSelectedMode] = useState('detailed');
   const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
-  const [customApiKey, setCustomApiKey] = useState(localStorage.getItem('user_gemini_api_key') || '');
-  const [showKeyModal, setShowKeyModal] = useState(false);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [conversations, setConversations] = useState([]);
@@ -146,8 +144,7 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         selectedMode,
         selectedSubject || null,
         currentConversation?.id || null,
-        selectedModel,
-        customApiKey || null
+        selectedModel
       );
 
       const aiMsg = {
@@ -181,16 +178,6 @@ export default function DoubtSolver({ user, onRequireAuth }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleSaveApiKey = (key) => {
-    setCustomApiKey(key);
-    if (key.trim()) {
-      localStorage.setItem('user_gemini_api_key', key.trim());
-    } else {
-      localStorage.removeItem('user_gemini_api_key');
-    }
-    setShowKeyModal(false);
   };
 
   const handleCopy = (text, id) => {
@@ -418,22 +405,9 @@ export default function DoubtSolver({ user, onRequireAuth }) {
 
             {/* 3. AI Model Engine Dropdown (LangChain Integrated) */}
             <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[10px] font-bold uppercase text-slate-500">
-                  AI Model Engine
-                </label>
-                {(selectedModel.includes('gemini') || selectedModel.includes('gpt')) && (
-                  <button
-                    type="button"
-                    onClick={() => setShowKeyModal(true)}
-                    className="text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
-                    title="Configure Custom API Key"
-                  >
-                    <Key className="h-3 w-3" />
-                    <span>{customApiKey ? 'Key Set' : 'Set Key'}</span>
-                  </button>
-                )}
-              </div>
+              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
+                AI Model Engine
+              </label>
               <select
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
@@ -641,57 +615,6 @@ export default function DoubtSolver({ user, onRequireAuth }) {
         </form>
 
       </div>
-
-      {/* Optional Custom API Key Modal */}
-      {showKeyModal && (
-        <div className="fixed inset-0 bg-slate-950/50 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-200 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <Key className="h-4 w-4 text-indigo-600" />
-                <span>Configure Custom API Key</span>
-              </h4>
-              <button
-                onClick={() => setShowKeyModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              If your backend does not have a global API key set in <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-indigo-600">backend/.env</code>, you can provide your own Gemini or OpenAI API key here. It will be stored locally in your browser session.
-            </p>
-            <div>
-              <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                API Key
-              </label>
-              <input
-                type="password"
-                value={customApiKey}
-                onChange={(e) => setCustomApiKey(e.target.value)}
-                placeholder="AIzaSy... or sk-..."
-                className="w-full px-3.5 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => handleSaveApiKey('')}
-                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-100"
-              >
-                Clear Key
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSaveApiKey(customApiKey)}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30"
-              >
-                Save Key
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );
