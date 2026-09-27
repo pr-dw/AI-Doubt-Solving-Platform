@@ -725,11 +725,17 @@ class StudyOrderView(APIView):
 
         target_user = user
         student_id = request.GET.get('student_id')
-        if student_id and user.role in ['faculty', 'admin']:
-            try:
-                target_user = User.objects.get(id=student_id)
-            except User.DoesNotExist:
-                return Response({"detail": "Student not found."}, status=status.HTTP_404_NOT_FOUND)
+        student_email = request.GET.get('student_email')
+
+        if (student_id or student_email) and user.role in ['faculty', 'admin']:
+            identifier = str(student_id or student_email).strip()
+            target_user = None
+            if identifier.isdigit():
+                target_user = User.objects.filter(id=int(identifier)).first()
+            if not target_user:
+                target_user = User.objects.filter(email__iexact=identifier).first()
+            if not target_user:
+                return Response({"detail": f"Student '{identifier}' not found."}, status=status.HTTP_404_NOT_FOUND)
 
         study_order = compute_personalized_study_order(target_user, subject_id=subject_id, exam_id=exam_id)
 

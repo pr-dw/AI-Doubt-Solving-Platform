@@ -15,8 +15,23 @@ const OFFICIAL_EXAM_TYPES = [
 
 const QUESTION_PAPER_SETS = ['Set A', 'Set B', 'Set C', 'Set D', 'Set E'];
 
-export default function FacultyExamPortal() {
-  const [activeSubTab, setActiveSubTab] = useState('upload-paper'); // 'upload-paper', 'record-marks', 'exam-list'
+export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavigateTab }) {
+  const [activeSubTab, setActiveSubTab] = useState(externalSubTab || 'upload-paper');
+
+  useEffect(() => {
+    if (externalSubTab && externalSubTab !== activeSubTab) {
+      setActiveSubTab(externalSubTab);
+    }
+  }, [externalSubTab]);
+
+  const switchTab = (tab) => {
+    setActiveSubTab(tab);
+    if (onNavigateTab) {
+      if (tab === 'upload-paper') onNavigateTab('faculty-upload');
+      else if (tab === 'record-marks') onNavigateTab('faculty-score');
+      else if (tab === 'exam-list') onNavigateTab('faculty-exams');
+    }
+  };
   const [subjects, setSubjects] = useState([]);
   const [exams, setExams] = useState([]);
   const [students, setStudents] = useState([]);
@@ -428,7 +443,7 @@ export default function FacultyExamPortal() {
           {/* Sub-Navigation Pills */}
           <div className="flex flex-wrap gap-2 pt-2">
             <button
-              onClick={() => setActiveSubTab('upload-paper')}
+              onClick={() => switchTab('upload-paper')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                 activeSubTab === 'upload-paper'
                   ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 font-black'
@@ -440,7 +455,7 @@ export default function FacultyExamPortal() {
             </button>
 
             <button
-              onClick={() => setActiveSubTab('record-marks')}
+              onClick={() => switchTab('record-marks')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                 activeSubTab === 'record-marks'
                   ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 font-black'
@@ -452,7 +467,7 @@ export default function FacultyExamPortal() {
             </button>
 
             <button
-              onClick={() => setActiveSubTab('exam-list')}
+              onClick={() => switchTab('exam-list')}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
                 activeSubTab === 'exam-list'
                   ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 font-black'
@@ -527,7 +542,7 @@ export default function FacultyExamPortal() {
                   <button
                     onClick={() => {
                       setSelectedExamId(examSavedSuccess.examId);
-                      setActiveSubTab('record-marks');
+                      switchTab('record-marks');
                     }}
                     className="px-4 py-2 rounded-xl bg-white text-slate-950 text-xs font-extrabold hover:bg-emerald-50 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                   >
@@ -887,7 +902,7 @@ export default function FacultyExamPortal() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => setActiveSubTab('upload-paper')}
+                  onClick={() => switchTab('upload-paper')}
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer inline-flex items-center gap-1.5"
                 >
                   <Upload className="h-4 w-4" />
@@ -1117,7 +1132,7 @@ export default function FacultyExamPortal() {
               <p className="text-xs text-slate-500">Only genuine exam papers uploaded by faculty are displayed.</p>
             </div>
             <button
-              onClick={() => setActiveSubTab('upload-paper')}
+              onClick={() => switchTab('upload-paper')}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
@@ -1194,7 +1209,7 @@ export default function FacultyExamPortal() {
                         onClick={() => {
                           setSelectedExamId(ex.id);
                           initializeQuestionScoresForExam(ex);
-                          setActiveSubTab('record-marks');
+                          switchTab('record-marks');
                         }}
                         className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
                       >

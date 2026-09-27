@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  MessageSquare, Compass, BarChart3, Target, Award, BookOpen, ShieldCheck, LogOut, GraduationCap, User 
+  MessageSquare, Compass, BarChart3, Target, Award, BookOpen, ShieldCheck, LogOut, GraduationCap, User,
+  Upload, FileText, Layers
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -28,14 +29,18 @@ const STUDENT_TABS = [
 ];
 
 const FACULTY_TABS = [
-  { id: 'exams', label: 'Exam Papers & Student Marks', icon: Target, badge: 'Upload' },
+  { id: 'faculty-upload', label: '1. Upload Exam Paper', icon: Upload, badge: 'AI Mapping' },
+  { id: 'faculty-score', label: '2. Score Students', icon: FileText, badge: 'Grading' },
+  { id: 'faculty-exams', label: '3. Uploaded Exams', icon: Layers },
   { id: 'resources', label: 'Study Materials & Notes', icon: BookOpen },
-  { id: 'analytics', label: 'Student Performance Metrics', icon: BarChart3 },
+  { id: 'analytics', label: 'Performance Analytics', icon: BarChart3 },
 ];
 
 const ADMIN_TABS = [
   { id: 'admin', label: 'System Overview & Telemetry', icon: ShieldCheck, badge: 'Admin' },
-  { id: 'exams', label: 'Exam Papers & Marks Portal', icon: Target, badge: 'Faculty' },
+  { id: 'faculty-upload', label: 'Upload Exam Paper', icon: Upload, badge: 'Faculty' },
+  { id: 'faculty-score', label: 'Score Students', icon: FileText, badge: 'Grading' },
+  { id: 'faculty-exams', label: 'Uploaded Exam Papers', icon: Layers },
   { id: 'study-order', label: 'Study Order Engine', icon: Target, badge: 'AI' },
   { id: 'resources', label: 'Resource Management', icon: BookOpen },
   { id: 'analytics', label: 'Student Performance Metrics', icon: BarChart3 },
@@ -58,7 +63,7 @@ export default function App() {
       if (stored.role === 'admin') {
         setActiveTab('admin');
       } else if (stored.role === 'faculty') {
-        setActiveTab('exams');
+        setActiveTab('faculty-upload');
       } else {
         setActiveTab('doubts');
       }
@@ -70,7 +75,7 @@ export default function App() {
       if (u?.role === 'admin') {
         setActiveTab('admin');
       } else if (u?.role === 'faculty') {
-        setActiveTab('exams');
+        setActiveTab('faculty-upload');
       }
     };
     window.addEventListener('auth-change', handleAuthChange);
@@ -82,7 +87,7 @@ export default function App() {
     if (userData.role === 'admin') {
       setActiveTab('admin');
     } else if (userData.role === 'faculty') {
-      setActiveTab('exams');
+      setActiveTab('faculty-upload');
     } else {
       setActiveTab('doubts');
     }
@@ -160,8 +165,21 @@ export default function App() {
                 }}
               />
             )}
-            {activeTab === 'exams' && (
-              <FacultyExamPortal user={user} />
+            {(activeTab === 'faculty-upload' || activeTab === 'faculty-score' || activeTab === 'faculty-exams' || activeTab === 'exams') && (
+              <FacultyExamPortal 
+                user={user} 
+                activeSubTab={
+                  activeTab === 'faculty-score' ? 'record-marks' : 
+                  activeTab === 'faculty-exams' ? 'exam-list' : 
+                  'upload-paper'
+                }
+                onNavigateTab={(tabKey) => {
+                  if (tabKey === 'upload-paper' || tabKey === 'faculty-upload') setActiveTab('faculty-upload');
+                  else if (tabKey === 'record-marks' || tabKey === 'faculty-score') setActiveTab('faculty-score');
+                  else if (tabKey === 'exam-list' || tabKey === 'faculty-exams') setActiveTab('faculty-exams');
+                  else setActiveTab(tabKey);
+                }}
+              />
             )}
             {activeTab === 'analytics' && (
               <PerformanceAnalytics user={user} onRequireAuth={() => setAuthModalOpen(true)} />

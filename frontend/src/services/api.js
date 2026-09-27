@@ -166,11 +166,17 @@ export const api = {
     }),
 
   // Personalised Study Order & Exams
-  getStudyOrder: (subject_id = null, exam_id = null, student_id = null) => {
+  getStudyOrder: (subject_id = null, exam_id = null, student_identifier = null) => {
     const params = new URLSearchParams();
     if (subject_id) params.append('subject_id', subject_id);
     if (exam_id) params.append('exam_id', exam_id);
-    if (student_id) params.append('student_id', student_id);
+    if (student_identifier) {
+      if (typeof student_identifier === 'string' && student_identifier.includes('@')) {
+        params.append('student_email', student_identifier);
+      } else {
+        params.append('student_id', student_identifier);
+      }
+    }
     return request(`/study-order/?${params.toString()}`);
   },
 
