@@ -324,8 +324,6 @@ class UserProfileView(APIView):
         data = request.data
         
         # Fields that students and faculty are permitted to update
-        if 'phone' in data:
-            user.phone = data['phone']
         if 'bio' in data:
             user.bio = data['bio']
         if 'avatar' in data:
@@ -337,6 +335,11 @@ class UserProfileView(APIView):
         if user.role == 'admin':
             if 'name' in data:
                 user.name = data['name']
+            if 'phone' in data:
+                user.phone = data['phone']
+            if 'email' in data:
+                user.email = data['email'].lower()
+                user.username = data['email'].lower()
             if 'roll_number' in data:
                 user.roll_number = data['roll_number']
             if 'department' in data:
