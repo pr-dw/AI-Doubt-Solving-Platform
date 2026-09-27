@@ -323,13 +323,11 @@ class UserProfileView(APIView):
         user = request.user
         data = request.data
         
-        # Fields that students and faculty are permitted to update
+        # Fields that students and faculty are permitted to update (bio, avatar)
         if 'bio' in data:
             user.bio = data['bio']
         if 'avatar' in data:
             user.avatar = data['avatar']
-        if 'password' in data and data['password']:
-            user.set_password(data['password'])
 
         # Institutional registry fields: strictly managed by Admin based on registered records
         if user.role == 'admin':
@@ -354,6 +352,55 @@ class UserProfileView(APIView):
 
         user.save()
         return Response(UserSerializer(user).data)
+
+
+class ChangePasswordView(APIView):
+    """
+    Enables users to change their password securely:
+    Requires entering current password, new password, and confirming new password.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        current_password = request.data.get('current_password', '')
+        new_password = request.data.get('new_password', '')
+        confirm_password = request.data.get('confirm_password', '')
+
+        if not current_password or not new_password or not confirm_password:
+            return Response(
+                {"detail": "Please fill in current password, new password, and confirm password."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not user.check_password(current_password):
+            return Response(
+                {"detail": "The current password you entered is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 6:
+            return Response(
+                {"detail": "New password must be at least 6 characters long."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if new_password != confirm_password:
+            return Response(
+                {"detail": "New password and confirmation password do not match."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if current_password == new_password:
+            return Response(
+                {"detail": "New password cannot be identical to your current password."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "Password changed successfully! Please use your new password next time you sign in."})
 
 
 class SubjectListView(APIView):

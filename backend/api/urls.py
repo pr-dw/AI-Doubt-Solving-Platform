@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     RootView, HealthCheckView, RegisterView, LoginView, UserProfileView,
+    ChangePasswordView,
     SubjectListView, AcademicRecordView, AnalyticsReportView,
     AIQueryView, ConversationListView, ConversationDetailView,
     ToggleBookmarkView, AISummarizeView, AIRoadmapView,
@@ -20,9 +21,10 @@ urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
     path('auth/me/', UserProfileView.as_view(), name='auth-me'),
+    path('auth/change-password/', ChangePasswordView.as_view(), name='auth-change-password'),
 
-    # File Uploads (Local private storage for avatar photos and course PDFs)
-    path('upload/', PrivateFileUploadView.as_view(), name='private-file-upload'),
+    # File Uploads (Local storage for avatar photos and course PDFs)
+    path('upload/', PrivateFileUploadView.as_view(), name='file-upload'),
 
     # Subjects & Academics
     path('subjects/', SubjectListView.as_view(), name='subject-list'),

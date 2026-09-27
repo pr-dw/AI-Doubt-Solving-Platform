@@ -80,6 +80,11 @@ export const api = {
 
   getProfile: () => request('/auth/me/'),
   updateProfile: (data) => request('/auth/me/', { method: 'PUT', body: JSON.stringify(data) }),
+  changePassword: (current_password, new_password, confirm_password) =>
+    request('/auth/change-password/', {
+      method: 'POST',
+      body: JSON.stringify({ current_password, new_password, confirm_password }),
+    }),
 
   // Local Private File Uploads (Images and PDFs)
   uploadFile: async (file, type = 'general') => {
