@@ -13,7 +13,7 @@
 - **Frontend:** React 19, Vite, Tailwind CSS v4, Lucide Icons, Canvas Confetti
 - **Backend:** Django 6 (Python 3.13), Django REST Framework, Django CORS Headers
 - **Security & Auth:** Argon2 Password Hashing, JWT (JSON Web Tokens via PyJWT / SimpleJWT)
-- **Database:** Django ORM with SQLite (Development) / PostgreSQL (Production)
+- **Database:** PostgreSQL 17 (Database: `ai_doubt_platform`, Port: 5432) via Django ORM & Psycopg2
 - **AI Engine:** Local Ollama integration (`qwen2.5:latest` & `llama3.2`) with integrated on-device academic fallback reasoning engine
 
 ---
