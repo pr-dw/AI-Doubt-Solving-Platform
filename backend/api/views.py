@@ -324,6 +324,17 @@ class UserProfileView(APIView):
             user.bio = data['bio']
         if 'avatar' in data:
             user.avatar = data['avatar']
+        if 'roll_number' in data:
+            user.roll_number = data['roll_number']
+        if 'department' in data:
+            user.department = data['department']
+        if 'semester' in data:
+            try:
+                user.semester = int(data['semester'])
+            except (ValueError, TypeError):
+                pass
+        if 'section' in data:
+            user.section = data['section']
         if 'password' in data and data['password']:
             user.set_password(data['password'])
         user.save()

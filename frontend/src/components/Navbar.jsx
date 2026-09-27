@@ -281,10 +281,16 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
                   </div>
                   <div className="py-1">
                     <button
+                      onClick={() => { setActiveTab('profile'); setShowUserMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-lg flex items-center gap-2 cursor-pointer font-medium"
+                    >
+                      <UserIcon className="h-3.5 w-3.5 text-indigo-600" /> Student Profile & Settings
+                    </button>
+                    <button
                       onClick={() => { setActiveTab('analytics'); setShowUserMenu(false); }}
                       className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-lg flex items-center gap-2 cursor-pointer"
                     >
-                      <UserIcon className="h-3.5 w-3.5 text-indigo-600" /> My Academic Performance
+                      <UserIcon className="h-3.5 w-3.5 text-slate-500" /> My Academic Performance
                     </button>
                     <button
                       onClick={() => { setActiveTab('admin'); setShowUserMenu(false); }}

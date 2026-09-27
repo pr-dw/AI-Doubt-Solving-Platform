@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  MessageSquare, Compass, BarChart3, Target, Award, BookOpen, ShieldCheck, LogOut, GraduationCap 
+  MessageSquare, Compass, BarChart3, Target, Award, BookOpen, ShieldCheck, LogOut, GraduationCap, User 
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -13,6 +13,7 @@ import StudyPlanner from './components/StudyPlanner';
 import QuizCenter from './components/QuizCenter';
 import ResourceLibrary from './components/ResourceLibrary';
 import AdminPanel from './components/AdminPanel';
+import StudentProfile from './components/StudentProfile';
 import { getStoredUser, clearAuthToken } from './services/api';
 
 const STUDENT_TABS = [
@@ -22,6 +23,7 @@ const STUDENT_TABS = [
   { id: 'planner', label: 'Study Planner', icon: Target, badge: 'Streaks' },
   { id: 'quiz', label: 'Quiz & Exam Prep', icon: Award },
   { id: 'resources', label: 'Resource Library', icon: BookOpen },
+  { id: 'profile', label: 'Student Profile', icon: User, badge: 'Account' },
   { id: 'admin', label: 'System Overview', icon: ShieldCheck },
 ];
 
@@ -158,6 +160,13 @@ export default function App() {
             )}
             {activeTab === 'resources' && (
               <ResourceLibrary user={user} />
+            )}
+            {activeTab === 'profile' && (
+              <StudentProfile 
+                user={user} 
+                onRequireAuth={() => setAuthModalOpen(true)}
+                onUpdateUser={(updated) => setUser(updated)}
+              />
             )}
             {activeTab === 'admin' && (
               <AdminPanel user={user} />
