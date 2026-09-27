@@ -124,7 +124,7 @@ def get_langchain_model(model_name: str, custom_api_key: str = None):
 
     # 3. Ollama Qwen Model
     elif 'qwen' in model_str:
-        resolved_tag = "qwen2.5:latest"
+        resolved_tag = getattr(settings, 'OLLAMA_QWEN_MODEL', os.environ.get('OLLAMA_QWEN_MODEL', 'qwen2.5:3b'))
         return ChatOllama(
             model=resolved_tag,
             base_url=ollama_base,

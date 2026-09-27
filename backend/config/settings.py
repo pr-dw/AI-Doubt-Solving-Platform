@@ -115,6 +115,7 @@ SIMPLE_JWT = {
 
 # AI Service Configuration
 OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
-OLLAMA_DEFAULT_MODEL = os.environ.get('OLLAMA_DEFAULT_MODEL', 'qwen2.5:latest')
+OLLAMA_DEFAULT_MODEL = os.environ.get('OLLAMA_DEFAULT_MODEL', 'qwen2.5:3b')
+OLLAMA_QWEN_MODEL = os.environ.get('OLLAMA_QWEN_MODEL', 'qwen2.5:3b')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY') or os.environ.get('GOOGLE_API_KEY', '')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
