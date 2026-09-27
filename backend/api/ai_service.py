@@ -422,6 +422,19 @@ def get_flattened_syllabus_topics(subject):
     return flattened
 
 
+def stem_word(w):
+    w = w.lower().strip('.,;:()[]"\'')
+    if w.endswith('ies') and len(w) > 4:
+        return w[:-3] + 'y'
+    if w.endswith('es') and len(w) > 4:
+        return w[:-2]
+    if w.endswith('s') and not w.endswith('ss') and len(w) > 3:
+        return w[:-1]
+    if w.endswith('ing') and len(w) > 5:
+        return w[:-3]
+    return w
+
+
 def sanitize_question_topic_and_unit(raw_topic, raw_unit, question_text, syllabus_topics):
     """
     Guarantees that:
@@ -434,56 +447,60 @@ def sanitize_question_topic_and_unit(raw_topic, raw_unit, question_text, syllabu
         return cleaned_topic, raw_unit or 'Unit I'
 
     raw_clean = (raw_topic or '').strip()
+    q_clean = (question_text or '').lower()
 
-    # 1. Exact match with any syllabus topic
+    # Sort syllabus topics by length descending so longer, more specific phrases match first
+    sorted_by_len = sorted(syllabus_topics, key=lambda x: len(x[1]), reverse=True)
+
+    # 1. Exact match with raw_clean if it is a single syllabus topic
     for u, t in syllabus_topics:
         if raw_clean.lower() == t.lower():
             return t, u
 
-    # 2. Check if any syllabus topic is a substring in raw_topic
-    # Sort by length descending so longer, more specific topics match before shorter ones
-    sorted_by_len = sorted(syllabus_topics, key=lambda x: len(x[1]), reverse=True)
+    # 2. Check direct substring match with question_text
+    for u, t in sorted_by_len:
+        if len(t) > 3 and t.lower() in q_clean:
+            return t, u
+
+    # 3. If raw_topic has multiple comma/semicolon pieces, check which piece matches a syllabus topic and overlaps with question_text
+    chunks = [c.strip() for c in re.split(r'[,;/]', raw_clean) if c.strip()]
+    if len(chunks) > 1:
+        for chunk in chunks:
+            for u, t in sorted_by_len:
+                if t.lower() in chunk.lower() or chunk.lower() in t.lower():
+                    t_words = set(re.findall(r'\w+', t.lower())) - {'and', 'or', 'of', 'in', 'the', 'for'}
+                    q_words = set(re.findall(r'\w+', q_clean))
+                    if t_words.intersection(q_words):
+                        return t, u
+        for u, t in sorted_by_len:
+            if t.lower() in chunks[0].lower():
+                return t, u
+
+    # 4. Check if any syllabus topic is a substring in raw_topic
     for u, t in sorted_by_len:
         if t.lower() in raw_clean.lower():
             return t, u
 
-    # 3. If raw_topic has comma or slash (multiple topics returned by AI), test the first chunk
-    chunks = [c.strip() for c in re.split(r'[,;/]', raw_clean) if c.strip()]
-    if len(chunks) > 1:
-        first_chunk = chunks[0]
-        for u, t in sorted_by_len:
-            if t.lower() in first_chunk.lower():
-                return t, u
-
-    # 4. Check if any syllabus topic appears in question_text
-    q_clean = (question_text or '').lower()
-    for u, t in sorted_by_len:
-        if t.lower() in q_clean:
-            return t, u
-
-    # 5. Fuzzy matching using best token overlap + difflib across syllabus
-    target = chunks[0] if chunks else raw_clean
-    combined_query = f"{target} {question_text}".lower()
-    query_tokens = set(re.findall(r'\w+', combined_query))
-
-    stop_words = {'and', 'or', 'of', 'in', 'the', 'for', 'with', 'to', 'a', 'an', 'what', 'explain', 'define', 'derive', 'layer', 'protocols', 'issues', 'system'}
-    query_tokens = query_tokens - stop_words
+    # 5. Token and Stemming Overlap across question_text + raw_topic
+    stop_words = {'and', 'or', 'of', 'in', 'the', 'for', 'with', 'to', 'a', 'an', 'what', 'explain', 'define', 'derive', 'layer', 'protocols', 'issues', 'system', 'different', 'suitable', 'compare', 'their', 'basic'}
+    query_raw = f"{raw_clean} {question_text}"
+    query_stemmed = {stem_word(w) for w in re.findall(r'\w+', query_raw.lower())} - stop_words
 
     best_item = None
     best_score = -1.0
 
     for u, t in syllabus_topics:
         score = 0.0
-        # Preferred unit bonus if raw_unit was specified and matches
         if raw_unit and u.lower() == raw_unit.lower():
-            score += 1.5
+            score += 1.0
 
-        t_tokens = (set(re.findall(r'\w+', t.lower())) - stop_words)
-        if t_tokens:
-            overlap = len(t_tokens.intersection(query_tokens))
-            score += (overlap / len(t_tokens)) * 5.0
+        t_stemmed = {stem_word(w) for w in re.findall(r'\w+', t.lower())} - stop_words
+        if t_stemmed:
+            overlap = len(t_stemmed.intersection(query_stemmed))
+            coverage = overlap / len(t_stemmed)
+            score += (overlap * 3.0) + (coverage * 4.0)
 
-        ratio = difflib.SequenceMatcher(None, t.lower(), target.lower()).ratio()
+        ratio = difflib.SequenceMatcher(None, t.lower(), raw_clean.lower()).ratio()
         score += ratio * 2.0
 
         if score > best_score:
@@ -594,44 +611,25 @@ def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set='', m
     """
     clean_text = (pdf_text or "").strip()
     syllabus_topics = get_flattened_syllabus_topics(subject)
-    unit_map = parse_subject_units_and_topics(subject.syllabus_overview or "")
-
-    formatted_syllabus_lines = []
-    for u, topics in unit_map.items():
-        formatted_syllabus_lines.append(f"{u}:")
-        for t in topics:
-            formatted_syllabus_lines.append(f"  - {t}")
-    formatted_syllabus_text = "\n".join(formatted_syllabus_lines)
 
     if len(clean_text) > 20:
         prompt = (
             f"You are an academic examination coordinator analyzing an uploaded university exam question paper.\n"
             f"Subject: [{subject.code}] {subject.name} (Semester {subject.semester})\n"
             f"Exam Type: {exam_type} {paper_set}\n\n"
-            f"OFFICIAL SUBJECT SYLLABUS TOPICS (Choose topics ONLY from this list):\n"
-            f"{formatted_syllabus_text}\n\n"
+            f"Official Subject Syllabus:\n"
+            f"{subject.syllabus_overview}\n\n"
             f"Uploaded Question Paper Text:\n"
             f"\"\"\"\n{clean_text[:4000]}\n\"\"\"\n\n"
-            f"CRITICAL RULES:\n"
-            f"1. Extract every question from the uploaded question paper text.\n"
-            f"2. For EACH question, determine the question number (e.g., 'Part A - Q1', 'Part B - Q3(a)', 'Q1(a)', 'Unit I - Q2', etc.), maximum marks, and summarize the question in 'question_text'.\n"
-            f"3. STRICT TOPIC ASSIGNMENT RULE: For EACH question, select EXACTLY ONE topic from the official syllabus topic list above that is closest to the question concept.\n"
-            f"   - NEVER include multiple topics separated by commas (DO NOT write 'Topic A, Topic B').\n"
-            f"   - DO NOT invent new topics.\n"
-            f"   - The 'topic' field MUST be a single exact topic name from the list above.\n"
-            f"   - The 'unit' field MUST be the exact Unit name containing that topic (e.g., 'Unit I', 'Unit II', etc.).\n"
-            f"4. If it is a choice question (e.g. in Pre-End sem where student chooses 1 out of 2 per unit), set is_choice: true and choice_group to the Unit name.\n\n"
-            f"Required JSON Output Format (ONLY valid JSON array of objects, no markdown formatting):\n"
+            f"Task:\n"
+            f"1. Extract ALL questions from the question paper text above into a JSON array.\n"
+            f"2. Do NOT stop after only one question. Output every single question and sub-question (e.g. Part A Q1, Q2, Part B Q3(a), Q3(b), Q3(c), Q4, Q5, etc.).\n"
+            f"3. For each question, extract its question number, maximum marks, summary in 'question_text', and the closest single syllabus topic name and Unit from the syllabus above.\n"
+            f"4. If it is a choice question (e.g. in Pre-End sem), set is_choice: true and choice_group to the Unit name.\n\n"
+            f"Required JSON Output Format (must be a valid JSON array of objects containing ALL questions, no markdown formatting):\n"
             f"[\n"
-            f"  {{\n"
-            f"    \"q_no\": \"Part A - Q1\",\n"
-            f"    \"unit\": \"Unit I\",\n"
-            f"    \"topic\": \"Exact Single Syllabus Topic Name\",\n"
-            f"    \"max_marks\": 5.0,\n"
-            f"    \"question_text\": \"Question summary\",\n"
-            f"    \"is_choice\": false,\n"
-            f"    \"choice_group\": \"\"\n"
-            f"  }}\n"
+            f"  {{\"q_no\": \"Part A - Q1\", \"unit\": \"Unit I\", \"topic\": \"Exact Topic Name\", \"max_marks\": 5.0, \"question_text\": \"Question summary\", \"is_choice\": false, \"choice_group\": \"\"}},\n"
+            f"  {{\"q_no\": \"Part A - Q2\", \"unit\": \"Unit I\", \"topic\": \"Exact Topic Name\", \"max_marks\": 5.0, \"question_text\": \"Question summary\", \"is_choice\": false, \"choice_group\": \"\"}}\n"
             f"]"
         )
         try:
@@ -645,7 +643,9 @@ def analyze_question_paper_with_ai(pdf_text, subject, exam_type, paper_set='', m
 
             match = re.search(r'\[\s*\{.*\}\s*\]', cleaned, re.DOTALL)
             if match:
-                parsed = json.loads(match.group(0))
+                # Clean trailing commas if any
+                clean_json_str = re.sub(r',\s*([\]}])', r'\1', match.group(0))
+                parsed = json.loads(clean_json_str)
                 if isinstance(parsed, list) and len(parsed) > 0:
                     sanitized = []
                     for q in parsed:
