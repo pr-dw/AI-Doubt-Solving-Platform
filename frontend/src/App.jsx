@@ -8,6 +8,7 @@ import LandingPage from './components/LandingPage';
 import AuthModal from './components/AuthModal';
 import DoubtSolver from './components/DoubtSolver';
 import PersonalisedStudyOrder from './components/PersonalisedStudyOrder';
+import FacultyExamPortal from './components/FacultyExamPortal';
 import PerformanceAnalytics from './components/PerformanceAnalytics';
 import StudyPlanner from './components/StudyPlanner';
 import QuizCenter from './components/QuizCenter';
@@ -24,20 +25,17 @@ const STUDENT_TABS = [
   { id: 'quiz', label: 'Quiz & Exam Prep', icon: Award },
   { id: 'resources', label: 'Resource Library', icon: BookOpen },
   { id: 'profile', label: 'Student Profile', icon: User, badge: 'Account' },
-  { id: 'admin', label: 'System Overview', icon: ShieldCheck },
 ];
 
 const FACULTY_TABS = [
-  { id: 'resources', label: 'Resource & Notes Management', icon: BookOpen, badge: 'Faculty' },
-  { id: 'study-order', label: 'Exam Marks & Study Order', icon: Target, badge: 'Upload' },
+  { id: 'exams', label: 'Exam Papers & Student Marks', icon: Target, badge: 'Upload' },
+  { id: 'resources', label: 'Study Materials & Notes', icon: BookOpen },
   { id: 'analytics', label: 'Student Performance Metrics', icon: BarChart3 },
-  { id: 'quiz', label: 'Quiz Repository', icon: Award },
-  { id: 'doubts', label: 'AI Doubt Solver', icon: MessageSquare, badge: '6 Modes' },
-  { id: 'admin', label: 'System Overview', icon: ShieldCheck },
 ];
 
 const ADMIN_TABS = [
   { id: 'admin', label: 'System Overview & Telemetry', icon: ShieldCheck, badge: 'Admin' },
+  { id: 'exams', label: 'Exam Papers & Marks Portal', icon: Target, badge: 'Faculty' },
   { id: 'study-order', label: 'Study Order Engine', icon: Target, badge: 'AI' },
   { id: 'resources', label: 'Resource Management', icon: BookOpen },
   { id: 'analytics', label: 'Student Performance Metrics', icon: BarChart3 },
@@ -60,7 +58,7 @@ export default function App() {
       if (stored.role === 'admin') {
         setActiveTab('admin');
       } else if (stored.role === 'faculty') {
-        setActiveTab('resources');
+        setActiveTab('exams');
       } else {
         setActiveTab('doubts');
       }
@@ -72,7 +70,7 @@ export default function App() {
       if (u?.role === 'admin') {
         setActiveTab('admin');
       } else if (u?.role === 'faculty') {
-        setActiveTab('resources');
+        setActiveTab('exams');
       }
     };
     window.addEventListener('auth-change', handleAuthChange);
@@ -84,7 +82,7 @@ export default function App() {
     if (userData.role === 'admin') {
       setActiveTab('admin');
     } else if (userData.role === 'faculty') {
-      setActiveTab('resources');
+      setActiveTab('exams');
     } else {
       setActiveTab('doubts');
     }
@@ -161,6 +159,9 @@ export default function App() {
                   setActiveTab('doubts');
                 }}
               />
+            )}
+            {activeTab === 'exams' && (
+              <FacultyExamPortal user={user} />
             )}
             {activeTab === 'analytics' && (
               <PerformanceAnalytics user={user} onRequireAuth={() => setAuthModalOpen(true)} />

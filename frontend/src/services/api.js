@@ -164,6 +164,12 @@ export const api = {
       body: JSON.stringify(scoreData),
     }),
 
+  getStudents: (semester = null) => {
+    const params = new URLSearchParams();
+    if (semester) params.append('semester', semester);
+    return request(`/students/?${params.toString()}`);
+  },
+
   // Resources
   getResources: (subject = '', type = '', query = '') => {
     const params = new URLSearchParams();

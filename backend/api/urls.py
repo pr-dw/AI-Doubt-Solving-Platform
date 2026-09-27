@@ -6,6 +6,7 @@ from .views import (
     AIQueryView, AIModelsView, ConversationListView, ConversationDetailView,
     ToggleBookmarkView, AISummarizeView, AIRoadmapView,
     StudyOrderView, ExamListView, ExamDetailView, ExamScoreUploadView,
+    StudentListView,
     ResourceListView, PrivateFileUploadView, StudyGoalView, ToggleStudyGoalView,
     QuizListView, QuizDetailView, SubmitQuizAttemptView,
     NotificationListView, MarkNotificationReadView,
@@ -46,6 +47,7 @@ urlpatterns = [
     path('exams/', ExamListView.as_view(), name='exam-list'),
     path('exams/<int:pk>/', ExamDetailView.as_view(), name='exam-detail'),
     path('exams/<int:pk>/scores/', ExamScoreUploadView.as_view(), name='exam-score-upload'),
+    path('students/', StudentListView.as_view(), name='student-list'),
 
     # Resources
     path('resources/', ResourceListView.as_view(), name='resource-list'),

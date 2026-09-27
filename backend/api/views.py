@@ -784,6 +784,24 @@ class ExamListView(APIView):
         answer_key_pdf = request.data.get('answer_key_pdf', '')
         questions_data = request.data.get('questions_data', [])
 
+        # Handle direct PDF uploads
+        if 'question_paper_file' in request.FILES:
+            qp_file = request.FILES['question_paper_file']
+            saved_qp = default_storage.save(f"exams/qp_{uuid.uuid4().hex[:8]}_{qp_file.name}", ContentFile(qp_file.read()))
+            question_paper_pdf = f"{settings.MEDIA_URL}{saved_qp}"
+
+        if 'answer_key_file' in request.FILES:
+            ak_file = request.FILES['answer_key_file']
+            saved_ak = default_storage.save(f"exams/ak_{uuid.uuid4().hex[:8]}_{ak_file.name}", ContentFile(ak_file.read()))
+            answer_key_pdf = f"{settings.MEDIA_URL}{saved_ak}"
+
+        # Handle questions_data if serialized as JSON string in multipart form
+        if isinstance(questions_data, str):
+            try:
+                questions_data = json.loads(questions_data)
+            except Exception:
+                questions_data = []
+
         if not subject_id or not title:
             return Response({"detail": "subject_id and title are required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -896,6 +914,26 @@ class AIRoadmapView(APIView):
 
     def post(self, request):
         return Response({"detail": "Roadmaps have been upgraded to Personalised Study Order."}, status=status.HTTP_200_OK)
+
+
+class StudentListView(APIView):
+    """
+    Returns list of enrolled students for faculty / admin mark entry.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role not in ['faculty', 'admin']:
+            return Response({"detail": "Permission denied. Only faculty or admin can list students."}, status=status.HTTP_403_FORBIDDEN)
+
+        semester = request.GET.get('semester')
+        queryset = User.objects.filter(role='student').order_by('name', 'roll_number')
+        if semester:
+            try:
+                queryset = queryset.filter(semester=int(semester))
+            except ValueError:
+                pass
+        return Response(UserSerializer(queryset, many=True).data)
 
 
 
