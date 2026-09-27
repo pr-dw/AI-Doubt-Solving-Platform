@@ -288,60 +288,6 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
             </div>
           </div>
 
-          {/* Action Triggers */}
-          <div className="flex items-center gap-2">
-            {!isChangingPassword ? (
-              <>
-                {!isEditingBio ? (
-                  <button
-                    onClick={() => {
-                      setIsEditingBio(true);
-                      setErrorMsg('');
-                      setSuccessMsg('');
-                    }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all cursor-pointer shadow-md shadow-indigo-600/20"
-                  >
-                    <Edit3 className="h-3.5 w-3.5" />
-                    <span>Edit Details</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setIsEditingBio(false);
-                      setBio(activeUser.bio || '');
-                      setErrorMsg('');
-                    }}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all cursor-pointer border border-slate-300"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    <span>Cancel Editing</span>
-                  </button>
-                )}
-
-                <button
-                  onClick={() => {
-                    setIsChangingPassword(true);
-                    setIsEditingBio(false);
-                    setErrorMsg('');
-                    setSuccessMsg('');
-                  }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-                >
-                  <KeyRound className="h-3.5 w-3.5 text-indigo-600" />
-                  <span>Change Password</span>
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={handleCancelPassword}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-              >
-                <ArrowLeft className="h-3.5 w-3.5 text-slate-500" />
-                <span>Back to Profile Details</span>
-              </button>
-            )}
-          </div>
-
         </div>
       </div>
 
