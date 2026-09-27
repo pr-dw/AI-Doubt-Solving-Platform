@@ -1,11 +1,17 @@
 import json
+import os
+import uuid
 from datetime import date, timedelta
 from django.utils import timezone
+from django.conf import settings
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Q
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
@@ -316,27 +322,33 @@ class UserProfileView(APIView):
     def put(self, request):
         user = request.user
         data = request.data
-        if 'name' in data:
-            user.name = data['name']
+        
+        # Fields that students and faculty are permitted to update
         if 'phone' in data:
             user.phone = data['phone']
         if 'bio' in data:
             user.bio = data['bio']
         if 'avatar' in data:
             user.avatar = data['avatar']
-        if 'roll_number' in data:
-            user.roll_number = data['roll_number']
-        if 'department' in data:
-            user.department = data['department']
-        if 'semester' in data:
-            try:
-                user.semester = int(data['semester'])
-            except (ValueError, TypeError):
-                pass
-        if 'section' in data:
-            user.section = data['section']
         if 'password' in data and data['password']:
             user.set_password(data['password'])
+
+        # Institutional registry fields: strictly managed by Admin based on registered records
+        if user.role == 'admin':
+            if 'name' in data:
+                user.name = data['name']
+            if 'roll_number' in data:
+                user.roll_number = data['roll_number']
+            if 'department' in data:
+                user.department = data['department']
+            if 'semester' in data:
+                try:
+                    user.semester = int(data['semester'])
+                except (ValueError, TypeError):
+                    pass
+            if 'section' in data:
+                user.section = data['section']
+
         user.save()
         return Response(UserSerializer(user).data)
 
@@ -610,6 +622,53 @@ class ResourceListView(APIView):
             serializer.save(uploaded_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PrivateFileUploadView(APIView):
+    """
+    Handles local backend file storage for profile avatar pictures and academic PDFs.
+    Files are stored directly on the local server without requiring third-party cloud services.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        uploaded_file = request.FILES.get('file')
+        upload_type = request.data.get('type', 'general')  # 'avatar', 'resource', 'document'
+
+        if not uploaded_file:
+            return Response({"detail": "No file uploaded."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate file size (max 25MB)
+        if uploaded_file.size > 25 * 1024 * 1024:
+            return Response({"detail": "File size exceeds the 25MB limit."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Generate unique safe local filename
+        ext = os.path.splitext(uploaded_file.name)[1].lower()
+        allowed_extensions = ['.png', '.jpg', '.jpeg', '.webp', '.pdf', '.docx', '.txt']
+        if ext not in allowed_extensions:
+            return Response({"detail": f"File type '{ext}' is not supported. Supported: {', '.join(allowed_extensions)}"}, status=status.HTTP_400_BAD_REQUEST)
+
+        filename = f"{upload_type}_{uuid.uuid4().hex[:10]}{ext}"
+        folder = 'avatars' if upload_type == 'avatar' else 'resources' if upload_type == 'resource' else 'uploads'
+        relative_path = os.path.join(folder, filename)
+
+        # Save to local MEDIA_ROOT
+        saved_path = default_storage.save(relative_path, ContentFile(uploaded_file.read()))
+        file_url = f"{settings.MEDIA_URL}{saved_path}"
+
+        # If it was an avatar upload, update the user profile immediately
+        if upload_type == 'avatar':
+            request.user.avatar = file_url
+            request.user.save()
+
+        return Response({
+            "message": "File successfully stored in local backend storage.",
+            "file_url": file_url,
+            "filename": uploaded_file.name,
+            "size": uploaded_file.size,
+            "saved_as": saved_path
+        }, status=status.HTTP_201_CREATED)
 
 
 class StudyGoalView(APIView):

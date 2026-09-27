@@ -81,6 +81,28 @@ export const api = {
   getProfile: () => request('/auth/me/'),
   updateProfile: (data) => request('/auth/me/', { method: 'PUT', body: JSON.stringify(data) }),
 
+  // Local Private File Uploads (Images and PDFs)
+  uploadFile: async (file, type = 'general') => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    const res = await fetch('/api/upload/', {
+      method: 'POST',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      },
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || data.message || 'File upload failed');
+    }
+    return data;
+  },
+
   // Subjects & Analytics
   getSubjects: () => request('/subjects/'),
   getAcademicRecords: () => request('/academic/records/'),

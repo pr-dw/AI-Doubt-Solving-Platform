@@ -4,7 +4,7 @@ from .views import (
     SubjectListView, AcademicRecordView, AnalyticsReportView,
     AIQueryView, ConversationListView, ConversationDetailView,
     ToggleBookmarkView, AISummarizeView, AIRoadmapView,
-    ResourceListView, StudyGoalView, ToggleStudyGoalView,
+    ResourceListView, PrivateFileUploadView, StudyGoalView, ToggleStudyGoalView,
     QuizListView, QuizDetailView, SubmitQuizAttemptView,
     NotificationListView, MarkNotificationReadView,
     GlobalSearchView, AdminStatsView
@@ -20,6 +20,9 @@ urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='auth-register'),
     path('auth/login/', LoginView.as_view(), name='auth-login'),
     path('auth/me/', UserProfileView.as_view(), name='auth-me'),
+
+    # File Uploads (Local private storage for avatar photos and course PDFs)
+    path('upload/', PrivateFileUploadView.as_view(), name='private-file-upload'),
 
     # Subjects & Academics
     path('subjects/', SubjectListView.as_view(), name='subject-list'),
