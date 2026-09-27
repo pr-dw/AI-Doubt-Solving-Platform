@@ -25,10 +25,10 @@ const AI_MODELS = [
 ];
 
 const QUICK_PROMPTS = [
-  { subject: 'BCA-501', title: 'AVL Tree Double Rotations', text: 'Explain Left-Right (LR) and Right-Left (RL) rotations in AVL Trees with a step-by-step example.' },
-  { subject: 'BCA-502', title: "Banker's Algorithm", text: "How does Banker's Algorithm prevent system deadlocks? Explain safe state verification." },
-  { subject: 'BCA-503', title: '3NF vs BCNF Decomposition', text: 'What is the strict mathematical difference between 3NF and BCNF? When can 3NF preserve dependencies?' },
-  { subject: 'BCA-504', title: 'CIDR Subnet Calculation', text: 'Given IP 192.168.10.0/27, calculate the subnet mask, total usable host IPs, and broadcast address.' },
+  { title: 'Sliding Window Protocols', text: 'Explain the working of Go-Back-N and Selective Repeat sliding window protocols in Computer Networks with an error recovery example.' },
+  { title: 'Hypothesis Testing & p-value', text: 'In Data Analytics, explain the difference between Null and Alternate hypothesis, Type I and Type II errors, and level of significance (p-value).' },
+  { title: 'A* vs Hill Climbing Search', text: 'In Artificial Intelligence, compare Informed Search strategies: explain Hill Climbing vs A* Heuristic Search and how to resolve local maxima.' },
+  { title: 'IT Act 2000 Key Provisions', text: 'What are the core objectives and major offences under the Indian Information Technology (IT) Act 2000 regarding hacking and data privacy?' },
 ];
 
 export default function DoubtSolver({ user, onRequireAuth }) {
