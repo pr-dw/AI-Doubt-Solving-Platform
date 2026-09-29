@@ -8,6 +8,13 @@ import { api } from '../services/api';
 
 const EXPLANATION_MODES = [
   { 
+    id: 'assist', 
+    title: 'Assist (Guided Research)', 
+    icon: HelpCircle, 
+    color: 'from-amber-500 to-orange-500',
+    desc: 'Points you directly to what topic to study and hints without spoiling answers.' 
+  },
+  { 
     id: 'detailed', 
     title: 'Detailed Academic', 
     icon: GraduationCap, 
@@ -21,33 +28,26 @@ const EXPLANATION_MODES = [
     color: 'from-emerald-500 to-teal-500',
     desc: 'Everyday analogies and intuitive metaphors that make dense topics instantly click.' 
   },
-  { 
-    id: 'assist', 
-    title: 'Assist (Guided Research)', 
-    icon: HelpCircle, 
-    color: 'from-amber-500 to-orange-500',
-    desc: 'Points you directly to what topic to study and hints without spoiling answers.' 
-  },
 ];
 
 const PLATFORM_PILLARS = [
   {
     icon: Target,
-    title: 'Personalised Study Order (Max ROI)',
-    desc: 'Examines previous exam marks by question & question paper PDFs to rank your worst to best topics for maximum score recovery.',
-    tag: 'Exam Score Maximizer'
+    title: 'Personalised Study Planner',
+    desc: 'Organizes course topics based on syllabus priorities and curriculum blueprints to optimize your study time.',
+    tag: 'Study Planning'
   },
   {
     icon: BarChart3,
     title: 'Performance Analytics',
-    desc: 'Real-time tracking of internal assessment marks, strong vs weak topics, and AI grade forecasting.',
+    desc: 'Real-time tracking of assessment marks, strong vs weak topics, and academic progress indicators.',
     tag: 'Data-Driven'
   },
   {
-    icon: Flame,
-    title: 'Study Streaks & Gamification',
-    desc: 'Build consistent daily learning habits with automated streak counters, task checklists, and confetti rewards.',
-    tag: 'Habit Building'
+    icon: CheckCircle2,
+    title: 'Structured Goal Tracking',
+    desc: 'Maintain daily learning consistency with organized study checklists, milestone countdowns, and topic goals.',
+    tag: 'Productivity'
   },
   {
     icon: Award,
@@ -58,7 +58,7 @@ const PLATFORM_PILLARS = [
 ];
 
 export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onGoToDashboard }) {
-  const [activeModeDemo, setActiveModeDemo] = useState('eli5');
+  const [activeModeDemo, setActiveModeDemo] = useState('assist');
 
   const handleAuthAction = () => {
     if (user && onGoToDashboard) {
@@ -120,18 +120,18 @@ export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onG
           
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold shadow-xs">
             <Sparkles className="h-3.5 w-3.5 text-indigo-600 animate-pulse" />
-            <span>On-Device Academic Intelligence • Powered by Local Ollama</span>
+            <span>Smart Academic Study Partner • Instant Doubt Resolution</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-slate-900 leading-tight">
             Master Any Academic Doubt with <br />
             <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              Intelligent Local AI
+              Adaptive AI Guidance
             </span>
           </h1>
 
           <p className="text-sm sm:text-base text-slate-600 leading-relaxed max-w-2xl mx-auto">
-            A comprehensive full-stack educational tool designed for students and educators. Resolve complex academic questions with 6 explanation modes, generate personalized learning roadmaps, maintain study streaks, and ace university examinations.
+            Your personalized 24/7 academic tutor. Understand complex concepts with tailored explanation modes, structured learning roadmaps, exam preparation drills, and progress tracking.
           </p>
 
           {/* Unified Single Login Button & CTA */}
@@ -147,9 +147,9 @@ export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onG
 
           <p className="text-xs text-slate-500">
             {user ? (
-              <span>Session active for <strong className="text-indigo-600 font-bold">{user.name || user.email}</strong> ({user.role}). Click above to resume without re-entering credentials.</span>
+              <span>Logged in as <strong className="text-indigo-600 font-semibold">{user.name || user.email}</strong>. Click above to return to your dashboard.</span>
             ) : (
-              <span>One login for all roles — your dashboard automatically opens based on whether your account is a <strong>Student</strong>, <strong>Faculty</strong>, or <strong>Admin</strong>.</span>
+              <span>Dedicated workspaces for Students, Faculty, and Academic Administrators.</span>
             )}
           </p>
 
@@ -162,11 +162,11 @@ export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onG
               <span className="h-3 w-3 rounded-full bg-rose-400 inline-block" />
               <span className="h-3 w-3 rounded-full bg-amber-400 inline-block" />
               <span className="h-3 w-3 rounded-full bg-emerald-400 inline-block" />
-              <span className="ml-2 text-xs font-mono text-slate-500">Live AI Doubt Solver Preview</span>
+              <span className="ml-2 text-xs font-medium text-slate-500">Live AI Doubt Solver Preview</span>
             </div>
-            <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-semibold px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200">
+            <div className="flex items-center gap-1.5 text-[11px] text-emerald-700 font-semibold px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping" />
-              <span>Ollama Ready</span>
+              <span>AI Ready</span>
             </div>
           </div>
 
@@ -320,16 +320,22 @@ export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onG
 
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-600">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="h-4 w-4 text-indigo-600" />
-            <span className="font-semibold text-slate-700">AI Doubt Solving Platform</span>
-            <span>•</span>
-            <span>Built with React 19, Django, and Local Ollama</span>
+      <footer className="mt-auto border-t border-slate-200/80 bg-white/80 backdrop-blur-sm py-8 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center">
+              <GraduationCap className="h-4 w-4" />
+            </div>
+            <span className="font-semibold text-slate-800">AI Doubt Solving Platform</span>
+            <span className="text-slate-300 hidden sm:inline">|</span>
+            <span className="hidden sm:inline">Empowering students & educators with intelligent academic assistance</span>
           </div>
-          <div className="text-[11px]">
-            Credentials: <code className="text-indigo-600 font-semibold">student@gmail.com</code> • <code className="text-emerald-600 font-semibold">faculty@gmail.com</code> • <code className="text-purple-600 font-semibold">admin@gmail.com</code> (Pass: <code className="text-slate-800 font-semibold">123456</code>)
+          <div className="text-slate-400 text-[11px] flex items-center gap-3">
+            <span>Privacy-First</span>
+            <span>•</span>
+            <span>Adaptive Pedagogy</span>
+            <span>•</span>
+            <span>© 2026 Academic AI</span>
           </div>
         </div>
       </footer>

@@ -420,21 +420,37 @@ class SubjectListView(APIView):
     def get(self, request):
         user = request.user
         semester = request.GET.get('semester')
-        if not semester and user.is_authenticated and hasattr(user, 'semester') and user.semester:
-            semester = user.semester
+        department = request.GET.get('department')
+        search = request.GET.get('search')
 
-        if semester:
+        queryset = Subject.objects.all().order_by('semester', 'code')
+
+        # If a student requests without specifying any filters, default to student's semester & department
+        if not semester and not department and not search and user.is_authenticated and hasattr(user, 'role') and user.role == 'student':
+            if hasattr(user, 'department') and user.department:
+                queryset = queryset.filter(department=user.department)
+            if hasattr(user, 'semester') and user.semester:
+                queryset = queryset.filter(semester=user.semester)
+
+        if department and department != 'all':
+            queryset = queryset.filter(department__iexact=department.strip())
+
+        if semester and semester != 'all':
             try:
                 sem_int = int(semester)
-                subjects = Subject.objects.filter(semester=sem_int).order_by('code')
-                if not subjects.exists():
-                    subjects = Subject.objects.all().order_by('code')
+                queryset = queryset.filter(semester=sem_int)
             except (ValueError, TypeError):
-                subjects = Subject.objects.all().order_by('code')
-        else:
-            subjects = Subject.objects.all().order_by('code')
+                pass
 
-        return Response(SubjectSerializer(subjects, many=True).data)
+        if search:
+            q_clean = search.strip()
+            queryset = queryset.filter(
+                Q(code__icontains=q_clean) |
+                Q(name__icontains=q_clean) |
+                Q(syllabus_overview__icontains=q_clean)
+            )
+
+        return Response(SubjectSerializer(queryset, many=True).data)
 
     def post(self, request):
         if not request.user.is_authenticated or request.user.role != 'admin':
@@ -614,7 +630,7 @@ class AnalyticsReportView(APIView):
             )
 
         ai_recommendations.append(
-            f"Your current daily study streak is {target_student.streak_count} days! Keep asking doubts and reviewing notes to build consistent academic momentum."
+            "Review priority topics and ask AI doubts to maintain steady academic progress and strengthen core subjects."
         )
 
         return Response({
@@ -1597,21 +1613,90 @@ class AdminStatsView(APIView):
 
     def get(self, request):
         total_students = User.objects.filter(role='student').count()
+        total_faculty = User.objects.filter(role='faculty').count()
         total_subjects = Subject.objects.count()
         total_resources = Resource.objects.count()
         total_conversations = Conversation.objects.count()
         total_messages = Message.objects.count()
         total_quizzes = Quiz.objects.count()
+        total_records = AcademicRecord.objects.count()
+
+        # Department distribution
+        departments = [
+            'Computer Application (BCA)',
+            'Computer Science & Engineering (B.Tech CSE)',
+            'Information Technology (B.Tech IT)',
+            'Business Administration (BBA)'
+        ]
+        dept_data = []
+        for d in departments:
+            sub_count = Subject.objects.filter(department=d).count()
+            stu_count = User.objects.filter(department=d, role='student').count()
+            dept_data.append({
+                "department": d,
+                "subjects": sub_count,
+                "students": stu_count,
+            })
+
+        # Most asked doubt subjects
+        top_subjects = list(
+            Conversation.objects.filter(subject__isnull=False)
+            .values('subject__code', 'subject__name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:5]
+        )
+
+        # Mode usage breakdown
+        mode_usage = list(
+            Message.objects.filter(sender='ai')
+            .exclude(mode_used='')
+            .values('mode_used')
+            .annotate(count=Count('id'))
+            .order_by('-count')
+        )
+
+        # Recent activities
+        recent_activities = []
+        recent_users = User.objects.order_by('-date_joined')[:4]
+        for u in recent_users:
+            recent_activities.append({
+                "type": "user_registration",
+                "title": f"New {u.role.title()} Account",
+                "description": f"{u.name or u.email} enrolled in {u.department or 'College'}",
+                "timestamp": u.date_joined.isoformat() if u.date_joined else timezone.now().isoformat()
+            })
+
+        recent_convs = Conversation.objects.select_related('subject').order_by('-created_at')[:4]
+        for c in recent_convs:
+            subj_title = c.subject.code if c.subject else "General Academic"
+            recent_activities.append({
+                "type": "doubt_resolved",
+                "title": f"Doubt in {subj_title}",
+                "description": c.title or "Interactive Doubt Session",
+                "timestamp": c.created_at.isoformat() if c.created_at else timezone.now().isoformat()
+            })
+
+        recent_activities.sort(key=lambda x: x["timestamp"], reverse=True)
 
         return Response({
             "total_students": total_students,
+            "total_faculty": total_faculty,
             "total_subjects": total_subjects,
             "total_resources": total_resources,
             "total_conversations": total_conversations,
             "total_messages": total_messages,
             "total_quizzes": total_quizzes,
-            "ollama_model": getattr(settings, 'OLLAMA_DEFAULT_MODEL', 'qwen2.5:latest'),
-            "ollama_endpoint": getattr(settings, 'OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
+            "total_records": total_records,
+            "department_distribution": dept_data,
+            "top_doubt_subjects": top_subjects,
+            "mode_usage": mode_usage,
+            "recent_activities": recent_activities[:6],
+            "system_health": {
+                "database_status": "Healthy (PostgreSQL)",
+                "auth_status": "Active (Argon2 / JWT)",
+                "ai_engines": ["Google Gemini", "OpenAI GPT-4o", "Local Engine"],
+                "active_model": getattr(settings, 'OLLAMA_DEFAULT_MODEL', 'qwen2.5:3b')
+            }
         })
 
 

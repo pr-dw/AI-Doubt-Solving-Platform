@@ -176,7 +176,7 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
         <User className="h-12 w-12 mx-auto text-indigo-600 mb-3" />
         <h3 className="text-lg font-bold text-slate-900">Sign in to view Student Profile</h3>
         <p className="text-xs text-slate-500 mt-2 mb-4 leading-relaxed">
-          Access your registered college records, study streak metrics, and personal account settings.
+          Access your registered college records, academic performance metrics, and personal account settings.
         </p>
         <button
           onClick={onRequireAuth}
@@ -396,17 +396,17 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Streak Count */}
+          {/* Department / Program */}
           <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-bold uppercase">Study Streak</span>
-              <Flame className="h-5 w-5 text-amber-500 fill-amber-500" />
+              <span className="text-xs text-slate-500 font-bold uppercase">Department</span>
+              <BookOpen className="h-5 w-5 text-indigo-600" />
             </div>
-            <div className="text-3xl font-black text-slate-900 mt-2">
-              {activeUser.streak_count || 1} <span className="text-sm font-semibold text-slate-500">Days</span>
+            <div className="text-xl font-black text-slate-900 mt-2 truncate">
+              {activeUser.department || 'Computer Application (BCA)'}
             </div>
-            <div className="text-[10px] text-amber-600 font-medium mt-1">
-              Personal Best: {activeUser.longest_streak || activeUser.streak_count || 1} Days
+            <div className="text-[10px] text-indigo-600 font-medium mt-1">
+              Enrolled Academic Program
             </div>
           </div>
 

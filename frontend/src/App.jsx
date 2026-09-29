@@ -18,25 +18,25 @@ import StudentProfile from './components/StudentProfile';
 import api, { getStoredUser, clearAuthToken } from './services/api';
 
 const STUDENT_TABS = [
-  { id: 'doubts', label: 'AI Doubt Solver', icon: MessageSquare, badge: '6 Modes' },
-  { id: 'study-order', label: 'Study Planner', icon: Compass, badge: 'Max ROI' },
+  { id: 'doubts', label: 'AI Doubt Solver', icon: MessageSquare },
+  { id: 'study-order', label: 'Study Planner', icon: Compass },
   { id: 'analytics', label: 'Performance Analytics', icon: BarChart3 },
-  { id: 'quiz', label: 'Quiz & Exam Prep', icon: Award, badge: 'AI & Tests' },
+  { id: 'quiz', label: 'Quiz & Exam Prep', icon: Award },
   { id: 'resources', label: 'Resource Library', icon: BookOpen },
 ];
 
 const FACULTY_TABS = [
-  { id: 'faculty-upload', label: 'Upload Exam Paper', icon: Upload, badge: 'AI Mapping' },
-  { id: 'faculty-score', label: 'Score Students', icon: FileText, badge: 'Grading' },
+  { id: 'faculty-upload', label: 'Upload Exam Paper', icon: Upload },
+  { id: 'faculty-score', label: 'Score Students', icon: FileText },
   { id: 'faculty-exams', label: 'Uploaded Exams', icon: Layers },
   { id: 'resources', label: 'Course Materials & Syllabus', icon: BookOpen },
 ];
 
 const ADMIN_TABS = [
-  { id: 'admin-users', label: 'User Governance', icon: Users, badge: 'Accounts' },
-  { id: 'admin-syllabus', label: 'Curriculum & Syllabus', icon: BookOpen, badge: 'Sem 1–6' },
-  { id: 'admin-paper-format', label: 'Exam Paper Formats', icon: FileCheck, badge: 'Blueprints' },
-  { id: 'admin', label: 'System Overview', icon: ShieldCheck, badge: 'Telemetry' },
+  { id: 'admin-users', label: 'User Governance', icon: Users },
+  { id: 'admin-syllabus', label: 'Curriculum & Syllabus', icon: BookOpen },
+  { id: 'admin-paper-format', label: 'Exam Paper Formats', icon: FileCheck },
+  { id: 'admin', label: 'System Overview', icon: ShieldCheck },
 ];
 
 export default function App() {
@@ -293,16 +293,18 @@ export default function App() {
           </main>
 
           {/* Footer */}
-          <footer className="glass-panel border-t border-slate-200/90 py-5 text-center text-xs text-slate-600 bg-white/70 mt-auto">
-            <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <footer className="border-t border-slate-200/80 py-4 text-xs text-slate-500 bg-white/60 backdrop-blur-xs mt-auto">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <GraduationCap className="h-4 w-4 text-indigo-600" />
-                <span className="font-semibold text-slate-700">
+                <span className="font-medium text-slate-700">
                   AI Doubt Solving Platform
                 </span>
+                <span className="text-slate-300 hidden sm:inline">•</span>
+                <span className="text-slate-400 hidden sm:inline">Academic Learning Portal</span>
               </div>
-              <div className="text-[11px] text-slate-500">
-                Intelligent Academic Assistant • Built with React & Django
+              <div className="text-[11px] text-slate-400">
+                Continuous Learning & Doubt Resolution
               </div>
             </div>
           </footer>

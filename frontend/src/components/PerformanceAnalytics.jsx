@@ -90,10 +90,9 @@ export default function PerformanceAnalytics({ user, onRequireAuth }) {
               <div className="text-lg font-extrabold text-emerald-600">{report?.average_score}%</div>
             </div>
             <div className="px-4 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-center">
-              <div className="text-[10px] text-slate-500 font-semibold uppercase">Daily Streak</div>
-              <div className="text-lg font-extrabold text-amber-600 flex items-center justify-center gap-1">
-                <Flame className="h-4 w-4 fill-amber-500 text-amber-500" />
-                <span>{report?.streak_count}d</span>
+              <div className="text-[10px] text-slate-500 font-semibold uppercase">Subjects Tracked</div>
+              <div className="text-lg font-extrabold text-indigo-600">
+                {report?.subject_performance?.length || 0}
               </div>
             </div>
           </div>

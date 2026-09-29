@@ -85,7 +85,7 @@ export default function StudyPlanner({ user, onRequireAuth }) {
         <Target className="h-12 w-12 mx-auto text-amber-500 mb-3" />
         <h3 className="text-lg font-bold text-slate-900">Sign in to manage Study Planner</h3>
         <p className="text-xs text-slate-500 mt-2 mb-4 leading-relaxed">
-          Set daily learning targets, track your 7-day study streak, and prepare for upcoming exams.
+          Set daily learning targets, organize syllabus milestones, and prepare for upcoming exams.
         </p>
         <button
           onClick={onRequireAuth}
@@ -100,21 +100,21 @@ export default function StudyPlanner({ user, onRequireAuth }) {
   return (
     <div className="space-y-6">
       
-      {/* Top Banner: Streaks & Exam Countdown */}
+      {/* Top Banner: Targets & Exam Countdown */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
-        {/* Streak Counter Card */}
-        <div className="glass-panel rounded-3xl p-6 border border-amber-200 bg-white shadow-xs relative overflow-hidden">
+        {/* Active Targets Card */}
+        <div className="glass-panel rounded-3xl p-6 border border-purple-200 bg-white shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Active Study Streak</span>
-            <Flame className="h-6 w-6 text-amber-500 fill-amber-500 animate-pulse" />
+            <span className="text-xs font-bold text-purple-700 uppercase tracking-wider">Active Study Tasks</span>
+            <CheckCircle2 className="h-6 w-6 text-purple-600" />
           </div>
           <div className="flex items-baseline gap-2 mt-3">
-            <span className="text-4xl font-black text-amber-600">{user.streak_count || 7}</span>
-            <span className="text-sm font-semibold text-slate-500">Consecutive Days</span>
+            <span className="text-4xl font-black text-purple-600">{goals.length}</span>
+            <span className="text-sm font-semibold text-slate-500">Planned Topics</span>
           </div>
           <p className="text-[11px] text-slate-600 mt-2">
-            Longest recorded: <strong className="text-amber-700">{user.longest_streak || 12} days</strong>. Keep asking doubts daily!
+            {completedCount} of {goals.length} study goals completed today.
           </p>
         </div>
 
@@ -163,7 +163,7 @@ export default function StudyPlanner({ user, onRequireAuth }) {
               <span>Personalized Study Goals & Checklists</span>
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Check off your academic tasks to maintain consistency and streak points
+              Check off your academic tasks to track your syllabus preparation progress
             </p>
           </div>
 

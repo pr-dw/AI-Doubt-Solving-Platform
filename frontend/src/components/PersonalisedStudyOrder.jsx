@@ -186,15 +186,15 @@ export default function PersonalisedStudyOrder({ user, onRequireAuth, onNavigate
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold tracking-wide uppercase">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold tracking-wide">
               <Compass className="h-3.5 w-3.5 text-indigo-400" />
-              <span>AI Study Planner • Max-Marks Priority</span>
+              <span>Personalized Study Schedule</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
               Personalised Study Planner
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              Our reasoning engine looks at your previous exam questions and marks deficits, ordering your study topics from <strong>most marks lost to already mastered</strong>. If you are low on time, start at Rank #1 to recover the most marks in your next exam!
+              Curriculum-guided study plan tailored to your coursework. Review recommended topics prioritized by conceptual importance and exam readiness.
             </p>
           </div>
 
@@ -219,37 +219,6 @@ export default function PersonalisedStudyOrder({ user, onRequireAuth, onNavigate
             </button>
           </div>
         </div>
-
-        {/* Quick Strategy Callout Card */}
-        {studyOrderData && (
-          <div className="mt-6 pt-5 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="sm:col-span-2 p-3.5 rounded-2xl bg-indigo-900/30 border border-indigo-500/30 flex items-start gap-3">
-              <div className="h-8 w-8 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center shrink-0 mt-0.5">
-                <Zap className="h-4 w-4" />
-              </div>
-              <div className="text-xs">
-                <div className="font-bold text-amber-300 mb-0.5">Quick-Wins Exam Strategy</div>
-                <div className="text-slate-200 leading-relaxed">{studyOrderData.quick_strategy}</div>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/60 flex items-center justify-between">
-              <div>
-                <div className="text-[11px] text-slate-400 font-medium">Top 3 Recoverable Marks</div>
-                <div className="text-xl font-black text-emerald-400">+{studyOrderData.recoverable_marks_top_3} Marks</div>
-              </div>
-              <TrendingUp className="h-6 w-6 text-emerald-400/50" />
-            </div>
-
-            <div className="p-3.5 rounded-2xl bg-slate-800/50 border border-slate-700/60 flex items-center justify-between">
-              <div>
-                <div className="text-[11px] text-slate-400 font-medium">Total Marks Deficit</div>
-                <div className="text-xl font-black text-rose-400">{studyOrderData.total_marks_lost} Lost</div>
-              </div>
-              <AlertTriangle className="h-6 w-6 text-rose-400/50" />
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Subject & Exam Dropdown Filters */}
@@ -300,7 +269,7 @@ export default function PersonalisedStudyOrder({ user, onRequireAuth, onNavigate
       {loading ? (
         <div className="text-center py-16">
           <div className="h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-xs font-semibold text-slate-500">Analyzing previous exam question scores & computing ROI order...</p>
+          <p className="text-xs font-semibold text-slate-500">Loading syllabus topics and study priorities...</p>
         </div>
       ) : error ? (
         <div className="p-6 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-center">
@@ -330,7 +299,7 @@ export default function PersonalisedStudyOrder({ user, onRequireAuth, onNavigate
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-slate-500 px-1">
             <span className="font-bold text-slate-700">
-              {studyOrderData.ranked_topics.length} Syllabus Topics Ranked (Highest Mark Return First)
+              {studyOrderData.ranked_topics.length} Syllabus Topics (Recommended Study Order)
             </span>
             <span className="text-[11px] text-slate-400">
               Priority: <span className="text-rose-600 font-bold">Critical</span> → <span className="text-amber-600 font-bold">High</span> → <span className="text-emerald-600 font-bold">Mastered</span>
@@ -696,7 +665,7 @@ export default function PersonalisedStudyOrder({ user, onRequireAuth, onNavigate
                     <label className="text-[11px] font-bold text-slate-700 block mb-1">Student Email / Roll</label>
                     <input
                       type="email"
-                      placeholder="e.g. student@gmail.com"
+                      placeholder="e.g. student@college.edu"
                       value={marksForm.student_email}
                       onChange={(e) => setMarksForm(prev => ({ ...prev, student_email: e.target.value }))}
                       required

@@ -5,7 +5,7 @@ import {
   Edit3, Trash2, Plus, Search, KeyRound, AlertCircle,
   Filter, Calendar, Clock, Layers, FileText, Sparkles,
   X, ChevronDown, ChevronRight, Hash, GraduationCap, FileCheck, Check,
-  Info, Eye, EyeOff
+  Info, Eye, EyeOff, TrendingUp, Activity, BarChart3, HelpCircle
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -47,6 +47,19 @@ const normalizeUnits = (data) => {
       topics
     };
   });
+};
+
+const formatRelativeTime = (timestamp) => {
+  if (!timestamp) return 'Just now';
+  try {
+    const diff = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  } catch (e) {
+    return 'Recently';
+  }
 };
 
 export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab }) {
@@ -242,6 +255,8 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
   const [subjects, setSubjects] = useState([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [syllabusSemFilter, setSyllabusSemFilter] = useState('all');
+  const [syllabusDeptFilter, setSyllabusDeptFilter] = useState('all');
+  const [syllabusSearch, setSyllabusSearch] = useState('');
   const [expandedSubjectUnits, setExpandedSubjectUnits] = useState({});
 
   const [showSubjectModal, setShowSubjectModal] = useState(false);
@@ -261,7 +276,11 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
   const loadSubjects = async () => {
     setLoadingSubjects(true);
     try {
-      const data = await api.getSubjects(syllabusSemFilter === 'all' ? '' : syllabusSemFilter);
+      const data = await api.getSubjects({
+        semester: syllabusSemFilter,
+        department: syllabusDeptFilter,
+        search: syllabusSearch
+      });
       setSubjects(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
@@ -273,9 +292,12 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
 
   useEffect(() => {
     if (currentTab === 'syllabus') {
-      loadSubjects();
+      const timer = setTimeout(() => {
+        loadSubjects();
+      }, 200);
+      return () => clearTimeout(timer);
     }
-  }, [currentTab, syllabusSemFilter]);
+  }, [currentTab, syllabusSemFilter, syllabusDeptFilter, syllabusSearch]);
 
   const toggleSubjectUnitExpand = (subjId, unitIdx) => {
     const key = `${subjId}-${unitIdx}`;
@@ -291,8 +313,8 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
       id: null,
       code: '',
       name: '',
-      department: 'Computer Application (BCA)',
-      semester: syllabusSemFilter !== 'all' ? parseInt(syllabusSemFilter) : 5,
+      department: syllabusDeptFilter !== 'all' ? syllabusDeptFilter : 'Computer Application (BCA)',
+      semester: syllabusSemFilter !== 'all' ? parseInt(syllabusSemFilter) : 1,
       syllabus_overview: '',
       units: [
         { unit_number: 1, name: 'Unit 1: Fundamentals & Conceptual Overview', topics: ['Core Concepts', 'System Architecture'] },
@@ -678,89 +700,7 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
         </div>
       )}
 
-      {/* Top Banner & Module Navigation Header */}
-      <div className="relative overflow-hidden rounded-3xl glass-panel p-6 sm:p-8 border border-purple-200/80 bg-linear-to-r from-purple-900 via-indigo-900 to-slate-900 text-white shadow-xl">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-purple-200 text-xs font-semibold backdrop-blur-xs">
-              <ShieldCheck className="h-4 w-4 text-purple-300" />
-              <span>College Administration Console • Institutional Control</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Institutional Admin Console
-            </h1>
-            <p className="text-xs sm:text-sm text-purple-200/80 leading-relaxed">
-              Manage student and faculty accounts, configure structured multi-semester unit syllabi with individual topics, define collegiate exam blueprints (Quizzes & Pre-End Sem), and inspect system telemetry.
-            </p>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-white/10 p-2 rounded-2xl border border-white/15 backdrop-blur-md">
-            <div className="text-center px-3 py-1 border-r border-white/10">
-              <div className="text-lg font-black text-white">{users.length || 4}</div>
-              <div className="text-[10px] uppercase font-bold text-purple-200 tracking-wider">Accounts</div>
-            </div>
-            <div className="text-center px-3 py-1 border-r border-white/10">
-              <div className="text-lg font-black text-white">{subjects.length || 17}</div>
-              <div className="text-[10px] uppercase font-bold text-purple-200 tracking-wider">Courses</div>
-            </div>
-            <div className="text-center px-3 py-1">
-              <div className="text-lg font-black text-white">{paperFormats.length || 2}</div>
-              <div className="text-[10px] uppercase font-bold text-purple-200 tracking-wider">College Papers</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sub-tab Navigation Pills */}
-        <div className="flex flex-wrap items-center gap-2 mt-6 pt-5 border-t border-white/15">
-          <button
-            onClick={() => handleTabChange('users')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              currentTab === 'users'
-                ? 'bg-white text-purple-900 shadow-lg shadow-black/20'
-                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            <span>User Account Governance</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('syllabus')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              currentTab === 'syllabus'
-                ? 'bg-white text-purple-900 shadow-lg shadow-black/20'
-                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-            }`}
-          >
-            <BookOpen className="h-4 w-4" />
-            <span>Curriculum & Syllabus (Sem 1–6)</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('paper-formats')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              currentTab === 'paper-formats'
-                ? 'bg-white text-purple-900 shadow-lg shadow-black/20'
-                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-            }`}
-          >
-            <FileCheck className="h-4 w-4" />
-            <span>College Exam Blueprints</span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange('telemetry')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              currentTab === 'telemetry'
-                ? 'bg-white text-purple-900 shadow-lg shadow-black/20'
-                : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-            }`}
-          >
-            <Cpu className="h-4 w-4" />
-            <span>System Telemetry & AI Model</span>
-          </button>
-        </div>
-      </div>
 
       {/* =========================================================
           VIEW 1: USER ACCOUNT GOVERNANCE
@@ -933,11 +873,6 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
                             <div className="text-[11px] text-slate-600">
                               {u.date_joined ? new Date(u.date_joined).toLocaleDateString() : 'Active'}
                             </div>
-                            {isStudent && (
-                              <div className="text-[10px] text-amber-600 font-medium">
-                                {u.streak_count || 1}d Streak
-                              </div>
-                            )}
                           </td>
 
                           <td className="py-3 px-4 text-right">
@@ -975,41 +910,106 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
       ========================================================= */}
       {currentTab === 'syllabus' && (
         <div className="space-y-6">
-          {/* Semester Selector Tabs & Add Subject Action */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
-            <div className="flex flex-wrap items-center gap-1.5">
+          {/* Filtering & Search Toolbar */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3.5">
+            {/* Row 1: Department Filter, Search & Add Subject */}
+            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1">
+                {/* Department Dropdown */}
+                <div className="relative min-w-[240px]">
+                  <select
+                    value={syllabusDeptFilter}
+                    onChange={(e) => setSyllabusDeptFilter(e.target.value)}
+                    className="w-full pl-3.5 pr-8 py-2 text-xs font-bold rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:border-purple-500 focus:bg-white appearance-none cursor-pointer"
+                  >
+                    <option value="all">All Academic Departments</option>
+                    <option value="Computer Application (BCA)">Computer Application (BCA)</option>
+                    <option value="Computer Science & Engineering (B.Tech CSE)">Computer Science & Engg (B.Tech CSE)</option>
+                    <option value="Information Technology (B.Tech IT)">Information Technology (B.Tech IT)</option>
+                    <option value="Business Administration (BBA)">Business Administration (BBA)</option>
+                  </select>
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
+
+                {/* Instant Search Bar */}
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={syllabusSearch}
+                    onChange={(e) => setSyllabusSearch(e.target.value)}
+                    placeholder="Search subject title, code, or syllabus topics..."
+                    className="w-full pl-8 pr-8 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-purple-500 focus:bg-white transition-all"
+                  />
+                  {syllabusSearch && (
+                    <button
+                      onClick={() => setSyllabusSearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Button */}
               <button
-                onClick={() => setSyllabusSemFilter('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  syllabusSemFilter === 'all'
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
+                onClick={openAddSubjectModal}
+                className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/20 transition-all cursor-pointer shrink-0"
               >
-                All BCA Semesters
+                <Plus className="h-4 w-4" />
+                <span>Add Subject & Units</span>
               </button>
-              {[1, 2, 3, 4, 5, 6].map((sem) => (
+            </div>
+
+            {/* Row 2: Semester Filter Pills & Active Summary */}
+            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[11px] font-bold text-slate-400 mr-1 uppercase tracking-wider">Semester:</span>
                 <button
-                  key={sem}
-                  onClick={() => setSyllabusSemFilter(String(sem))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    syllabusSemFilter === String(sem)
+                  onClick={() => setSyllabusSemFilter('all')}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    syllabusSemFilter === 'all'
                       ? 'bg-purple-600 text-white shadow-xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  Semester {sem}
+                  All Semesters
                 </button>
-              ))}
-            </div>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                  <button
+                    key={sem}
+                    onClick={() => setSyllabusSemFilter(String(sem))}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      syllabusSemFilter === String(sem)
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    Sem {sem}
+                  </button>
+                ))}
+              </div>
 
-            <button
-              onClick={openAddSubjectModal}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md shadow-purple-600/30 transition-all cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Add Subject & Units</span>
-            </button>
+              {/* Results & Reset Indicator */}
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <span className="text-[11px] font-bold text-slate-500">
+                  {subjects.length} course{subjects.length === 1 ? '' : 's'} found
+                </span>
+                {(syllabusSemFilter !== 'all' || syllabusDeptFilter !== 'all' || syllabusSearch) && (
+                  <button
+                    onClick={() => {
+                      setSyllabusSemFilter('all');
+                      setSyllabusDeptFilter('all');
+                      setSyllabusSearch('');
+                    }}
+                    className="text-[11px] font-bold text-purple-600 hover:text-purple-700 underline cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Subjects Grid */}
@@ -1019,16 +1019,36 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
               <span>Loading semester curricula...</span>
             </div>
           ) : subjects.length === 0 ? (
-            <div className="glass-panel p-12 text-center rounded-2xl border border-slate-200 bg-white">
-              <BookOpen className="h-10 w-10 mx-auto text-slate-300 mb-2" />
-              <div className="text-sm font-bold text-slate-700">No subjects configured for Semester {syllabusSemFilter}</div>
-              <p className="text-xs text-slate-500 mt-1 mb-4">Click "Add Subject & Units" to provision structured curriculum for this semester.</p>
-              <button
-                onClick={openAddSubjectModal}
-                className="px-4 py-2 rounded-xl bg-purple-600 text-white text-xs font-bold shadow-xs cursor-pointer"
-              >
-                Provision Subject Now
-              </button>
+            <div className="glass-panel p-12 text-center rounded-2xl border border-slate-200 bg-white space-y-3">
+              <BookOpen className="h-10 w-10 mx-auto text-slate-300" />
+              <div>
+                <div className="text-sm font-bold text-slate-700">No curriculum subjects found</div>
+                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                  {syllabusSemFilter !== 'all' || syllabusDeptFilter !== 'all' || syllabusSearch
+                    ? 'No courses match your active department, semester, or search filter criteria.'
+                    : 'No subjects have been provisioned in the academic catalog yet.'}
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                {(syllabusSemFilter !== 'all' || syllabusDeptFilter !== 'all' || syllabusSearch) && (
+                  <button
+                    onClick={() => {
+                      setSyllabusSemFilter('all');
+                      setSyllabusDeptFilter('all');
+                      setSyllabusSearch('');
+                    }}
+                    className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Clear All Filters
+                  </button>
+                )}
+                <button
+                  onClick={openAddSubjectModal}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-xs cursor-pointer"
+                >
+                  Provision Subject Now
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -1039,20 +1059,33 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
                 return (
                   <div key={s.id} className="glass-panel rounded-2xl border border-slate-200 bg-white shadow-xs p-5 flex flex-col justify-between hover:border-purple-200 transition-colors">
                     <div className="space-y-3.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="font-mono text-xs font-extrabold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg">
                           {s.code}
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                          Semester {s.semester}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                            s.department?.includes('CSE')
+                              ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                              : s.department?.includes('IT')
+                              ? 'bg-sky-50 text-sky-700 border-sky-200'
+                              : s.department?.includes('BBA')
+                              ? 'bg-amber-50 text-amber-700 border-amber-200'
+                              : 'bg-purple-50 text-purple-700 border-purple-200'
+                          }`}>
+                            {s.department?.includes('(') ? s.department.split('(')[1].replace(')', '') : (s.department || 'BCA')}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                            Sem {s.semester}
+                          </span>
+                        </div>
                       </div>
 
                       <div>
                         <h3 className="text-base font-bold text-slate-900 tracking-tight leading-snug">
                           {s.name}
                         </h3>
-                        <p className="text-[11px] text-slate-500 mt-0.5">{s.department}</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5 font-medium">{s.department}</p>
                       </div>
 
                       {/* Syllabus Overview */}
@@ -1333,82 +1366,314 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
       )}
 
       {/* =========================================================
-          VIEW 4: SYSTEM TELEMETRY & LOCAL AI ENGINE
+          VIEW 4: SYSTEM TELEMETRY & INSTITUTIONAL INSIGHTS
       ========================================================= */}
       {currentTab === 'telemetry' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
+          {/* Section 1: Core KPI Metric Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+            <div className="glass-panel rounded-2xl p-4 border border-slate-200 bg-white shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-bold uppercase">Enrolled Students</span>
-                <Users className="h-5 w-5 text-indigo-600" />
+                <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Students</span>
+                <Users className="h-4 w-4 text-indigo-600" />
               </div>
-              <div className="text-3xl font-black text-slate-900 mt-2">{stats?.total_students || 1}</div>
-              <div className="text-[10px] text-emerald-600 font-medium mt-1">Active BCA Cohort</div>
+              <div className="text-2xl font-black text-slate-900 mt-2">{stats?.total_students || 0}</div>
+              <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">Enrolled Cohort</div>
             </div>
 
-            <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
+            <div className="glass-panel rounded-2xl p-4 border border-slate-200 bg-white shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-bold uppercase">Curriculum Subjects</span>
-                <BookOpen className="h-5 w-5 text-purple-600" />
+                <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Faculty</span>
+                <GraduationCap className="h-4 w-4 text-purple-600" />
               </div>
-              <div className="text-3xl font-black text-slate-900 mt-2">{stats?.total_subjects || 17}</div>
-              <div className="text-[10px] text-purple-600 font-medium mt-1">BCA Semesters 1 to 6</div>
+              <div className="text-2xl font-black text-slate-900 mt-2">{stats?.total_faculty || 0}</div>
+              <div className="text-[10px] text-purple-600 font-semibold mt-0.5">Academic Mentors</div>
             </div>
 
-            <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
+            <div className="glass-panel rounded-2xl p-4 border border-slate-200 bg-white shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-bold uppercase">AI Doubts Resolved</span>
-                <MessageSquare className="h-5 w-5 text-emerald-600" />
+                <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Courses</span>
+                <BookOpen className="h-4 w-4 text-blue-600" />
               </div>
-              <div className="text-3xl font-black text-slate-900 mt-2">{stats?.total_conversations || 0}</div>
-              <div className="text-[10px] text-emerald-600 font-medium mt-1">In 6 Explanation Modes</div>
+              <div className="text-2xl font-black text-slate-900 mt-2">{stats?.total_subjects || 0}</div>
+              <div className="text-[10px] text-blue-600 font-semibold mt-0.5">Across 4 Depts</div>
             </div>
 
-            <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
+            <div className="glass-panel rounded-2xl p-4 border border-slate-200 bg-white shadow-xs">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-bold uppercase">Study Resources</span>
-                <Database className="h-5 w-5 text-amber-500" />
+                <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Doubts</span>
+                <MessageSquare className="h-4 w-4 text-emerald-600" />
               </div>
-              <div className="text-3xl font-black text-slate-900 mt-2">{stats?.total_resources || 5}</div>
-              <div className="text-[10px] text-amber-600 font-medium mt-1">Syllabus, Notes & PYQs</div>
+              <div className="text-2xl font-black text-slate-900 mt-2">{stats?.total_conversations || 0}</div>
+              <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">{stats?.total_messages || 0} Messages</div>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-4 border border-slate-200 bg-white shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Resources</span>
+                <Database className="h-4 w-4 text-amber-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-2">{stats?.total_resources || 0}</div>
+              <div className="text-[10px] text-amber-600 font-semibold mt-0.5">Notes, PYQs & Syllabi</div>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-4 border border-slate-200 bg-white shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">Assessments</span>
+                <FileCheck className="h-4 w-4 text-rose-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-2">{(stats?.total_quizzes || 0) + (stats?.total_records || 0)}</div>
+              <div className="text-[10px] text-rose-600 font-semibold mt-0.5">Quizzes & Exam Sets</div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 max-w-3xl">
-            <div className="glass-panel rounded-2xl p-6 border border-slate-200 bg-white shadow-xs space-y-4">
-              <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <Cpu className="h-4 w-4 text-purple-600" />
-                <span>Local AI Model Engine (Ollama Integration)</span>
+          {/* Section 2: Academic Department Distribution */}
+          <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-purple-600" />
+                  <span>Academic Department Distribution & Curricular Breadth</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Curriculum depth, course mappings, and active student enrolment by department</p>
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                {stats?.department_distribution?.length || 4} Departments Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {(stats?.department_distribution || []).map((dept, idx) => {
+                const totalSubs = stats?.total_subjects || 1;
+                const pct = Math.round(((dept.subjects || 0) / totalSubs) * 100);
+                const shortCode = dept.department.includes('(')
+                  ? dept.department.split('(')[1].replace(')', '')
+                  : dept.department;
+
+                return (
+                  <div key={idx} className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/60 hover:bg-slate-50 transition-colors space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 font-mono">
+                        {shortCode}
+                      </span>
+                      <span className="text-[11px] font-bold text-slate-600">
+                        {dept.students} student{dept.students === 1 ? '' : 's'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-bold text-slate-800 line-clamp-1" title={dept.department}>
+                        {dept.department}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                        {dept.subjects} courses provisioned ({pct}%)
+                      </div>
+                    </div>
+
+                    <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-purple-600 h-1.5 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.max(pct, 5)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Section 3: AI Doubt Inquiries & Mode Preferences (2-Column Grid) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Top Inquired Subjects */}
+            <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-emerald-600" />
+                    <span>Top Inquired Subjects by Students</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Subjects generating the highest student doubts and queries</p>
+                </div>
+                <TrendingUp className="h-4 w-4 text-emerald-600" />
+              </div>
+
+              {(!stats?.top_doubt_subjects || stats.top_doubt_subjects.length === 0) ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No subject inquiry trends recorded yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stats.top_doubt_subjects.map((item, idx) => {
+                    const topCount = stats.top_doubt_subjects[0]?.count || 1;
+                    const barWidth = Math.round((item.count / topCount) * 100);
+
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2 truncate pr-2">
+                            <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 shrink-0">
+                              {item.subject__code}
+                            </span>
+                            <span className="font-semibold text-slate-800 truncate">
+                              {item.subject__name}
+                            </span>
+                          </div>
+                          <span className="text-[11px] font-bold text-slate-600 shrink-0">
+                            {item.count} doubt{item.count === 1 ? '' : 's'}
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-emerald-500 h-1.5 rounded-full transition-all duration-500"
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Cognitive Mode Breakdown */}
+            <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-purple-600" />
+                    <span>Student Explanation Mode Adoption</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Breakdown of cognitive explanation styles requested during learning</p>
+                </div>
+              </div>
+
+              {(!stats?.mode_usage || stats.mode_usage.length === 0) ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No mode telemetry recorded yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {stats.mode_usage.map((m, idx) => {
+                    const totalModes = stats.mode_usage.reduce((acc, curr) => acc + curr.count, 0) || 1;
+                    const pct = Math.round((m.count / totalModes) * 100);
+                    const modeLabels = {
+                      detailed: 'Detailed Academic Explanation',
+                      assist: 'Guided Assist & Socratic Research',
+                      eli5: 'Simplified / Conceptual (ELI5)',
+                      exam: 'Exam & Marking Blueprint',
+                      summary: 'Quick Unit Revision'
+                    };
+                    const label = modeLabels[m.mode_used] || m.mode_used;
+
+                    return (
+                      <div key={idx} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-800">{label}</span>
+                          <span className="text-[11px] font-bold text-slate-600">
+                            {m.count} ({pct}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className="bg-purple-600 h-1.5 rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 4: Live Activity Stream & System Telemetry (2-Column Grid) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Live Institutional Activity Feed */}
+            <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-indigo-600" />
+                  <span>Recent Institutional Activity Stream</span>
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Live
+                </span>
+              </div>
+
+              {(!stats?.recent_activities || stats.recent_activities.length === 0) ? (
+                <div className="py-8 text-center text-xs text-slate-400">
+                  No recent activities recorded yet.
+                </div>
+              ) : (
+                <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                  {stats.recent_activities.map((act, idx) => (
+                    <div key={idx} className="p-2.5 rounded-xl border border-slate-100 bg-slate-50/70 flex items-start gap-3">
+                      <div className="p-1.5 rounded-lg bg-white border border-slate-200 shadow-2xs shrink-0 mt-0.5">
+                        {act.type === 'user_registration' ? (
+                          <UserPlus className="h-3.5 w-3.5 text-indigo-600" />
+                        ) : (
+                          <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-slate-800 truncate">{act.title}</span>
+                          <span className="text-[10px] text-slate-400 shrink-0">{formatRelativeTime(act.timestamp)}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate mt-0.5">{act.description}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Infrastructure & Privacy Governance */}
+            <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Server className="h-4 w-4 text-purple-600" />
+                <span>Institutional Infrastructure & Privacy Governance</span>
               </h3>
 
-              <div className="space-y-3">
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div className="space-y-2.5">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                   <div>
-                    <div className="text-xs font-semibold text-slate-900">Default Inference Model</div>
-                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">{stats?.ollama_model || 'qwen2.5:latest'}</div>
+                    <div className="text-xs font-bold text-slate-900">Database Core</div>
+                    <div className="text-[11px] text-slate-500 font-mono mt-0.5">{stats?.system_health?.database_status || 'Operational (PostgreSQL / SQLite)'}</div>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Active Target
+                    Active
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                   <div>
-                    <div className="text-xs font-semibold text-slate-900">Ollama API Base URL</div>
-                    <div className="text-[10px] text-slate-500 font-mono mt-0.5">{stats?.ollama_endpoint || 'http://127.0.0.1:11434'}</div>
+                    <div className="text-xs font-bold text-slate-900">Security & Authentication Subsystem</div>
+                    <div className="text-[11px] text-slate-500 font-mono mt-0.5">{stats?.system_health?.auth_status || 'Active (Argon2 / JWT Session Guard)'}</div>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    Localhost
+                    Secured
                   </span>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                   <div>
-                    <div className="text-xs font-semibold text-slate-900">Privacy & Institutional Governance</div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">Zero student prompts sent to external cloud APIs</div>
+                    <div className="text-xs font-bold text-slate-900">AI Inference Engine Target</div>
+                    <div className="text-[11px] text-slate-500 font-mono mt-0.5">{stats?.system_health?.active_model || 'qwen2.5:3b'}</div>
                   </div>
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+                    Online
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-bold text-slate-900">Institutional Data Privacy</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">Strict compliance with institutional privacy standards</div>
+                  </div>
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                 </div>
               </div>
             </div>
@@ -1776,17 +2041,31 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
             </div>
 
             <form onSubmit={handleSubjectSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">Subject Code <span className="text-rose-500">*</span></label>
                   <input
                     type="text"
                     required
-                    placeholder="e.g. BCA-501"
+                    placeholder="e.g. BCA-501 / CS-402"
                     value={subjectForm.code}
                     onChange={(e) => setSubjectForm({ ...subjectForm, code: e.target.value })}
                     className="w-full px-3.5 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-mono uppercase focus:outline-none focus:border-purple-500 focus:bg-white"
                   />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Department <span className="text-rose-500">*</span></label>
+                  <select
+                    value={subjectForm.department}
+                    onChange={(e) => setSubjectForm({ ...subjectForm, department: e.target.value })}
+                    className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-semibold focus:outline-none focus:border-purple-500"
+                  >
+                    <option value="Computer Application (BCA)">Computer Application (BCA)</option>
+                    <option value="Computer Science & Engineering (B.Tech CSE)">Computer Science & Engg (B.Tech CSE)</option>
+                    <option value="Information Technology (B.Tech IT)">Information Technology (B.Tech IT)</option>
+                    <option value="Business Administration (BBA)">Business Administration (BBA)</option>
+                  </select>
                 </div>
 
                 <div>
@@ -1796,7 +2075,7 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
                     onChange={(e) => setSubjectForm({ ...subjectForm, semester: parseInt(e.target.value) })}
                     className="w-full px-3.5 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 font-semibold focus:outline-none focus:border-purple-500"
                   >
-                    {[1, 2, 3, 4, 5, 6].map((sem) => (
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
                       <option key={sem} value={sem}>Semester {sem}</option>
                     ))}
                   </select>

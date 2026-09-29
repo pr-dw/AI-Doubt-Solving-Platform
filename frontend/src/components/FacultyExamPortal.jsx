@@ -1174,7 +1174,7 @@ export default function FacultyExamPortal({ user, activeSubTab: externalSubTab, 
                 ) : (
                   <input
                     type="email"
-                    placeholder="Enter student email (e.g. student@gmail.com)"
+                    placeholder="Enter student email (e.g. student@college.edu)"
                     value={selectedStudentEmail}
                     onChange={(e) => handleStudentEmailChange(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"

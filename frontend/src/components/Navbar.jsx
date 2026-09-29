@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  GraduationCap, Flame, Bell, Search,
+  GraduationCap, Bell, Search,
   CheckCircle, BookOpen, Menu, Sparkles, Bot, Cpu, Check, ShieldCheck 
 } from 'lucide-react';
 import { api, clearAuthToken, getStoredAIModel, setStoredAIModel, AI_MODELS } from '../services/api';
@@ -216,18 +216,17 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
           )}
         </div>
 
-        {/* Right Section: Streak, Ollama status, Notifications, User */}
+        {/* Right Section: Role Portal, AI Model Selector, Notifications, User */}
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* Study Streak Badge - Only shown for students */}
+          {/* Student Portal Badge - Shown for student */}
           {user && user.role === 'student' && (
             <div 
-              onClick={() => setActiveTab('study-order')}
-              title="Consecutive Daily Study Streak"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700 cursor-pointer hover:scale-105 transition-transform shadow-xs"
+              title="Student Portal"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 shadow-xs select-none"
             >
-              <Flame className="h-4 w-4 text-amber-500 fill-amber-500 animate-pulse" />
-              <span className="text-xs font-bold">{user.streak_count || 1}d Streak</span>
+              <GraduationCap className="h-4 w-4 text-indigo-600" />
+              <span className="text-xs font-bold">Student Portal</span>
             </div>
           )}
 
@@ -245,36 +244,29 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
           {/* Admin Badge - Shown for admin */}
           {user && user.role === 'admin' && (
             <div 
-              title="Central Administrator & Governance Console"
+              title="Central Administrator Portal"
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-300 text-purple-700 shadow-xs select-none"
             >
               <ShieldCheck className="h-4 w-4 text-purple-600" />
-              <span className="text-xs font-bold">Admin Console</span>
+              <span className="text-xs font-bold">Admin Portal</span>
             </div>
           )}
 
-          {/* Universal AI Model Engine Selector */}
+          {/* Universal AI Model Selector */}
           <div 
-            title="Active AI Model Engine for all platform tasks (Doubt Solver, PDF Question Paper Analysis, Study Order)"
-            className="flex items-center gap-1.5 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors shadow-xs"
+            title="Selected AI Model"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100/90 hover:bg-slate-200/70 border border-slate-200/90 text-slate-700 transition-all shadow-2xs"
           >
-            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="AI Model Active" />
-            {selectedAIModel.includes('gemini') ? (
-              <Sparkles className="h-3.5 w-3.5 text-indigo-600 shrink-0 animate-pulse" />
-            ) : selectedAIModel.includes('gpt') ? (
-              <Bot className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-            ) : (
-              <Cpu className="h-3.5 w-3.5 text-purple-600 shrink-0" />
-            )}
+            <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" title="AI Ready" />
             <select
               id="universal-ai-model-selector"
               value={selectedAIModel}
               onChange={handleModelSelect}
-              className="bg-transparent text-[11px] sm:text-xs font-semibold text-slate-800 pr-1 cursor-pointer focus:outline-none max-w-[110px] sm:max-w-[180px] truncate"
+              className="bg-transparent text-xs font-medium text-slate-800 pr-1 cursor-pointer focus:outline-none max-w-[120px] sm:max-w-[180px] truncate"
             >
               {AI_MODELS.map((m) => (
                 <option key={m.id} value={m.id} className="text-slate-800 bg-white py-1">
-                  {m.shortName || m.name}
+                  {m.name}
                 </option>
               ))}
             </select>

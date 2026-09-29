@@ -519,22 +519,9 @@ export default function DoubtSolver({
             ))
           )}
         </div>
-
-        {/* Dynamic Model Architecture Footer */}
-        <div className="pt-3 border-t border-slate-100 mt-2 px-2 text-[10px] text-slate-500 flex items-center justify-between">
-          <div className="flex items-center gap-1.5 truncate">
-            {selectedModel.includes('gemini') ? (
-              <Sparkles className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
-            ) : selectedModel.includes('gpt') ? (
-              <Bot className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
-            ) : (
-              <Cpu className="h-3.5 w-3.5 text-purple-600 shrink-0" />
-            )}
-            <span className="truncate font-semibold text-slate-700">{activeModelMeta.name.split('(')[0]}</span>
-          </div>
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
-            Active AI
-          </span>
+        {/* Saved Doubts Footer */}
+        <div className="pt-2.5 border-t border-slate-100 mt-2 px-2 text-[11px] text-slate-400 flex items-center justify-between">
+          <span>{conversations.length} Saved Doubt{conversations.length === 1 ? '' : 's'}</span>
         </div>
       </div>
 
@@ -689,11 +676,6 @@ export default function DoubtSolver({
                             <span className="font-semibold text-indigo-600 capitalize">
                               {msg.mode_used || selectedMode} Mode
                             </span>
-                            {msg.model_used && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 font-medium">
-                                {msg.model_used}
-                              </span>
-                            )}
                           </>
                         )}
                       </div>
@@ -752,7 +734,7 @@ export default function DoubtSolver({
           <div className="relative flex items-center">
             <textarea
               rows={2}
-              placeholder={`Ask your doubt in ${EXPLANATION_MODES.find(m => m.id === selectedMode)?.label} using ${activeModelMeta.name.split('(')[0]}...`}
+              placeholder="Type your academic question or doubt here (e.g. explain how quicksort partition works)..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -772,12 +754,10 @@ export default function DoubtSolver({
               <Send className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1.5 px-2">
-            <span>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 font-mono">Enter ↵</kbd> to submit</span>
+          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1.5 px-2">
+            <span>Press <kbd className="px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 font-mono text-[10px]">Enter ↵</kbd> to submit • <kbd className="px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 font-mono text-[10px]">Shift + Enter</kbd> for new line</span>
             <div className="flex items-center gap-2">
-              <span>Mode: <strong className="text-indigo-600">{EXPLANATION_MODES.find(m => m.id === selectedMode)?.label}</strong></span>
-              <span>•</span>
-              <span>Model: <strong className="text-purple-600">{activeModelMeta.name.split('(')[0]}</strong></span>
+              <span>Mode: <strong className="text-indigo-600 font-medium">{EXPLANATION_MODES.find(m => m.id === selectedMode)?.label}</strong></span>
             </div>
           </div>
         </form>

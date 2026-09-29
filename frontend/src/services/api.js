@@ -26,11 +26,11 @@ export const setStoredUser = (user) => {
 };
 
 export const AI_MODELS = [
-  { id: 'gemini-1.5-flash', name: 'Google Gemini 1.5 Flash (Cloud API)', shortName: 'Gemini 1.5 Flash', provider: 'Google DeepMind', badge: 'Cloud Fast', type: 'gemini' },
-  { id: 'gemini-1.5-pro', name: 'Google Gemini 1.5 Pro (Cloud API)', shortName: 'Gemini 1.5 Pro', provider: 'Google DeepMind', badge: 'Cloud Adv', type: 'gemini' },
-  { id: 'ollama:qwen', name: 'Ollama Qwen 2.5 (Local Model)', shortName: 'Ollama Qwen 2.5', provider: 'Local / On-Device', badge: 'Local Ollama', type: 'ollama' },
-  { id: 'ollama:gemma', name: 'Ollama Gemma 2 (Local Model)', shortName: 'Ollama Gemma 2', provider: 'Local / On-Device', badge: 'Local Ollama', type: 'ollama' },
-  { id: 'gpt-4o-mini', name: 'OpenAI ChatGPT-4o Mini (Cloud API)', shortName: 'ChatGPT-4o Mini', provider: 'OpenAI', badge: 'Cloud GPT', type: 'gpt' },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', shortName: 'Gemini 1.5 Flash', provider: 'Google', badge: 'Fast', type: 'gemini' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', shortName: 'Gemini 1.5 Pro', provider: 'Google', badge: 'Advanced', type: 'gemini' },
+  { id: 'ollama:qwen', name: 'Qwen 2.5 (Local)', shortName: 'Qwen 2.5', provider: 'Local Engine', badge: 'Offline', type: 'ollama' },
+  { id: 'ollama:gemma', name: 'Gemma 2 (Local)', shortName: 'Gemma 2', provider: 'Local Engine', badge: 'Offline', type: 'ollama' },
+  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', shortName: 'GPT-4o Mini', provider: 'OpenAI', badge: 'Fast', type: 'gpt' },
 ];
 
 export const getStoredAIModel = () => {
@@ -149,7 +149,20 @@ export const api = {
   },
 
   // Subjects & Analytics
-  getSubjects: () => request('/subjects/'),
+  getSubjects: (params = {}) => {
+    let query = '';
+    if (typeof params === 'object' && params !== null) {
+      const searchParams = new URLSearchParams();
+      if (params.semester && params.semester !== 'all') searchParams.append('semester', params.semester);
+      if (params.department && params.department !== 'all') searchParams.append('department', params.department);
+      if (params.search && params.search.trim()) searchParams.append('search', params.search.trim());
+      const qs = searchParams.toString();
+      if (qs) query = `?${qs}`;
+    } else if (params && params !== 'all') {
+      query = `?semester=${encodeURIComponent(params)}`;
+    }
+    return request(`/subjects/${query}`);
+  },
   getAcademicRecords: () => request('/academic/records/'),
   getAnalyticsReport: () => request('/analytics/report/'),
 

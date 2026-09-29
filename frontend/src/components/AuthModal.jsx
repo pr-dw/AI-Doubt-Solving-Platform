@@ -132,7 +132,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
               <input
                 type="email"
                 required
-                placeholder="student@gmail.com or admin@gmail.com"
+                placeholder="you@university.edu"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white"
