@@ -546,3 +546,206 @@
   color: #d1fae5 !important;
 }
 
+/* ================================================================
+   SIDEBAR THEME ARCHITECTURE & TRANSLUCENT OVERRIDES
+================================================================ */
+/* Default / Light Theme */
+.app-sidebar {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(226, 232, 240, 0.9);
+}
+
+.app-sidebar-header {
+  border-color: #f1f5f9;
+}
+
+.app-sidebar-footer {
+  background-color: rgba(248, 250, 252, 0.85);
+  border-color: #f1f5f9;
+}
+
+.app-sidebar-nav-item {
+  color: #475569;
+}
+
+.app-sidebar-pinned-item {
+  background-color: rgba(255, 255, 255, 0.85);
+  border-color: rgba(226, 232, 240, 0.8);
+  color: #334155;
+}
+
+.app-sidebar-pinned-item:hover {
+  background-color: rgba(254, 243, 199, 0.5);
+  border-color: rgba(253, 230, 138, 0.8);
+}
+
+.app-sidebar-profile-card {
+  background-color: #ffffff;
+  border-color: rgba(226, 232, 240, 0.9);
+}
+
+.app-sidebar-toggle-btn {
+  color: #334155;
+}
+
+.app-sidebar-toggle-btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* 1. Midnight Dark Theme Sidebar */
+[data-theme="dark"] .app-sidebar {
+  background-color: #0f172a !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .app-sidebar-header {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .app-sidebar-footer {
+  background-color: #0b0f19 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+[data-theme="dark"] .app-sidebar-toggle-btn {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .app-sidebar-toggle-btn:hover {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .app-sidebar-nav-item {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .app-sidebar-nav-item:hover {
+  color: #ffffff !important;
+  background-color: #1e293b !important;
+}
+
+[data-theme="dark"] .app-sidebar-pinned-item {
+  background-color: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .app-sidebar-profile-card {
+  background-color: #1e293b !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f1f5f9 !important;
+}
+
+/* 2. Sunset Amber Theme Sidebar */
+[data-theme="sunset"] .app-sidebar {
+  background-color: #160f0a !important;
+  border-color: rgba(245, 158, 11, 0.22) !important;
+  color: #fef3c7 !important;
+}
+
+[data-theme="sunset"] .app-sidebar-header {
+  border-color: rgba(245, 158, 11, 0.18) !important;
+}
+
+[data-theme="sunset"] .app-sidebar-footer {
+  background-color: #110b07 !important;
+  border-color: rgba(245, 158, 11, 0.18) !important;
+}
+
+[data-theme="sunset"] .app-sidebar-toggle-btn {
+  color: #fde68a !important;
+}
+
+[data-theme="sunset"] .app-sidebar-toggle-btn:hover {
+  background-color: #271a11 !important;
+  color: #f59e0b !important;
+}
+
+[data-theme="sunset"] .app-sidebar-nav-item {
+  color: #fde68a !important;
+}
+
+[data-theme="sunset"] .app-sidebar-nav-item:hover {
+  color: #f59e0b !important;
+  background-color: #271a11 !important;
+}
+
+[data-theme="sunset"] .app-sidebar-pinned-item {
+  background-color: #271a11 !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  color: #fef3c7 !important;
+}
+
+[data-theme="sunset"] .app-sidebar-profile-card {
+  background-color: #271a11 !important;
+  border-color: rgba(245, 158, 11, 0.25) !important;
+  color: #fef3c7 !important;
+}
+
+/* 3. Forest Emerald Theme Sidebar */
+[data-theme="emerald"] .app-sidebar {
+  background-color: #071c16 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+  color: #ecfdf5 !important;
+}
+
+[data-theme="emerald"] .app-sidebar-header {
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+[data-theme="emerald"] .app-sidebar-footer {
+  background-color: #04120e !important;
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+[data-theme="emerald"] .app-sidebar-toggle-btn {
+  color: #a7f3d0 !important;
+}
+
+[data-theme="emerald"] .app-sidebar-toggle-btn:hover {
+  background-color: #0f3328 !important;
+  color: #34d399 !important;
+}
+
+[data-theme="emerald"] .app-sidebar-nav-item {
+  color: #a7f3d0 !important;
+}
+
+[data-theme="emerald"] .app-sidebar-nav-item:hover {
+  color: #34d399 !important;
+  background-color: #0f3328 !important;
+}
+
+[data-theme="emerald"] .app-sidebar-pinned-item {
+  background-color: #0f3328 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+  color: #ecfdf5 !important;
+}
+
+[data-theme="emerald"] .app-sidebar-profile-card {
+  background-color: #0f3328 !important;
+  border-color: rgba(16, 185, 129, 0.25) !important;
+  color: #ecfdf5 !important;
+}
+
+/* Global Inversion for Translucent White Containers */
+[data-theme="dark"] [class*="bg-white/"]:not([class*="text-white"]):not([class*="bg-white/10"]):not([class*="bg-white/20"]):not([class*="bg-white/30"]),
+[data-theme="dark"] [class*="bg-slate-50/"] {
+  background-color: #0f172a !important;
+}
+
+[data-theme="sunset"] [class*="bg-white/"]:not([class*="text-white"]):not([class*="bg-white/10"]):not([class*="bg-white/20"]):not([class*="bg-white/30"]),
+[data-theme="sunset"] [class*="bg-slate-50/"] {
+  background-color: #160f0a !important;
+}
+
+[data-theme="emerald"] [class*="bg-white/"]:not([class*="text-white"]):not([class*="bg-white/10"]):not([class*="bg-white/20"]):not([class*="bg-white/30"]),
+[data-theme="emerald"] [class*="bg-slate-50/"] {
+  background-color: #071c16 !important;
+}
+

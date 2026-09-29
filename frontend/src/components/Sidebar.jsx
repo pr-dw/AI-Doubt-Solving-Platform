@@ -57,20 +57,20 @@ export default function Sidebar({
 
       {/* Sidebar Container */}
       <aside 
-        className={`fixed lg:sticky top-16 left-0 z-40 h-[calc(100vh-4rem)] bg-white/95 backdrop-blur-md border-r border-slate-200/90 flex flex-col justify-between transition-all duration-300 ease-in-out shrink-0 ${
+        className={`app-sidebar fixed lg:sticky top-16 left-0 z-40 h-[calc(100vh-4rem)] border-r flex flex-col justify-between transition-all duration-300 ease-in-out shrink-0 ${
           isOpen ? 'w-64 translate-x-0 shadow-xl lg:shadow-none' : '-translate-x-full lg:translate-x-0 lg:w-20'
         }`}
       >
         {/* Top Header: 3-bar Sidebar Toggle (Open/Close) */}
-        <div className="p-3 border-b border-slate-100 flex items-center">
+        <div className="p-3 border-b border-slate-100 flex items-center app-sidebar-header">
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className={`p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-2.5 ${!isOpen ? 'mx-auto' : ''}`}
+            className={`p-2 rounded-xl text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-2.5 app-sidebar-toggle-btn ${!isOpen ? 'mx-auto' : ''}`}
             title={isOpen ? "Collapse Sidebar" : "Expand Sidebar"}
           >
-            <Menu className="h-5 w-5 text-slate-800" />
+            <Menu className="h-5 w-5 text-current" />
             {isOpen && (
-              <span className="text-xs font-bold text-slate-800 tracking-tight">
+              <span className="text-xs font-bold tracking-tight">
                 Menu
               </span>
             )}
@@ -105,11 +105,11 @@ export default function Sidebar({
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group relative ${
                   isActive 
                     ? style.activeItem 
-                    : `text-slate-600 ${style.hoverItem}`
+                    : `app-sidebar-nav-item ${style.hoverItem}`
                 } ${!isOpen ? 'lg:justify-center' : ''}`}
               >
                 <Icon className={`h-4 w-4 shrink-0 transition-transform group-hover:scale-110 ${
-                  isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'
+                  isActive ? 'text-white' : 'text-slate-500 group-hover:text-current'
                 }`} />
 
                 {isOpen && (
@@ -175,7 +175,7 @@ export default function Sidebar({
                           className={`group/pin relative flex items-center justify-between p-2 rounded-xl text-xs transition-all cursor-pointer border ${
                             isSelected
                               ? 'bg-amber-50/90 border-amber-300 text-amber-900 font-semibold shadow-xs'
-                              : 'bg-white/80 hover:bg-amber-50/50 border-slate-200/70 hover:border-amber-200 text-slate-700'
+                              : 'app-sidebar-pinned-item'
                           }`}
                           onClick={() => {
                             if (onSelectPinnedChat) onSelectPinnedChat(chat);
@@ -251,7 +251,7 @@ export default function Sidebar({
         </nav>
 
         {/* User Card & Sign Out Footer */}
-        <div className="p-3 border-t border-slate-100 bg-slate-50/70">
+        <div className="p-3 border-t app-sidebar-footer">
           {isOpen ? (
             <div className="space-y-2">
               <div 
@@ -262,7 +262,7 @@ export default function Sidebar({
                 className={`flex items-center gap-2.5 p-2 rounded-xl transition-all cursor-pointer border ${
                   activeTab === 'profile'
                     ? 'bg-indigo-50 border-indigo-300 ring-2 ring-indigo-500/20 shadow-xs'
-                    : 'bg-white hover:bg-slate-100/90 border-slate-200/80 hover:border-slate-300 shadow-2xs'
+                    : 'app-sidebar-profile-card shadow-2xs'
                 }`}
                 title={user.role === 'faculty' ? 'View Faculty Profile & Settings' : user.role === 'admin' ? 'View Admin Profile & Settings' : 'View Student Profile & Settings'}
               >
