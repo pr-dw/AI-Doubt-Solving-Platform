@@ -85,8 +85,14 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class ConversationSerializer(serializers.ModelSerializer):
     messages = MessageSerializer(many=True, read_only=True)
-    subject_name = serializers.CharField(source='subject.name', read_only=True)
-    subject_code = serializers.CharField(source='subject.code', read_only=True)
+    subject_name = serializers.SerializerMethodField()
+    subject_code = serializers.SerializerMethodField()
+
+    def get_subject_code(self, obj):
+        return obj.subject.code if obj.subject else "General"
+
+    def get_subject_name(self, obj):
+        return obj.subject.name if obj.subject else "General Academic"
 
     class Meta:
         model = Conversation

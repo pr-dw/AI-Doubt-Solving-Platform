@@ -492,7 +492,13 @@ export default function DoubtSolver({
                 <div className="truncate flex-1">
                   <div className="font-semibold truncate">{c.title}</div>
                   <div className="text-[10px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                    <span>{c.subject_code || 'General'}</span>
+                    <span className={`font-mono px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                      (c.subject_code && c.subject_code !== 'General')
+                        ? 'bg-indigo-100 text-indigo-800'
+                        : 'bg-slate-200/80 text-slate-700'
+                    }`}>
+                      {c.subject_code || 'General'}
+                    </span>
                     <span>•</span>
                     <span className="capitalize">{c.mode}</span>
                   </div>

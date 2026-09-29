@@ -719,11 +719,11 @@ class AIQueryView(APIView):
         # Auto-match identified subject to Subject model
         identified_code = ai_result.get('identified_code')
         matched_subject_obj = None
-        if identified_code:
+        if identified_code and identified_code.upper() not in ['GENERAL', 'NONE', 'UNKNOWN']:
             matched_subject_obj = Subject.objects.filter(code__iexact=identified_code).first()
 
         # If not matched by code, try matching by name
-        if not matched_subject_obj and ai_result.get('identified_name'):
+        if not matched_subject_obj and ai_result.get('identified_name') and ai_result.get('identified_name') not in ['General Academic', 'General']:
             matched_subject_obj = Subject.objects.filter(name__icontains=ai_result['identified_name']).first()
 
         if matched_subject_obj:
@@ -731,6 +731,12 @@ class AIQueryView(APIView):
             # Tag subject into conversation title if not already tagged
             if not conversation.title.startswith(f"[{matched_subject_obj.code}]"):
                 conversation.title = f"[{matched_subject_obj.code}] {query_text[:40]}" + ("..." if len(query_text) > 40 else "")
+            conversation.save()
+        else:
+            conversation.subject = None
+            # If not matched to any subject, mark as [General] in conversation
+            if not conversation.title.startswith("[General]"):
+                conversation.title = f"[General] {query_text[:40]}" + ("..." if len(query_text) > 40 else "")
             conversation.save()
 
         # Save AI message
@@ -752,6 +758,13 @@ class AIQueryView(APIView):
                 "code": matched_subject_obj.code,
                 "name": matched_subject_obj.name,
                 "semester": matched_subject_obj.semester
+            }
+        else:
+            identified_subject_data = {
+                "id": None,
+                "code": "General",
+                "name": "General Academic",
+                "semester": user_semester
             }
 
         return Response({

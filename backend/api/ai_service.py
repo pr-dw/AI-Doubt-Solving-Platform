@@ -199,6 +199,163 @@ def get_langchain_model(model_name: str, custom_api_key: str = None):
         ), f"Ollama ({resolved_tag})"
 
 
+GENERIC_SYLLABUS_WORDS = {
+    'computer', 'science', 'engineering', 'application', 'applications',
+    'system', 'systems', 'management', 'technology', 'technologies',
+    'law', 'laws', 'data', 'information', 'theory', 'study', 'studies',
+    'principle', 'principles', 'concept', 'concepts', 'general', 'basic',
+    'basics', 'advanced', 'introduction', 'overview', 'lab', 'practical',
+    'audit', 'security'
+}
+
+SUBJECT_DOMAIN_KEYWORDS = {
+    # UNIX / Linux Operating System
+    'NBCA-5053': [
+        'unix', 'linux', 'terminal', 'shell', 'bash', 'zsh', 'cat', 'grep', 'chmod', 'chown',
+        'ls', 'pwd', 'cd', 'mkdir', 'rm', 'cp', 'mv', 'sed', 'awk', 'pipe', 'pipes', 'redirection',
+        'kernel', 'posix', 'command line', 'vi editor', 'vim', 'nano', 'shell script', 'tar', 'gzip',
+        'daemon', 'standard input', 'standard output', 'stdin', 'stdout', 'stderr', 'cut', 'paste',
+        'sort', 'uniq', 'head', 'tail', 'touch', 'find', 'wc', 'echo', 'man page', 'cron', 'crontab',
+        'process management', 'ps', 'kill', 'top', 'fork', 'exec', 'directory permissions'
+    ],
+    # Computer Networks
+    'NBCA-501': [
+        'network', 'networking', 'osi', 'tcp', 'udp', 'ip', 'ipv4', 'ipv6', 'subnet', 'subnetting',
+        'routing', 'router', 'switch', 'packet', 'sliding window', 'aloha', 'dns', 'http', 'https',
+        'ftp', 'smtp', 'topology', 'star topology', 'bus topology', 'ring topology', 'bandwidth',
+        'latency', 'mac address', 'ethernet', 'transport layer', 'datalink', 'data link', 'payload',
+        'handshake', 'congestion control', 'lan', 'wan', 'man', 'flow control', 'error detection', 'crc'
+    ],
+    # Data Analytics
+    'NBCA-502': [
+        'data analytics', 'predictive', 'predictive analysis', 'probability', 'bayes', 'hypothesis testing',
+        'z-test', 't-test', 'chi-square', 'anova', 'imputation', 'outlier', 'data cleaning', 'visualization',
+        'histogram', 'heatmap', 'box plot', 'variance', 'standard deviation', 'correlation', 'regression',
+        'linear regression', 'data analytics lifecycle', 'sample distribution', 'null hypothesis', 'p-value'
+    ],
+    # Artificial Intelligence
+    'NBCA-503': [
+        'artificial intelligence', 'intelligent agent', 'heuristic', 'heuristic search', 'a*', 'hill climbing',
+        'best-first', 'predicate logic', 'unification', 'resolution refutation', 'semantic net', 'conceptual dependency',
+        'fuzzy logic', 'neural network', 'nlp', 'natural language processing', 'computer vision', 'robotics',
+        'knowledge representation', 'expert system', 'minimax'
+    ],
+    # Cyber Law and Internet Security
+    'NBCA-504': [
+        'cyber law', 'it act', 'it act 2000', 'cyber offence', 'cyber crime', 'intellectual property',
+        'patent', 'copyright', 'trademark', 'e-commerce security', 'digital record', 'phishing', 'trojan',
+        'malware', 'firewall', 'perimeter security', 'digital signature', 'cyber ethics', 'data privacy',
+        'uncitral', 'isp guidelines'
+    ],
+    # Graph Theory
+    'NBCA-5051': [
+        'graph theory', 'euler graph', 'hamiltonian', 'travelling salesman', 'tsp', 'spanning tree',
+        'prim', 'kruskal', 'planar graph', 'kuratowski', 'adjacency matrix', 'incidence matrix',
+        'graph coloring', 'chromatic', 'bipartite', 'vertex', 'vertices', 'cut-set', 'graph isomorphism'
+    ],
+    # Software Testing and Audit
+    'NBCA-5052': [
+        'software testing', 'verification and validation', 'boundary value', 'equivalence class',
+        'partitioning', 'control-flow', 'path testing', 'regression testing', 'test case', 'test suite',
+        'black box', 'white box', 'defect', 'bug', 'audit', 'test planning', 'usability testing'
+    ],
+    # Data Mining and Data Warehousing
+    'NBCA-5054': [
+        'data mining', 'data warehouse', 'data warehousing', 'apriori', 'association rule', 'decision tree',
+        'naive bayes', 'k-means', 'dbscan', 'star schema', 'snowflake schema', 'fact constellation',
+        'fact table', 'dimension table', 'olap', 'etl', 'data binning', 'data cube'
+    ],
+    # Data Analytics Lab
+    'NBCA-506P': [
+        'numpy', 'pandas', 'array operations', 'dataframe', 'series', 'matplotlib', 'seaborn',
+        'jupyter notebook', 'python lab', 'box plots', 'heat maps'
+    ]
+}
+
+
+def match_query_to_syllabus(prompt, subjects, response_text=''):
+    """
+    Intelligently scores and matches a doubt query against a collection of academic subjects.
+    Accounts for subject codes, non-generic subject name tokens, domain keyword libraries,
+    and official syllabus overviews & topics.
+    Returns (matched_subject, score) where score >= 25 indicates high confidence.
+    """
+    if not subjects:
+        return None, 0
+    if response_text and "Academic Scope Notice" in response_text:
+        return None, 0
+    prompt_lower = (prompt or '').lower()
+    combined_lower = f"{prompt_lower} {(response_text or '').lower()}"
+    best_subject = None
+    best_score = 0
+
+    stop_words = {
+        'what', 'when', 'where', 'which', 'who', 'whom', 'whose', 'why', 'how',
+        'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+        'in', 'on', 'at', 'to', 'for', 'with', 'by', 'about', 'against', 'between',
+        'into', 'through', 'during', 'before', 'after', 'above', 'below', 'from',
+        'up', 'down', 'of', 'off', 'over', 'under', 'again', 'further', 'then',
+        'once', 'can', 'could', 'should', 'would', 'will', 'use', 'explain', 'tell', 'about'
+    }
+
+    query_tokens = [
+        t for t in re.findall(r'\b[a-z0-9_-]{2,}\b', prompt_lower)
+        if t not in stop_words and t not in GENERIC_SYLLABUS_WORDS
+    ]
+
+    for s in subjects:
+        score = 0
+        s_code_lower = s.code.lower()
+        s_name_lower = s.name.lower()
+
+        # 1. Subject code match
+        if s_code_lower in prompt_lower:
+            score += 100
+        elif s_code_lower in combined_lower:
+            score += 40
+
+        # 2. Subject name match (full name or distinctive non-generic keywords)
+        if s_name_lower in prompt_lower:
+            score += 65
+        elif s_name_lower in combined_lower:
+            score += 30
+        else:
+            name_tokens = [
+                w for w in re.findall(r'\b[a-z0-9]{3,}\b', s_name_lower)
+                if w not in GENERIC_SYLLABUS_WORDS
+            ]
+            for ntoken in name_tokens:
+                if re.search(r'\b' + re.escape(ntoken) + r'\b', prompt_lower):
+                    score += 35
+                elif re.search(r'\b' + re.escape(ntoken) + r'\b', combined_lower):
+                    score += 12
+
+        # 3. Domain keyword library match
+        domain_kws = SUBJECT_DOMAIN_KEYWORDS.get(s.code, [])
+        for dkw in domain_kws:
+            pattern = r'\b' + re.escape(dkw) + r'\b'
+            if re.search(pattern, prompt_lower):
+                score += 30
+            elif re.search(pattern, combined_lower):
+                score += 8
+
+        # 4. Recommended topics & Syllabus overview matching with clean tokens
+        topics_blob = ' '.join(s.recommended_topics if isinstance(s.recommended_topics, list) else []).lower()
+        overview_blob = (s.syllabus_overview or '').lower()
+        for qt in query_tokens:
+            pat = r'\b' + re.escape(qt) + r'\b'
+            if re.search(pat, topics_blob):
+                score += 18
+            if re.search(pat, overview_blob):
+                score += 10
+
+        if score > best_score:
+            best_score = score
+            best_subject = s
+
+    return (best_subject, best_score) if best_score >= 25 else (None, best_score)
+
+
 def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject=None, model='gemini-1.5-flash', custom_api_key=None):
     """
     Executes reasoning pipeline using LangChain.
@@ -226,7 +383,8 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
             "model": "Academic Guardrail Engine",
             "identified_code": None,
             "identified_name": None,
-            "identified_topic": None
+            "identified_topic": None,
+            "is_general": False
         }
 
     llm, resolved_model_label = get_langchain_model(model, custom_api_key=custom_api_key)
@@ -246,9 +404,14 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
             f"{curriculum_context}\n"
             f"======================================================\n"
             f"MANDATORY INSTRUCTIONS FOR AUTOMATIC SUBJECT IDENTIFICATION & SYLLABUS GROUNDING:\n"
-            f"1. Cross-examine the student's question against the syllabus units, topics, and library study resources of the enrolled Semester {semester} subjects listed above.\n"
-            f"2. Automatically determine which enrolled subject code and title this question belongs to.\n"
-            f"3. On line 1 of your response, output the tag: [SUBJECT_MATCH: <Subject Code> | <Subject Name> | <Specific Topic or Unit>]\n"
+            f"1. Cross-examine the student's question against the syllabus units, topics, and study resources of the enrolled Semester {semester} subjects listed above.\n"
+            f"   - Note: doubts regarding terminal/shell commands (cat, grep, chmod, ls, redirection, pipes, scripts) map to UNIX Operating System.\n"
+            f"   - Doubts regarding network protocols (HTTP, TCP, IP, routing, OSI) map to Computer Network.\n"
+            f"   - Doubts regarding data analytics/probability map to Data Analytics, etc.\n"
+            f"2. If this doubt matches an enrolled subject above, output line 1 as:\n"
+            f"   [SUBJECT_MATCH: <Subject Code> | <Subject Name> | <Specific Topic or Unit>]\n"
+            f"3. If this doubt is an academic inquiry that does NOT belong to any enrolled subject above (e.g. general science, other branches of math/physics, non-syllabus questions):\n"
+            f"   Output line 1 as: [SUBJECT_MATCH: GENERAL | General Academic | General Inquiry]\n"
             f"4. On line 2 and onwards, write your full, comprehensive academic response according to the '{mode}' explanation mode rules. Do NOT stop after line 1.\n"
             f"5. Do NOT output boilerplate greeting intros or repetitive headers. Provide your academic response directly, grounded in the subject's curriculum.\n"
         )
@@ -302,27 +465,45 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
         identified_code = match.group(1).strip()
         identified_name = match.group(2).strip()
         identified_topic = match.group(3).strip() if match.group(3) else None
-        # Clean the internal tag so student only sees the clean markdown
+        # Clean internal tag
         response_text = re.sub(r'\[SUBJECT_MATCH:[^\]]+\]\s*', '', response_text).strip()
     else:
-        # Fallback: check markdown header
         hdr_match = re.search(r'###\s*#*\s*📚\s*Subject:\s*([A-Za-z0-9_-]+)(?:\s*[-|]\s*([^|\n\r]+))?(?:\s*[-|]\s*([^\n\r]+))?', response_text)
         if hdr_match:
             identified_code = hdr_match.group(1).strip()
             identified_name = hdr_match.group(2).strip() if hdr_match.group(2) else None
             identified_topic = hdr_match.group(3).strip() if hdr_match.group(3) else None
 
-    # Clean any accidental redundant headers so the user gets a clean answer
+    # Clean any accidental redundant headers so user gets clean output
     response_text = re.sub(r'^###\s*#*\s*📚\s*Subject:[^\n]*\n*', '', response_text).strip()
     response_text = re.sub(r'^>\s*\*\*Curriculum Alignment\*\*:[^\n]*\n*', '', response_text).strip()
 
-    # Fallback search if code not explicitly tagged in header
-    if not identified_code and subjects_list:
-        for s in subjects_list:
-            if s.code.lower() in response_text[:350].lower() or s.name.lower() in response_text[:350].lower():
-                identified_code = s.code
-                identified_name = s.name
-                break
+    # Intelligent syllabus & subject verification via multi-layer scoring
+    matched_subject_obj, match_score = match_query_to_syllabus(prompt, subjects_list, response_text)
+    if matched_subject_obj:
+        identified_code = matched_subject_obj.code
+        identified_name = matched_subject_obj.name
+        if not identified_topic or identified_topic.lower() in ['general inquiry', 'general academic']:
+            identified_topic = f"{matched_subject_obj.name} Concepts"
+    elif identified_code and identified_code.upper() not in ['GENERAL', 'NONE', 'UNKNOWN']:
+        # If AI identified a code, verify it exists in subjects_list
+        found_s = next((s for s in subjects_list if s.code.lower() == identified_code.lower()), None)
+        if not found_s:
+            from api.models import Subject as SubjectModel
+            found_s = SubjectModel.objects.filter(code__iexact=identified_code).first()
+        if found_s:
+            identified_code = found_s.code
+            identified_name = found_s.name
+        else:
+            identified_code = 'GENERAL'
+            identified_name = 'General Academic'
+            identified_topic = 'General Academic Inquiry'
+    else:
+        identified_code = 'GENERAL'
+        identified_name = 'General Academic'
+        identified_topic = 'General Academic Inquiry'
+
+    is_general = (identified_code == 'GENERAL')
 
     return {
         "success": True,
@@ -331,6 +512,7 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
         "identified_code": identified_code,
         "identified_name": identified_name,
         "identified_topic": identified_topic,
+        "is_general": is_general,
         "source": "langchain"
     }
 
