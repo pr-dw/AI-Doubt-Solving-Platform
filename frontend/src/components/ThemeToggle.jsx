@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sun, Moon, Sparkles, Compass, Check, ChevronDown, Palette } from 'lucide-react';
+import { Sun, Moon, Flame, Compass, Check, ChevronDown, Palette } from 'lucide-react';
 import { THEMES, getStoredTheme, setStoredTheme } from '../utils/theme';
 
 const ICONS = {
   light: Sun,
   dark: Moon,
-  midnight: Sparkles,
+  sunset: Flame,
   emerald: Compass
 };
 

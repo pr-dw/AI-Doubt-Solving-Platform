@@ -20,13 +20,13 @@ export const THEMES = [
     borderPreview: '#334155'
   },
   {
-    id: 'midnight',
-    name: 'Cyber Indigo',
-    shortName: 'Indigo',
-    desc: 'Futuristic deep space navy with neon violet & cyan highlights',
-    dotColor: '#38bdf8',
-    bgPreview: '#090d1b',
-    borderPreview: '#4338ca'
+    id: 'sunset',
+    name: 'Sunset Amber',
+    shortName: 'Sunset',
+    desc: 'Warm espresso dark mode with glowing honey & amber tones',
+    dotColor: '#f59e0b',
+    bgPreview: '#17110b',
+    borderPreview: '#78350f'
   },
   {
     id: 'emerald',
@@ -44,6 +44,9 @@ const THEME_STORAGE_KEY = 'ai_platform_theme';
 export function getStoredTheme() {
   try {
     const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    if (saved === 'midnight') {
+      return 'sunset';
+    }
     if (saved && THEMES.some(t => t.id === saved)) {
       return saved;
     }

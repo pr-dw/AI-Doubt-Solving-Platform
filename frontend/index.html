@@ -13,6 +13,7 @@
       (function() {
         try {
           var t = localStorage.getItem('ai_platform_theme') || 'light';
+          if (t === 'midnight') t = 'sunset';
           document.documentElement.setAttribute('data-theme', t);
           if (t !== 'light') {
             document.documentElement.classList.add('dark');

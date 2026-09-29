@@ -215,112 +215,141 @@
 }
 
 /* ================================================================
-   2. CYBER MIDNIGHT INDIGO THEME
+   2. SUNSET AMBER THEME (Warm Espresso & Glowing Amber)
 ================================================================ */
+[data-theme="sunset"] body,
 [data-theme="midnight"] body {
-  background-color: #070a14;
-  color: #f1f5f9;
+  background-color: #120e0a;
+  color: #fef3c7;
 }
 
+[data-theme="sunset"] h1,
+[data-theme="sunset"] h2,
+[data-theme="sunset"] h3,
+[data-theme="sunset"] h4,
+[data-theme="sunset"] h5,
+[data-theme="sunset"] h6,
 [data-theme="midnight"] h1,
 [data-theme="midnight"] h2,
 [data-theme="midnight"] h3,
 [data-theme="midnight"] h4,
 [data-theme="midnight"] h5,
 [data-theme="midnight"] h6 {
-  color: #f8fafc;
+  color: #fffbeb;
 }
 
+[data-theme="sunset"] .glass-panel,
 [data-theme="midnight"] .glass-panel {
-  background: rgba(13, 19, 36, 0.9);
-  border-color: rgba(99, 102, 241, 0.25);
-  box-shadow: 0 4px 25px -2px rgba(5, 10, 25, 0.6);
+  background: rgba(28, 20, 14, 0.92);
+  border-color: rgba(245, 158, 11, 0.22);
+  box-shadow: 0 4px 25px -2px rgba(20, 10, 4, 0.6);
 }
 
+[data-theme="sunset"] .glass-card,
 [data-theme="midnight"] .glass-card {
-  background: rgba(23, 29, 58, 0.65);
-  border-color: rgba(99, 102, 241, 0.2);
+  background: rgba(43, 29, 18, 0.65);
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
+[data-theme="sunset"] .bg-white,
 [data-theme="midnight"] .bg-white {
-  background-color: #0f172a !important;
-  border-color: rgba(99, 102, 241, 0.25);
+  background-color: #1a120c !important;
+  border-color: rgba(245, 158, 11, 0.22);
 }
 
+[data-theme="sunset"] .bg-slate-50,
 [data-theme="midnight"] .bg-slate-50 {
-  background-color: #070a14 !important;
+  background-color: #120e0a !important;
 }
 
+[data-theme="sunset"] .bg-slate-100,
 [data-theme="midnight"] .bg-slate-100 {
-  background-color: #17203b !important;
+  background-color: #271a11 !important;
 }
 
+[data-theme="sunset"] .bg-slate-200,
 [data-theme="midnight"] .bg-slate-200 {
-  background-color: #27345b !important;
+  background-color: #3d291c !important;
 }
 
+[data-theme="sunset"] .text-slate-900,
 [data-theme="midnight"] .text-slate-900 {
-  color: #ffffff !important;
+  color: #fffbeb !important;
 }
 
+[data-theme="sunset"] .text-slate-800,
 [data-theme="midnight"] .text-slate-800 {
-  color: #f1f5f9 !important;
+  color: #fef3c7 !important;
 }
 
+[data-theme="sunset"] .text-slate-700,
 [data-theme="midnight"] .text-slate-700 {
-  color: #e2e8f0 !important;
+  color: #fde68a !important;
 }
 
+[data-theme="sunset"] .text-slate-600,
 [data-theme="midnight"] .text-slate-600 {
-  color: #cbd5e1 !important;
+  color: #fcd34d !important;
 }
 
+[data-theme="sunset"] .text-slate-500,
 [data-theme="midnight"] .text-slate-500 {
-  color: #94a3b8 !important;
+  color: #f59e0b !important;
 }
 
+[data-theme="sunset"] .border-slate-200,
+[data-theme="sunset"] .border-slate-100,
 [data-theme="midnight"] .border-slate-200,
 [data-theme="midnight"] .border-slate-100 {
-  border-color: rgba(99, 102, 241, 0.22) !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
 }
 
+[data-theme="sunset"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="sunset"] select,
+[data-theme="sunset"] textarea,
 [data-theme="midnight"] input:not([type="checkbox"]):not([type="radio"]),
 [data-theme="midnight"] select,
 [data-theme="midnight"] textarea {
-  background-color: #0a0e1c !important;
-  color: #f8fafc !important;
-  border-color: #312e81 !important;
+  background-color: #150f09 !important;
+  color: #fffbeb !important;
+  border-color: #78350f !important;
 }
 
+[data-theme="sunset"] .theme-toggle-btn,
 [data-theme="midnight"] .theme-toggle-btn {
-  background: #17203b;
-  border-color: #3730a3;
-  color: #38bdf8;
+  background: #271a11;
+  border-color: #92400e;
+  color: #f59e0b;
 }
 
+[data-theme="sunset"] .theme-dropdown-menu,
 [data-theme="midnight"] .theme-dropdown-menu {
-  background: #0f172a;
-  border: 1px solid #3730a3;
-  color: #ffffff;
+  background: #1a120c;
+  border: 1px solid #92400e;
+  color: #fffbeb;
 }
 
+[data-theme="sunset"] .theme-dropdown-header,
 [data-theme="midnight"] .theme-dropdown-header {
-  border-color: #1e1b4b;
+  border-color: #451a03;
 }
 
+[data-theme="sunset"] .theme-item-active,
 [data-theme="midnight"] .theme-item-active {
-  background: rgba(56, 189, 248, 0.18);
-  border: 1px solid #38bdf8;
-  color: #ffffff;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid #f59e0b;
+  color: #fffbeb;
 }
 
+[data-theme="sunset"] .theme-item-inactive,
 [data-theme="midnight"] .theme-item-inactive {
-  color: #cbd5e1;
+  color: #fde68a;
 }
 
+[data-theme="sunset"] .theme-item-inactive:hover,
 [data-theme="midnight"] .theme-item-inactive:hover {
-  background-color: #17203b !important;
-  color: #38bdf8;
+  background-color: #271a11 !important;
+  color: #f59e0b;
 }
 
 /* ================================================================
@@ -436,42 +465,49 @@
    SHARED DARK THEME ADAPTATIONS FOR CHIPS & BADGES
 ================================================================ */
 [data-theme="dark"] .bg-indigo-50,
+[data-theme="sunset"] .bg-indigo-50,
 [data-theme="midnight"] .bg-indigo-50,
 [data-theme="emerald"] .bg-indigo-50 {
   background-color: rgba(99, 102, 241, 0.15) !important;
 }
 
 [data-theme="dark"] .bg-purple-50,
+[data-theme="sunset"] .bg-purple-50,
 [data-theme="midnight"] .bg-purple-50,
 [data-theme="emerald"] .bg-purple-50 {
   background-color: rgba(168, 85, 247, 0.15) !important;
 }
 
 [data-theme="dark"] .bg-emerald-50,
+[data-theme="sunset"] .bg-emerald-50,
 [data-theme="midnight"] .bg-emerald-50,
 [data-theme="emerald"] .bg-emerald-50 {
   background-color: rgba(16, 185, 129, 0.15) !important;
 }
 
 [data-theme="dark"] .bg-amber-50,
+[data-theme="sunset"] .bg-amber-50,
 [data-theme="midnight"] .bg-amber-50,
 [data-theme="emerald"] .bg-amber-50 {
   background-color: rgba(245, 158, 11, 0.15) !important;
 }
 
 [data-theme="dark"] .bg-rose-50,
+[data-theme="sunset"] .bg-rose-50,
 [data-theme="midnight"] .bg-rose-50,
 [data-theme="emerald"] .bg-rose-50 {
   background-color: rgba(244, 63, 94, 0.15) !important;
 }
 
 [data-theme="dark"] .bg-blue-50,
+[data-theme="sunset"] .bg-blue-50,
 [data-theme="midnight"] .bg-blue-50,
 [data-theme="emerald"] .bg-blue-50 {
   background-color: rgba(59, 130, 246, 0.15) !important;
 }
 
 [data-theme="dark"] .bg-sky-50,
+[data-theme="sunset"] .bg-sky-50,
 [data-theme="midnight"] .bg-sky-50,
 [data-theme="emerald"] .bg-sky-50 {
   background-color: rgba(14, 165, 233, 0.15) !important;
@@ -479,6 +515,7 @@
 
 /* Dark scrollbar track */
 [data-theme="dark"] ::-webkit-scrollbar-track,
+[data-theme="sunset"] ::-webkit-scrollbar-track,
 [data-theme="midnight"] ::-webkit-scrollbar-track,
 [data-theme="emerald"] ::-webkit-scrollbar-track {
   background: rgba(15, 23, 42, 0.6);
@@ -486,6 +523,7 @@
 
 /* Sidebar hover and active styling in dark themes */
 [data-theme="dark"] aside .hover\:bg-purple-50:hover,
+[data-theme="sunset"] aside .hover\:bg-purple-50:hover,
 [data-theme="midnight"] aside .hover\:bg-purple-50:hover,
 [data-theme="emerald"] aside .hover\:bg-purple-50:hover {
   background-color: rgba(168, 85, 247, 0.18) !important;
@@ -493,6 +531,7 @@
 }
 
 [data-theme="dark"] aside .hover\:bg-indigo-50:hover,
+[data-theme="sunset"] aside .hover\:bg-indigo-50:hover,
 [data-theme="midnight"] aside .hover\:bg-indigo-50:hover,
 [data-theme="emerald"] aside .hover\:bg-indigo-50:hover {
   background-color: rgba(99, 102, 241, 0.18) !important;
@@ -500,6 +539,7 @@
 }
 
 [data-theme="dark"] aside .hover\:bg-emerald-50:hover,
+[data-theme="sunset"] aside .hover\:bg-emerald-50:hover,
 [data-theme="midnight"] aside .hover\:bg-emerald-50:hover,
 [data-theme="emerald"] aside .hover\:bg-emerald-50:hover {
   background-color: rgba(16, 185, 129, 0.18) !important;
