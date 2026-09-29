@@ -2161,3 +2161,254 @@ class AdminPaperFormatDetailView(APIView):
         fmt = get_object_or_404(ExamPaperFormat, pk=pk)
         fmt.delete()
         return Response({"message": "Paper format deleted successfully."})
+
+
+class AdminDatabaseTablesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can view database schema."}, status=status.HTTP_403_FORBIDDEN)
+
+        from django.apps import apps
+        from django.db import connection
+
+        model_by_table = {m._meta.db_table: m for m in apps.get_models()}
+        all_table_names = sorted(connection.introspection.table_names())
+
+        tables_data = []
+        total_records_sum = 0
+
+        for t_name in all_table_names:
+            model = model_by_table.get(t_name)
+            if model:
+                try:
+                    row_count = model.objects.count()
+                except Exception:
+                    row_count = 0
+
+                fields_info = []
+                for f in model._meta.fields:
+                    fields_info.append({
+                        "name": f.name,
+                        "verbose_name": str(f.verbose_name).title(),
+                        "type": f.get_internal_type(),
+                        "primary_key": f.primary_key,
+                        "nullable": f.null,
+                    })
+
+                app_label = model._meta.app_label
+                if app_label == 'api':
+                    category = "Application Core"
+                elif app_label in ['auth', 'sessions']:
+                    category = "Authentication & Access"
+                else:
+                    category = "Django Framework"
+
+                tables_data.append({
+                    "table_name": t_name,
+                    "model_name": model.__name__,
+                    "app_label": app_label,
+                    "category": category,
+                    "verbose_name": str(model._meta.verbose_name).title(),
+                    "row_count": row_count,
+                    "columns_count": len(fields_info),
+                    "columns": fields_info,
+                    "is_model": True
+                })
+                total_records_sum += row_count
+            else:
+                row_count = 0
+                fields_info = []
+                try:
+                    with connection.cursor() as cursor:
+                        cursor.execute(f'SELECT COUNT(*) FROM "{t_name}"')
+                        row_count = cursor.fetchone()[0]
+                        table_desc = connection.introspection.get_table_description(cursor, t_name)
+                        for col in table_desc:
+                            fields_info.append({
+                                "name": col.name,
+                                "verbose_name": col.name.replace('_', ' ').title(),
+                                "type": "RawColumn",
+                                "primary_key": False,
+                                "nullable": True,
+                            })
+                except Exception as e:
+                    logger.warning("Error introspecting raw table %s: %s", t_name, e)
+
+                tables_data.append({
+                    "table_name": t_name,
+                    "model_name": t_name.replace('api_', '').replace('_', ' ').title(),
+                    "app_label": "database",
+                    "category": "System / Internal",
+                    "verbose_name": t_name,
+                    "row_count": row_count,
+                    "columns_count": len(fields_info),
+                    "columns": fields_info,
+                    "is_model": False
+                })
+                total_records_sum += row_count
+
+        db_settings = settings.DATABASES.get('default', {})
+        db_name = db_settings.get('NAME', 'ai_doubt_platform')
+        db_engine = db_settings.get('ENGINE', '').split('.')[-1].upper() or 'POSTGRESQL'
+
+        return Response({
+            "database": db_name,
+            "engine": db_engine,
+            "total_tables": len(tables_data),
+            "total_records": total_records_sum,
+            "tables": tables_data
+        })
+
+
+class AdminDatabaseRecordsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, table_name):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can view database records."}, status=status.HTTP_403_FORBIDDEN)
+
+        from django.apps import apps
+        from django.db import connection, models
+        import datetime, uuid
+
+        model_by_table = {m._meta.db_table: m for m in apps.get_models()}
+        all_tables = connection.introspection.table_names()
+
+        if table_name not in all_tables:
+            return Response({"detail": f"Table '{table_name}' does not exist in database."}, status=status.HTTP_404_NOT_FOUND)
+
+        search = request.query_params.get('search', '').strip()
+        try:
+            limit = min(max(int(request.query_params.get('limit', 50)), 1), 200)
+        except ValueError:
+            limit = 50
+        try:
+            offset = max(int(request.query_params.get('offset', 0)), 0)
+        except ValueError:
+            offset = 0
+
+        model = model_by_table.get(table_name)
+
+        def serialize_val(val, field_name=''):
+            if field_name == 'password':
+                return '••••••••'
+            if val is None:
+                return None
+            if isinstance(val, (datetime.datetime, datetime.date, datetime.time)):
+                return val.isoformat()
+            if isinstance(val, uuid.UUID):
+                return str(val)
+            if hasattr(val, 'url'):
+                try:
+                    return val.url
+                except Exception:
+                    return str(val)
+            if isinstance(val, (dict, list, int, float, bool, str)):
+                return val
+            return str(val)
+
+        if model:
+            columns = []
+            text_fields = []
+            int_fields = []
+            for f in model._meta.fields:
+                itype = f.get_internal_type()
+                columns.append({
+                    "name": f.name,
+                    "verbose_name": str(f.verbose_name).title(),
+                    "type": itype,
+                    "primary_key": f.primary_key,
+                    "nullable": f.null,
+                })
+                if itype in ['CharField', 'TextField', 'EmailField', 'SlugField']:
+                    text_fields.append(f.name)
+                elif itype in ['IntegerField', 'BigIntegerField', 'AutoField', 'BigAutoField', 'PositiveIntegerField']:
+                    int_fields.append(f.name)
+
+            queryset = model.objects.all()
+            total_count = queryset.count()
+
+            if search:
+                q_obj = Q()
+                for tf in text_fields:
+                    q_obj |= Q(**{f"{tf}__icontains": search})
+                if search.isdigit():
+                    for nf in int_fields:
+                        q_obj |= Q(**{f"{nf}": int(search)})
+                queryset = queryset.filter(q_obj)
+
+            filtered_count = queryset.count()
+
+            try:
+                pk_name = model._meta.pk.name
+                queryset = queryset.order_by(f"-{pk_name}")
+            except Exception:
+                pass
+
+            page_objs = queryset[offset:offset + limit]
+            rows = []
+            for obj in page_objs:
+                row_dict = {}
+                for col in columns:
+                    fname = col['name']
+                    raw_val = getattr(obj, fname, None)
+                    row_dict[fname] = serialize_val(raw_val, fname)
+                rows.append(row_dict)
+
+            return Response({
+                "table_name": table_name,
+                "model_name": model.__name__,
+                "app_label": model._meta.app_label,
+                "total_records": total_count,
+                "filtered_records": filtered_count,
+                "limit": limit,
+                "offset": offset,
+                "columns": columns,
+                "records": rows
+            })
+        else:
+            with connection.cursor() as cursor:
+                cursor.execute(f'SELECT COUNT(*) FROM "{table_name}"')
+                total_count = cursor.fetchone()[0]
+
+                table_desc = connection.introspection.get_table_description(cursor, table_name)
+                cols = [col.name for col in table_desc]
+                columns = [{"name": c, "verbose_name": c.replace('_', ' ').title(), "type": "RawColumn", "primary_key": False, "nullable": True} for c in cols]
+
+                where_sql = ""
+                params = []
+                if search:
+                    clauses = [f'"{c}"::text ILIKE %s' for c in cols]
+                    where_sql = " WHERE " + " OR ".join(clauses)
+                    params = [f"%{search}%"] * len(cols)
+
+                count_sql = f'SELECT COUNT(*) FROM "{table_name}"' + where_sql
+                cursor.execute(count_sql, params)
+                filtered_count = cursor.fetchone()[0]
+
+                query_sql = f'SELECT * FROM "{table_name}"' + where_sql + " LIMIT %s OFFSET %s"
+                cursor.execute(query_sql, params + [limit, offset])
+                raw_rows = cursor.fetchall()
+
+                records = []
+                for row_tuple in raw_rows:
+                    record_dict = {}
+                    for idx, val in enumerate(row_tuple):
+                        col_name = cols[idx]
+                        record_dict[col_name] = serialize_val(val, col_name)
+                    records.append(record_dict)
+
+                return Response({
+                    "table_name": table_name,
+                    "model_name": table_name,
+                    "app_label": "database",
+                    "total_records": total_count,
+                    "filtered_records": filtered_count,
+                    "limit": limit,
+                    "offset": offset,
+                    "columns": columns,
+                    "records": records
+                })
+

@@ -14,7 +14,8 @@ from .views import (
     GlobalSearchView, AdminStatsView,
     MockExamGenerateView, MockExamListView, MockExamDetailView, MockExamBlueprintsView,
     SubjectDetailView, AdminUserManagementView, AdminUserDetailView,
-    AdminPaperFormatView, AdminPaperFormatDetailView
+    AdminPaperFormatView, AdminPaperFormatDetailView,
+    AdminDatabaseTablesView, AdminDatabaseRecordsView
 )
 
 urlpatterns = [
@@ -81,6 +82,8 @@ urlpatterns = [
     path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
     path('admin/paper-formats/', AdminPaperFormatView.as_view(), name='admin-paper-formats'),
     path('admin/paper-formats/<int:pk>/', AdminPaperFormatDetailView.as_view(), name='admin-paper-format-detail'),
+    path('admin/database/tables/', AdminDatabaseTablesView.as_view(), name='admin-database-tables'),
+    path('admin/database/tables/<str:table_name>/records/', AdminDatabaseRecordsView.as_view(), name='admin-database-records'),
 
     # AI Mock Exams & Question Papers
     path('mock-exams/generate/', MockExamGenerateView.as_view(), name='mock-exam-generate'),

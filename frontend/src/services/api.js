@@ -385,6 +385,16 @@ export const api = {
     request(`/admin/paper-formats/${formatId}/`, {
       method: 'DELETE',
     }),
+
+  // Admin Database Overview (Read-Only)
+  getDatabaseTables: () => request('/admin/database/tables/'),
+  getDatabaseRecords: (tableName, { search = '', limit = 50, offset = 0 } = {}) => {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (limit) params.append('limit', limit);
+    if (offset) params.append('offset', offset);
+    return request(`/admin/database/tables/${encodeURIComponent(tableName)}/records/?${params.toString()}`);
+  },
 };
 
 

@@ -5,7 +5,8 @@ import {
   Edit3, Trash2, Plus, Search, KeyRound, AlertCircle,
   Filter, Calendar, Clock, Layers, FileText, Sparkles,
   X, ChevronDown, ChevronRight, Hash, GraduationCap, FileCheck, Check,
-  Info, Eye, EyeOff, TrendingUp, Activity, BarChart3, HelpCircle
+  Info, Eye, EyeOff, TrendingUp, Activity, BarChart3, HelpCircle,
+  RefreshCw, Table, Columns, Copy, Lock, ChevronLeft, Download
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -675,6 +676,125 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
       loadStats();
     }
   }, [currentTab]);
+
+  /* =============================================================
+     TAB 5: DATABASE OVERVIEW (READ-ONLY)
+  ============================================================= */
+  const [dbData, setDbData] = useState(null);
+  const [loadingTables, setLoadingTables] = useState(false);
+  const [selectedTable, setSelectedTable] = useState(null);
+  const [tableCategoryFilter, setTableCategoryFilter] = useState('all');
+  const [tableSearchQuery, setTableSearchQuery] = useState('');
+
+  // Table Records
+  const [recordsData, setRecordsData] = useState(null);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+  const [recordsSearchQuery, setRecordsSearchQuery] = useState('');
+  const [recordsSearchInput, setRecordsSearchInput] = useState('');
+  const [recordsPage, setRecordsPage] = useState(0);
+  const [recordsPerPage, setRecordsPerPage] = useState(50);
+  const [inspectedRecord, setInspectedRecord] = useState(null);
+  const [copiedKey, setCopiedKey] = useState(false);
+
+  const loadDatabaseTables = async (preserveSelected = true) => {
+    setLoadingTables(true);
+    try {
+      const res = await api.getDatabaseTables();
+      setDbData(res);
+      if (res?.tables?.length > 0) {
+        if (!preserveSelected || !selectedTable) {
+          const defaultTable = res.tables.find(t => t.table_name === 'api_user') || res.tables[0];
+          setSelectedTable(defaultTable);
+        } else {
+          const currName = selectedTable.table_name || selectedTable;
+          const found = res.tables.find(t => t.table_name === currName);
+          if (found) setSelectedTable(found);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load database tables:', err);
+      showToast(err.message || 'Failed to load database schema', 'error');
+    } finally {
+      setLoadingTables(false);
+    }
+  };
+
+  const loadTableRecords = async (tableName, search = '', page = 0, perPage = 50) => {
+    if (!tableName) return;
+    setLoadingRecords(true);
+    try {
+      const res = await api.getDatabaseRecords(tableName, {
+        search,
+        limit: perPage,
+        offset: page * perPage
+      });
+      setRecordsData(res);
+    } catch (err) {
+      console.error('Failed to load records for ' + tableName + ':', err);
+      showToast(err.message || 'Failed to load table records', 'error');
+    } finally {
+      setLoadingRecords(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentTab === 'database') {
+      loadDatabaseTables();
+    }
+  }, [currentTab]);
+
+  useEffect(() => {
+    if (currentTab === 'database' && selectedTable) {
+      const tableName = selectedTable.table_name || selectedTable;
+      setRecordsPage(0);
+      setRecordsSearchInput('');
+      setRecordsSearchQuery('');
+      loadTableRecords(tableName, '', 0, recordsPerPage);
+    }
+  }, [selectedTable?.table_name]);
+
+  const handleExecuteRecordsSearch = (e) => {
+    if (e) e.preventDefault();
+    setRecordsSearchQuery(recordsSearchInput);
+    setRecordsPage(0);
+    if (selectedTable) {
+      loadTableRecords(selectedTable.table_name, recordsSearchInput, 0, recordsPerPage);
+    }
+  };
+
+  const handleClearRecordsSearch = () => {
+    setRecordsSearchInput('');
+    setRecordsSearchQuery('');
+    setRecordsPage(0);
+    if (selectedTable) {
+      loadTableRecords(selectedTable.table_name, '', 0, recordsPerPage);
+    }
+  };
+
+  const handleRecordsPageChange = (newPage) => {
+    setRecordsPage(newPage);
+    if (selectedTable) {
+      loadTableRecords(selectedTable.table_name, recordsSearchQuery, newPage, recordsPerPage);
+    }
+  };
+
+  const handleExportJSON = () => {
+    if (!recordsData?.records) return;
+    const blob = new Blob([JSON.stringify(recordsData.records, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedTable?.table_name || 'database_export'}_records.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Exported table records as JSON', 'success');
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(typeof text === 'object' ? JSON.stringify(text, null, 2) : String(text));
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -1682,6 +1802,475 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
       )}
 
       {/* =========================================================
+          VIEW 5: DATABASE OVERVIEW (READ-ONLY)
+      ========================================================= */}
+      {currentTab === 'database' && (
+        <div className="space-y-6">
+          {/* Header & Quick Engine Info */}
+          <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0">
+                <Database className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-bold text-slate-900">Database Overview</h2>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Live Connection
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                    Read-Only
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  PostgreSQL database schema catalog, relation tables, and interactive read-only record inspector.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-stretch md:self-auto justify-end">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 font-mono">
+                <span>{dbData?.engine || 'POSTGRESQL'}</span>
+                <span>•</span>
+                <span className="text-slate-800 font-bold">{dbData?.database || 'ai_doubt_platform'}</span>
+              </div>
+              <button
+                onClick={() => loadDatabaseTables(true)}
+                disabled={loadingTables}
+                className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                title="Refresh database schema and row counts"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loadingTables ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
+                <span>Refresh Schema</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Database Summary Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">Database Tables</span>
+                <Table className="h-4 w-4 text-indigo-600" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-2">
+                {dbData ? dbData.total_tables : '—'}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Relational tables cataloged</div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">Total Live Records</span>
+                <Layers className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-black text-slate-900 mt-2">
+                {dbData ? Number(dbData.total_records).toLocaleString() : '—'}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Rows across all tables</div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">Active Selection</span>
+                <Columns className="h-4 w-4 text-purple-600" />
+              </div>
+              <div className="text-base font-bold text-slate-900 mt-2 font-mono truncate">
+                {selectedTable?.table_name || 'None'}
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                {selectedTable ? `${selectedTable.columns_count} columns • ${selectedTable.row_count} rows` : 'Select a table'}
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-500">Data Access Mode</span>
+                <Lock className="h-4 w-4 text-amber-600" />
+              </div>
+              <div className="text-base font-bold text-slate-900 mt-2 flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+                <span>Fetch Only</span>
+              </div>
+              <div className="text-[11px] text-slate-400 mt-0.5">Zero mutation risk enforced</div>
+            </div>
+          </div>
+
+          {/* Main Workspace: Left (Table Directory) & Right (Records Explorer) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            
+            {/* Table Directory & Selector (4 cols) */}
+            <div className="lg:col-span-4 space-y-4">
+              <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                    Tables Directory ({dbData?.tables?.length || 0})
+                  </h3>
+                </div>
+
+                {/* Table Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Find table name or model..."
+                    value={tableSearchQuery}
+                    onChange={(e) => setTableSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white placeholder:text-slate-400"
+                  />
+                  {tableSearchQuery && (
+                    <button
+                      onClick={() => setTableSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Table Category Pills */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {[
+                    { id: 'all', label: 'All' },
+                    { id: 'Application Core', label: 'App Core' },
+                    { id: 'Authentication & Access', label: 'Auth' },
+                    { id: 'System / Internal', label: 'System' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setTableCategoryFilter(cat.id)}
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all cursor-pointer ${
+                        tableCategoryFilter === cat.id
+                          ? 'bg-indigo-600 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tables List */}
+                <div className="space-y-1.5 max-h-[620px] overflow-y-auto pr-1">
+                  {loadingTables && !dbData ? (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      <RefreshCw className="h-5 w-5 animate-spin mx-auto text-indigo-500 mb-2" />
+                      Loading tables catalog...
+                    </div>
+                  ) : (
+                    (() => {
+                      const filteredTables = (dbData?.tables || []).filter((tbl) => {
+                        const matchesCategory = tableCategoryFilter === 'all' || tbl.category === tableCategoryFilter;
+                        const q = tableSearchQuery.toLowerCase().trim();
+                        const matchesSearch = !q || tbl.table_name.toLowerCase().includes(q) || tbl.model_name.toLowerCase().includes(q) || tbl.verbose_name.toLowerCase().includes(q);
+                        return matchesCategory && matchesSearch;
+                      });
+
+                      if (filteredTables.length === 0) {
+                        return (
+                          <div className="py-8 text-center text-xs text-slate-400">
+                            No database tables match your filter.
+                          </div>
+                        );
+                      }
+
+                      return filteredTables.map((tbl) => {
+                        const isSelected = selectedTable?.table_name === tbl.table_name;
+                        return (
+                          <button
+                            key={tbl.table_name}
+                            onClick={() => setSelectedTable(tbl)}
+                            className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                              isSelected
+                                ? 'bg-indigo-50/80 border-indigo-300 ring-2 ring-indigo-500/20 shadow-xs'
+                                : 'bg-slate-50/60 hover:bg-slate-100/80 border-slate-200'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`font-mono text-xs font-bold truncate ${isSelected ? 'text-indigo-950' : 'text-slate-800'}`}>
+                                  {tbl.table_name}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[11px] text-slate-500 truncate">
+                                  {tbl.verbose_name || tbl.model_name}
+                                </span>
+                                <span className="text-[10px] text-slate-400">•</span>
+                                <span className="text-[10px] text-slate-400">
+                                  {tbl.columns_count} cols
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 flex flex-col items-end gap-1">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                tbl.row_count > 0 
+                                  ? (isSelected ? 'bg-indigo-200/70 text-indigo-900' : 'bg-slate-200 text-slate-700')
+                                  : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                {tbl.row_count} rows
+                              </span>
+                              <span className="text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
+                                {tbl.category === 'Application Core' ? 'App' : (tbl.category === 'Authentication & Access' ? 'Auth' : 'Sys')}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      });
+                    })()
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Selected Table Records Explorer (8 cols) */}
+            <div className="lg:col-span-8 space-y-4">
+              <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-4">
+                
+                {/* Header for Active Table */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-base font-black text-slate-900">
+                        {selectedTable?.table_name || 'Select a table'}
+                      </span>
+                      {selectedTable?.model_name && (
+                        <span className="text-xs px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
+                          Model: {selectedTable.model_name}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Showing records in table <code className="font-mono text-slate-700">{selectedTable?.table_name}</code>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleExportJSON}
+                      disabled={!recordsData?.records?.length}
+                      className="px-3 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                      title="Download current page records as JSON"
+                    >
+                      <Download className="h-3.5 w-3.5 text-slate-500" />
+                      <span>Export JSON</span>
+                    </button>
+                    <button
+                      onClick={() => selectedTable && loadTableRecords(selectedTable.table_name, recordsSearchQuery, recordsPage, recordsPerPage)}
+                      disabled={loadingRecords || !selectedTable}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-xs font-semibold text-indigo-700 flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      <RefreshCw className={`h-3.5 w-3.5 ${loadingRecords ? 'animate-spin' : ''}`} />
+                      <span>Refresh</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Records Search and Pagination Config */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  {/* Search input */}
+                  <form onSubmit={handleExecuteRecordsSearch} className="flex-1 relative flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Search records by text, email, title, or ID..."
+                        value={recordsSearchInput}
+                        onChange={(e) => setRecordsSearchInput(e.target.value)}
+                        className="w-full pl-9 pr-8 py-2 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-800 focus:outline-none focus:border-indigo-500 focus:bg-white placeholder:text-slate-400"
+                      />
+                      {recordsSearchInput && (
+                        <button
+                          type="button"
+                          onClick={handleClearRecordsSearch}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loadingRecords}
+                      className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-xs cursor-pointer shrink-0 disabled:opacity-50"
+                    >
+                      Search
+                    </button>
+                  </form>
+
+                  {/* Rows per page selector */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-slate-500 font-medium">Rows:</span>
+                    <select
+                      value={recordsPerPage}
+                      onChange={(e) => setRecordsPerPage(Number(e.target.value))}
+                      className="px-2.5 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-semibold focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Records Count Indicator */}
+                {recordsData && (
+                  <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                    <div>
+                      {recordsData.filtered_records !== recordsData.total_records ? (
+                        <span>
+                          Found <strong className="text-indigo-600 font-bold">{recordsData.filtered_records}</strong> matching records (out of {recordsData.total_records} total)
+                        </span>
+                      ) : (
+                        <span>
+                          Total <strong className="text-slate-800 font-bold">{recordsData.total_records}</strong> records in table
+                        </span>
+                      )}
+                    </div>
+                    <div>
+                      Page {recordsPage + 1} of {Math.max(1, Math.ceil((recordsData.filtered_records || 1) / recordsPerPage))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Table Data Grid */}
+                <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                  <div className="overflow-x-auto max-h-[500px] relative">
+                    {loadingRecords ? (
+                      <div className="py-20 text-center text-xs text-slate-500 bg-slate-50/50">
+                        <RefreshCw className="h-6 w-6 animate-spin mx-auto text-indigo-500 mb-2" />
+                        Fetching table records...
+                      </div>
+                    ) : !recordsData?.records || recordsData.records.length === 0 ? (
+                      <div className="py-16 text-center text-xs text-slate-400 bg-slate-50/50">
+                        <Table className="h-8 w-8 mx-auto text-slate-300 mb-2" />
+                        <p className="font-semibold text-slate-600">No records found</p>
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          {recordsSearchQuery ? 'No rows match current search query.' : 'This table is currently empty.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
+                          <tr>
+                            <th className="py-2.5 px-3 font-bold text-slate-700 border-r border-slate-200 bg-slate-50 w-16 text-center">
+                              #
+                            </th>
+                            {(recordsData.columns || []).map((col) => (
+                              <th key={col.name} className="py-2.5 px-3 font-bold text-slate-700 border-r border-slate-200 bg-slate-50 whitespace-nowrap">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="font-mono text-slate-900">{col.name}</span>
+                                  {col.primary_key && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
+                                      PK
+                                    </span>
+                                  )}
+                                  <span className="text-[9px] font-normal text-slate-400">
+                                    {col.type}
+                                  </span>
+                                </div>
+                              </th>
+                            ))}
+                            <th className="py-2.5 px-3 font-bold text-slate-700 bg-slate-50 text-center sticky right-0 z-20 w-20">
+                              Action
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {recordsData.records.map((row, rowIdx) => (
+                            <tr key={rowIdx} className="hover:bg-indigo-50/40 transition-colors group">
+                              <td className="py-2 px-3 text-slate-400 font-mono text-[11px] border-r border-slate-100 text-center">
+                                {recordsPage * recordsPerPage + rowIdx + 1}
+                              </td>
+                              {(recordsData.columns || []).map((col) => {
+                                const val = row[col.name];
+                                const isNull = val === null || val === undefined;
+                                const isBool = typeof val === 'boolean';
+                                const isPassword = col.name === 'password';
+
+                                return (
+                                  <td
+                                    key={col.name}
+                                    className="py-2 px-3 border-r border-slate-100 text-slate-800 max-w-xs truncate font-mono text-[11px]"
+                                    title={typeof val === 'object' ? JSON.stringify(val) : String(val ?? '')}
+                                  >
+                                    {isNull ? (
+                                      <span className="text-slate-300 italic">&lt;null&gt;</span>
+                                    ) : isPassword ? (
+                                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-mono text-[10px]">
+                                        <Lock className="h-2.5 w-2.5" />
+                                        ••••••••
+                                      </span>
+                                    ) : isBool ? (
+                                      <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                        val ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                      }`}>
+                                        {String(val)}
+                                      </span>
+                                    ) : typeof val === 'object' ? (
+                                      <span className="text-purple-600 bg-purple-50 px-1 py-0.5 rounded text-[10px]">
+                                        {Array.isArray(val) ? `[Array(${val.length})]` : '{Object}'}
+                                      </span>
+                                    ) : (
+                                      <span>{String(val)}</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                              <td className="py-2 px-3 text-center sticky right-0 bg-white group-hover:bg-indigo-50/40 transition-colors">
+                                <button
+                                  onClick={() => setInspectedRecord(row)}
+                                  className="p-1 rounded-lg hover:bg-indigo-100 text-slate-500 hover:text-indigo-600 transition-colors cursor-pointer"
+                                  title="Inspect full record details"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pagination Controls */}
+                {recordsData && recordsData.filtered_records > recordsPerPage && (
+                  <div className="flex items-center justify-between pt-2">
+                    <button
+                      onClick={() => handleRecordsPageChange(Math.max(0, recordsPage - 1))}
+                      disabled={recordsPage === 0 || loadingRecords}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      <span>Previous</span>
+                    </button>
+
+                    <span className="text-xs text-slate-500">
+                      Page <strong>{recordsPage + 1}</strong> of <strong>{Math.ceil(recordsData.filtered_records / recordsPerPage)}</strong>
+                    </span>
+
+                    <button
+                      onClick={() => handleRecordsPageChange(recordsPage + 1)}
+                      disabled={(recordsPage + 1) * recordsPerPage >= recordsData.filtered_records || loadingRecords}
+                      className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40"
+                    >
+                      <span>Next</span>
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================
           MODALS
       ========================================================= */}
 
@@ -2516,6 +3105,69 @@ export default function AdminPanel({ user, activeSubTab = 'users', onNavigateTab
                 className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-600/30 transition-all cursor-pointer"
               >
                 Delete Blueprint
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 8: RECORD INSPECTOR */}
+      {inspectedRecord && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-3xl w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <Database className="h-5 w-5 text-indigo-600" />
+                <h3 className="text-base font-bold text-slate-900">
+                  Record Details: <code className="font-mono text-indigo-600">{selectedTable?.table_name}</code>
+                </h3>
+              </div>
+              <button
+                onClick={() => setInspectedRecord(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                Detailed field values for selected row
+              </span>
+              <button
+                onClick={() => copyToClipboard(inspectedRecord)}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                {copiedKey ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-500" />}
+                <span>{copiedKey ? 'Copied JSON!' : 'Copy JSON'}</span>
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
+              {Object.entries(inspectedRecord).map(([key, value]) => (
+                <div key={key} className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                  <div className="sm:w-1/3 shrink-0">
+                    <span className="font-mono text-xs font-bold text-slate-800">{key}</span>
+                  </div>
+                  <div className="sm:w-2/3 font-mono text-xs text-slate-900 break-all bg-white p-2 rounded-lg border border-slate-100">
+                    {value === null || value === undefined ? (
+                      <span className="text-slate-400 italic">&lt;null&gt;</span>
+                    ) : typeof value === 'object' ? (
+                      <pre className="text-[11px] whitespace-pre-wrap">{JSON.stringify(value, null, 2)}</pre>
+                    ) : (
+                      <span>{String(value)}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setInspectedRecord(null)}
+                className="px-5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Close Inspector
               </button>
             </div>
           </div>

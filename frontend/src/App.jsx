@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   MessageSquare, Compass, BarChart3, Target, Award, BookOpen, ShieldCheck, LogOut, GraduationCap,
-  Upload, FileText, Layers, Users, FileCheck
+  Upload, FileText, Layers, Users, FileCheck, Database
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -41,6 +41,7 @@ const ADMIN_TABS = [
   { id: 'admin-syllabus', label: 'Curriculum & Syllabus', icon: BookOpen },
   { id: 'admin-paper-format', label: 'Exam Paper Formats', icon: FileCheck },
   { id: 'admin', label: 'System Overview', icon: ShieldCheck },
+  { id: 'admin-database', label: 'Database Overview', icon: Database },
 ];
 
 export default function App() {
@@ -283,6 +284,7 @@ export default function App() {
                   activeTab === 'admin-syllabus' ? 'syllabus' :
                   activeTab === 'admin-paper-format' ? 'paper-formats' :
                   activeTab === 'admin' ? 'telemetry' :
+                  activeTab === 'admin-database' ? 'database' :
                   'users'
                 }
                 onNavigateTab={(tabKey) => {
@@ -290,6 +292,7 @@ export default function App() {
                   else if (tabKey === 'syllabus') setActiveTab('admin-syllabus');
                   else if (tabKey === 'paper-formats') setActiveTab('admin-paper-format');
                   else if (tabKey === 'telemetry') setActiveTab('admin');
+                  else if (tabKey === 'database') setActiveTab('admin-database');
                   else setActiveTab(tabKey);
                 }}
               />
