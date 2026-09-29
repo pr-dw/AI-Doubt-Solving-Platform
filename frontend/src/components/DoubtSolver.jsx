@@ -387,12 +387,31 @@ export default function DoubtSolver({
     }
   };
 
-  // Simple Markdown renderer helper for clean display
-  const renderFormattedText = (text) => {
+  // Inline Markdown renderer helper (bold, code, etc.)
+  const renderInlineMarkdown = (text) => {
     if (!text) return null;
+    const codeParts = text.split(/(`[^`]+`)/g);
+    return codeParts.map((part, i) => {
+      if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+        return (
+          <code key={i} className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-mono text-[11px] border border-slate-200/60 dark:border-slate-700/60">
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+      const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
+      return boldParts.map((bPart, j) => {
+        if (bPart.startsWith('**') && bPart.endsWith('**') && bPart.length >= 4) {
+          return <strong key={`${i}-${j}`} className="font-bold text-slate-900 dark:text-slate-100">{bPart.slice(2, -2)}</strong>;
+        }
+        return bPart;
+      });
+    });
+  };
 
-    // Check for code blocks ```lang ... ```
-    const parts = text.split(/(```[\s\S]*?```)/g);
+  // Content block renderer (handles code blocks, lists, quotes, paragraphs)
+  const renderContentBlocks = (content, cardType = null) => {
+    const parts = content.split(/(```[\s\S]*?```)/g);
 
     return parts.map((part, index) => {
       if (part.startsWith('```') && part.endsWith('```')) {
@@ -401,54 +420,184 @@ export default function DoubtSolver({
         const code = lines.slice(1).join('\n') || lines[0];
 
         return (
-          <div key={index} className="my-3 rounded-xl overflow-hidden border border-slate-700 bg-slate-900 font-mono text-xs shadow-xs">
+          <div key={index} className="my-2.5 rounded-xl overflow-hidden border border-slate-700 bg-slate-900 font-mono text-xs shadow-xs">
             <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-800 border-b border-slate-700 text-slate-400">
               <span className="text-[11px] font-semibold uppercase">{language || 'code'}</span>
               <button
-                onClick={() => handleCopy(code, `code-${index}`)}
+                type="button"
+                onClick={() => handleCopy(code, `code-${index}-${Math.random()}`)}
                 className="hover:text-white flex items-center gap-1 text-[11px] cursor-pointer"
               >
-                {copiedId === `code-${index}` ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                <span>{copiedId === `code-${index}` ? 'Copied' : 'Copy Code'}</span>
+                {copiedId?.startsWith('code-') ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>Copy Code</span>
               </button>
             </div>
-            <pre className="p-3.5 overflow-x-auto text-emerald-300 leading-relaxed">
+            <pre className="p-3.5 overflow-x-auto text-emerald-300 leading-relaxed text-xs">
               <code>{code}</code>
             </pre>
           </div>
         );
       }
 
-      // Format headings and regular text
+      const paras = part.split(/\n\n+/);
       return (
         <div key={index} className="space-y-2">
-          {part.split('\n\n').map((para, pIdx) => {
-            if (para.startsWith('### ')) {
-              return <h3 key={pIdx} className="text-base font-bold text-indigo-700 mt-4 mb-2">{para.replace('### ', '')}</h3>;
-            }
-            if (para.startsWith('#### ')) {
-              return <h4 key={pIdx} className="text-sm font-semibold text-slate-800 mt-3 mb-1">{para.replace('#### ', '')}</h4>;
-            }
-            if (para.startsWith('> ')) {
+          {paras.map((para, pIdx) => {
+            const trimmed = para.trim();
+            if (!trimmed) return null;
+
+            if (trimmed.startsWith('#### ')) {
               return (
-                <blockquote key={pIdx} className="border-l-4 border-indigo-500 pl-3 py-1 my-2 text-xs italic text-indigo-900 bg-indigo-50 rounded-r-lg">
-                  {para.replace('> ', '')}
+                <h4 key={pIdx} className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mt-2.5 mb-1">
+                  {renderInlineMarkdown(trimmed.replace('#### ', ''))}
+                </h4>
+              );
+            }
+            if (trimmed.startsWith('### ')) {
+              return (
+                <h3 key={pIdx} className="text-sm sm:text-base font-bold text-indigo-700 dark:text-indigo-400 mt-3 mb-1.5">
+                  {renderInlineMarkdown(trimmed.replace('### ', ''))}
+                </h3>
+              );
+            }
+            if (trimmed.startsWith('> ')) {
+              return (
+                <blockquote key={pIdx} className="border-l-4 border-indigo-500 pl-3 py-1 my-2 text-xs italic text-indigo-900 dark:text-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-r-lg">
+                  {renderInlineMarkdown(trimmed.replace('> ', ''))}
                 </blockquote>
               );
             }
-            // Parse bold **text**
-            const boldFormatted = para.split(/(\*\*.*?\*\*)/g).map((chunk, cIdx) => {
-              if (chunk.startsWith('**') && chunk.endsWith('**')) {
-                return <strong key={cIdx} className="font-bold text-slate-900">{chunk.slice(2, -2)}</strong>;
-              }
-              return chunk;
-            });
 
-            return <p key={pIdx} className="text-xs sm:text-sm leading-relaxed text-slate-700">{boldFormatted}</p>;
+            const lines = trimmed.split('\n');
+            if (lines.length > 1 && lines.some(l => l.trim().startsWith('- ') || l.trim().startsWith('* ') || /^\d+\.\s/.test(l.trim()))) {
+              return (
+                <ul key={pIdx} className="space-y-1.5 my-1.5 pl-1 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                  {lines.map((l, lIdx) => {
+                    const lTrim = l.trim();
+                    if (lTrim.startsWith('- ') || lTrim.startsWith('* ')) {
+                      return (
+                        <li key={lIdx} className="flex items-start gap-2">
+                          <span className="text-indigo-500 shrink-0 font-bold">•</span>
+                          <span>{renderInlineMarkdown(lTrim.substring(2))}</span>
+                        </li>
+                      );
+                    } else if (/^\d+\.\s/.test(lTrim)) {
+                      const numMatch = lTrim.match(/^(\d+\.)\s*(.*)$/);
+                      return (
+                        <li key={lIdx} className="flex items-start gap-2">
+                          <span className="font-semibold text-indigo-600 dark:text-indigo-400 shrink-0">{numMatch ? numMatch[1] : '•'}</span>
+                          <span>{renderInlineMarkdown(numMatch ? numMatch[2] : lTrim)}</span>
+                        </li>
+                      );
+                    }
+                    return <p key={lIdx}>{renderInlineMarkdown(lTrim)}</p>;
+                  })}
+                </ul>
+              );
+            }
+
+            return (
+              <p key={pIdx} className="text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                {renderInlineMarkdown(trimmed)}
+              </p>
+            );
           })}
         </div>
       );
     });
+  };
+
+  // Structured Markdown renderer with dedicated Assist Mode Socratic card styling
+  const renderFormattedText = (text) => {
+    if (!text) return null;
+
+    // Detect if this message has Assist Mode Socratic sections
+    const hasAssistSections = 
+      (text.includes('Understanding Validation') || text.includes('🎯')) &&
+      (text.includes('What to Study') || text.includes('📚')) &&
+      (text.includes('Guiding Clue') || text.includes('💡'));
+
+    if (!hasAssistSections) {
+      return renderContentBlocks(text);
+    }
+
+    // Split text into Socratic sections by ### headers
+    const rawSections = text.split(/(?=###\s+)/g);
+
+    const getSectionConfig = (headerLine) => {
+      const h = headerLine.toLowerCase();
+      if (h.includes('understanding validation') || h.includes('🎯')) {
+        return {
+          type: 'validation',
+          badge: '🎯 Understanding Validation',
+          cardClass: 'bg-amber-50/80 dark:bg-amber-950/25 border-amber-300/70 dark:border-amber-700/50 text-amber-950 dark:text-amber-100',
+          titleClass: 'text-amber-900 dark:text-amber-300 font-bold',
+        };
+      }
+      if (h.includes('what to study') || h.includes('study & research') || h.includes('📚')) {
+        return {
+          type: 'study',
+          badge: '📚 What to Study & Research',
+          cardClass: 'bg-indigo-50/80 dark:bg-indigo-950/25 border-indigo-300/70 dark:border-indigo-700/50 text-indigo-950 dark:text-indigo-100',
+          titleClass: 'text-indigo-900 dark:text-indigo-300 font-bold',
+        };
+      }
+      if (h.includes('guiding clue') || h.includes('💡')) {
+        return {
+          type: 'clue',
+          badge: '💡 Guiding Clue',
+          cardClass: 'bg-emerald-50/80 dark:bg-emerald-950/25 border-emerald-300/70 dark:border-emerald-700/50 text-emerald-950 dark:text-emerald-100',
+          titleClass: 'text-emerald-900 dark:text-emerald-300 font-bold',
+        };
+      }
+      if (h.includes('checkpoint challenge') || h.includes('🔍')) {
+        return {
+          type: 'challenge',
+          badge: '🔍 Checkpoint Challenge',
+          cardClass: 'bg-purple-50/80 dark:bg-purple-950/25 border-purple-300/70 dark:border-purple-700/50 text-purple-950 dark:text-purple-100',
+          titleClass: 'text-purple-900 dark:text-purple-300 font-bold',
+        };
+      }
+      return null;
+    };
+
+    return (
+      <div className="space-y-3">
+        {rawSections.map((sec, sIdx) => {
+          const trimmed = sec.trim();
+          if (!trimmed) return null;
+
+          if (trimmed.startsWith('### ')) {
+            const firstLineEnd = trimmed.indexOf('\n');
+            const headerLine = firstLineEnd !== -1 ? trimmed.slice(0, firstLineEnd).trim() : trimmed;
+            const bodyContent = firstLineEnd !== -1 ? trimmed.slice(firstLineEnd).trim() : '';
+
+            const config = getSectionConfig(headerLine);
+            if (config) {
+              return (
+                <div 
+                  key={sIdx} 
+                  className={`p-3.5 rounded-xl border shadow-xs transition-all ${config.cardClass}`}
+                >
+                  <p className={`text-xs sm:text-sm mb-1.5 flex items-center gap-1.5 ${config.titleClass}`}>
+                    <span>{config.badge}</span>
+                  </p>
+                  <div className="text-xs sm:text-sm leading-relaxed">
+                    {renderContentBlocks(bodyContent, config.type)}
+                  </div>
+                </div>
+              );
+            }
+          }
+
+          return (
+            <div key={sIdx}>
+              {renderContentBlocks(trimmed)}
+            </div>
+          );
+        })}
+      </div>
+    );
   };
 
   const activeModelMeta = AI_MODELS.find(m => m.id === selectedModel) || AI_MODELS[0];
@@ -677,12 +826,26 @@ export default function DoubtSolver({
                           <span className="font-bold text-rose-600 flex items-center gap-1">
                             Engine Communication Error
                           </span>
+                        ) : (msg.mode_used || selectedMode) === 'assist' ? (
+                          <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                            <HelpCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                            <span>Assist Mode (Guided Socratic Research)</span>
+                          </span>
+                        ) : (msg.mode_used || selectedMode) === 'eli5' ? (
+                          <span className="font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1.5">
+                            <Lightbulb className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                            <span>ELI5 Mode</span>
+                          </span>
                         ) : (
-                          <>
-                            <span className="font-semibold text-indigo-600 capitalize">
-                              {msg.mode_used || selectedMode} Mode
-                            </span>
-                          </>
+                          <span className="font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
+                            <GraduationCap className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                            <span>Detailed Academic Mode</span>
+                          </span>
+                        )}
+                        {msg.model_used && (
+                          <span className="text-[10px] text-slate-500 font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                            {msg.model_used}
+                          </span>
                         )}
                       </div>
                       {!msg.is_error && (

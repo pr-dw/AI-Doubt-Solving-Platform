@@ -36,10 +36,27 @@ def get_semester_syllabus_context(semester=5, department=None):
                 res_list.append(f"  * [{r.get_resource_type_display()}] {r.title}: {r.description}")
             res_str = "\n".join(res_list) if res_list else "  * Standard college reference textbook & unit notes"
 
+            topics_str = "Comprehensive unit curriculum"
+            if isinstance(s.recommended_topics, list) and s.recommended_topics:
+                flat_topics = []
+                for item in s.recommended_topics:
+                    if isinstance(item, dict):
+                        unit_title = item.get('unit') or item.get('title') or ''
+                        sub = item.get('topics') or []
+                        if isinstance(sub, list):
+                            flat_topics.append(f"{unit_title}: {', '.join(str(x) for x in sub)}")
+                        else:
+                            flat_topics.append(f"{unit_title}: {sub}")
+                    else:
+                        flat_topics.append(str(item))
+                topics_str = "; ".join(flat_topics)
+            elif s.recommended_topics:
+                topics_str = str(s.recommended_topics)
+
             block = (
                 f"- SUBJECT: [{s.code}] {s.name} (Semester {s.semester})\n"
                 f"  Syllabus Overview: {s.syllabus_overview or 'Core departmental subject'}\n"
-                f"  Syllabus Units & Topics: {', '.join(s.recommended_topics) if s.recommended_topics else 'Comprehensive unit curriculum'}\n"
+                f"  Syllabus Units & Topics: {topics_str}\n"
                 f"  Library Resources & Reference Materials:\n{res_str}"
             )
             curriculum_blocks.append(block)
@@ -78,20 +95,22 @@ SYSTEM_PROMPTS = {
     ),
     'assist': (
         "You are an expert Socratic Academic Research Mentor on the AI Doubt Solving Platform.\n"
-        "STRICT CARDINAL RULE: UNDER NO CIRCUMSTANCES SHOULD YOU PROVIDE THE DIRECT ANSWER, COMPLETE CODE, FINISHED CALCULATION, OR FULL SOLUTION!\n"
-        "Your role is to guide the student toward independent discovery by showing them PRECISELY WHAT TOPIC, THEOREM, OR CONCEPT TO STUDY OR RESEARCH.\n\n"
-        "Structure your response strictly with the following sections:\n"
-        "1. 🎯 **Understanding Check & Progress Validation**:\n"
-        "   - If the student shared what they know or partially answered (e.g. 'I know this part, but don't understand how X works'), affirm and validate the parts they got right.\n"
-        "   - If they just asked a question, state the core underlying challenge without revealing the answer.\n"
-        "2. 📚 **Precise Topics to Study & Research**:\n"
-        "   - Explicitly specify the exact topics, syllabus units, theorems, algorithms, or documentation concepts they need to research.\n"
-        "   - Explain *why* studying that specific topic will uncover the mechanism they are missing.\n"
-        "3. 💡 **Guiding Clue & Focus Area**:\n"
-        "   - Provide 1 or 2 targeted conceptual clues or leading questions that nudge them to connect the researched topic to their specific problem.\n"
-        "   - Never reveal the final outcome or complete calculation.\n"
-        "4. 🔍 **Checkpoint Challenge**:\n"
-        "   - Give them a concrete question or step to try on their own once they read that topic, and encourage them to reply with what they discover!"
+        "Your role is 'Assist Mode (Guided Socratic Research)'. Rather than dumping a full final solution or direct answer immediately, "
+        "your objective is to validate the student's concept, point them directly to the exact syllabus topic to study, provide intuitive clues without spoiling the answer, "
+        "and give them a concrete checkpoint challenge to test their understanding.\n\n"
+        "You MUST structure your entire response using the following 4 clean markdown sections with these exact headers:\n\n"
+        "### 🎯 Understanding Validation\n"
+        "Acknowledge the student's doubt with academic precision and encouragement. "
+        "Identify and validate the core concept or mechanism they are asking about, framing the problem clearly.\n\n"
+        "### 📚 What to Study & Research\n"
+        "Explicitly point the student to the exact syllabus unit, textbook chapter, command, algorithm, theorem, or official topic to research. "
+        "Explain specifically why studying this topic unlocks the answer to their question.\n\n"
+        "### 💡 Guiding Clue\n"
+        "Provide a sharp conceptual hint, mental model, or thought-provoking leading question that bridges the gap without giving away the full answer. "
+        "Help them think about how the mechanism works.\n\n"
+        "### 🔍 Checkpoint Challenge\n"
+        "Give a targeted micro-challenge, hands-on terminal/code experiment, calculation, or self-test question for the student to try right now on scratchpad or terminal to verify their understanding.\n\n"
+        "Tone: Socratic, encouraging, pedagogically sharp, and concise. Do NOT include generic filler intros or repetitive summaries."
     )
 }
 
@@ -285,7 +304,8 @@ def match_query_to_syllabus(prompt, subjects, response_text=''):
     if response_text and "Academic Scope Notice" in response_text:
         return None, 0
     prompt_lower = (prompt or '').lower()
-    combined_lower = f"{prompt_lower} {(response_text or '').lower()}"
+    response_lower = (response_text or '').lower()
+    combined_lower = f"{prompt_lower} {response_lower}"
     best_subject = None
     best_score = 0
 
@@ -308,50 +328,65 @@ def match_query_to_syllabus(prompt, subjects, response_text=''):
         s_code_lower = s.code.lower()
         s_name_lower = s.name.lower()
 
+        prompt_score = 0
+        response_score = 0
+
         # 1. Subject code match
         if s_code_lower in prompt_lower:
-            score += 100
-        elif s_code_lower in combined_lower:
-            score += 40
+            prompt_score += 100
+        elif s_code_lower in response_lower:
+            response_score += 20
 
         # 2. Subject name match (full name or distinctive non-generic keywords)
+        name_tokens = [
+            w for w in re.findall(r'\b[a-z0-9]{3,}\b', s_name_lower)
+            if w not in GENERIC_SYLLABUS_WORDS
+        ]
         if s_name_lower in prompt_lower:
-            score += 65
-        elif s_name_lower in combined_lower:
-            score += 30
+            prompt_score += 65
+        elif s_name_lower in response_lower:
+            response_score += 20
         else:
-            name_tokens = [
-                w for w in re.findall(r'\b[a-z0-9]{3,}\b', s_name_lower)
-                if w not in GENERIC_SYLLABUS_WORDS
-            ]
             for ntoken in name_tokens:
                 if re.search(r'\b' + re.escape(ntoken) + r'\b', prompt_lower):
-                    score += 35
-                elif re.search(r'\b' + re.escape(ntoken) + r'\b', combined_lower):
-                    score += 12
+                    prompt_score += 35
+                elif re.search(r'\b' + re.escape(ntoken) + r'\b', response_lower):
+                    response_score += 10
 
         # 3. Domain keyword library match
         domain_kws = SUBJECT_DOMAIN_KEYWORDS.get(s.code, [])
         for dkw in domain_kws:
             pattern = r'\b' + re.escape(dkw) + r'\b'
             if re.search(pattern, prompt_lower):
-                score += 30
-            elif re.search(pattern, combined_lower):
-                score += 8
+                prompt_score += 30
+            elif re.search(pattern, response_lower):
+                response_score += 8
 
         # 4. Recommended topics & Syllabus overview matching with clean tokens
-        topics_blob = ' '.join(s.recommended_topics if isinstance(s.recommended_topics, list) else []).lower()
+        raw_topics = s.recommended_topics if isinstance(s.recommended_topics, list) else []
+        topic_strings = []
+        for t in raw_topics:
+            if isinstance(t, str):
+                topic_strings.append(t)
+            elif isinstance(t, dict):
+                topic_strings.extend(str(v) for v in t.values() if isinstance(v, (str, int, float)))
+            else:
+                topic_strings.append(str(t))
+        topics_blob = ' '.join(topic_strings).lower()
         overview_blob = (s.syllabus_overview or '').lower()
         for qt in query_tokens:
             pat = r'\b' + re.escape(qt) + r'\b'
             if re.search(pat, topics_blob):
-                score += 18
+                prompt_score += 18
             if re.search(pat, overview_blob):
-                score += 10
+                prompt_score += 10
 
-        if score > best_score:
-            best_score = score
-            best_subject = s
+        # Total score requires direct prompt relevance to avoid hallucinated matches
+        if prompt_score >= 18:
+            total_score = prompt_score + response_score
+            if total_score > best_score:
+                best_score = total_score
+                best_subject = s
 
     return (best_subject, best_score) if best_score >= 25 else (None, best_score)
 
@@ -418,11 +453,37 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
     elif subject:
         system_instruction += f"\nAcademic Subject Context: {subject}."
 
+    if mode == 'assist':
+        system_instruction += (
+            "\n\n======================================================\n"
+            "🚨 CRITICAL MANDATORY DIRECTIVE FOR ASSIST MODE (SOCRATIC RESEARCH): 🚨\n"
+            "You are operating in ASSIST MODE. Do NOT provide a full direct answer or complete code solution.\n"
+            "Instead, guide the student Socratically using the enrolled curriculum and library resources.\n"
+            "Your academic response (starting on line 2 after [SUBJECT_MATCH: ...]) MUST strictly use these 4 exact markdown sections and headers:\n\n"
+            "### 🎯 Understanding Validation\n"
+            "Acknowledge the student's doubt with academic precision. Frame the core concept clearly and validate their reasoning.\n\n"
+            "### 📚 What to Study & Research\n"
+            "Explicitly point the student to the exact syllabus unit, textbook chapter, algorithm, or topic from the enrolled curriculum. Explain why researching this concept is the key to solving their question.\n\n"
+            "### 💡 Guiding Clue\n"
+            "Provide a sharp conceptual hint, mental model, or thought-provoking leading question that bridges the gap without giving away the full answer.\n\n"
+            "### 🔍 Checkpoint Challenge\n"
+            "Give a targeted micro-challenge, hands-on terminal/code experiment, calculation, or self-test question for the student to try right now to verify their understanding.\n"
+            "======================================================\n"
+        )
+
     system_instruction += ACADEMIC_GUARDRAIL_INSTRUCTION
+
+    human_prompt = prompt
+    if mode == 'assist':
+        human_prompt = (
+            f"{prompt}\n\n"
+            f"[Instruction: Guide me in Assist Mode with the 4 sections: "
+            f"### 🎯 Understanding Validation, ### 📚 What to Study & Research, ### 💡 Guiding Clue, and ### 🔍 Checkpoint Challenge]"
+        )
 
     messages = [
         SystemMessage(content=system_instruction),
-        HumanMessage(content=prompt)
+        HumanMessage(content=human_prompt)
     ]
 
     try:
