@@ -769,3 +769,122 @@ body:not([data-theme]) {
   background-color: #071c16 !important;
 }
 
+/* ================================================================
+   AI RESPONSE BUBBLE THEME ADAPTATION
+   - Light Theme: Black background with crisp white text
+   - Dark Theme: Deep midnight navy with crisp light text
+   - Sunset Theme: Deep espresso dark with warm cream text
+   - Emerald Theme: Deep forest emerald dark with mint white text
+================================================================ */
+
+.ai-response-bubble,
+[data-theme="light"] .ai-response-bubble {
+  background-color: #0f172a !important; /* Deep dark slate / black */
+  color: #f8fafc !important; /* Crisp white text */
+  border: 1px solid #1e293b !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.28);
+}
+
+.ai-response-bubble p,
+[data-theme="light"] .ai-response-bubble p,
+.ai-response-bubble li,
+[data-theme="light"] .ai-response-bubble li {
+  color: #f1f5f9 !important;
+}
+
+.ai-response-bubble strong,
+[data-theme="light"] .ai-response-bubble strong {
+  color: #ffffff !important;
+}
+
+.ai-response-bubble code,
+[data-theme="light"] .ai-response-bubble code {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+  color: #fbbf24 !important; /* Warm gold/amber accent for code keywords */
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.ai-response-bubble .ai-bubble-header,
+[data-theme="light"] .ai-response-bubble .ai-bubble-header {
+  border-bottom: 1px solid #1e293b !important;
+  color: #94a3b8 !important;
+}
+
+/* Midnight Dark Theme */
+[data-theme="dark"] .ai-response-bubble {
+  background-color: #0d1322 !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+}
+[data-theme="dark"] .ai-response-bubble p,
+[data-theme="dark"] .ai-response-bubble li {
+  color: #f1f5f9 !important;
+}
+[data-theme="dark"] .ai-response-bubble strong {
+  color: #ffffff !important;
+}
+[data-theme="dark"] .ai-response-bubble code {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: #38bdf8 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+[data-theme="dark"] .ai-response-bubble .ai-bubble-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
+}
+
+/* Sunset Theme */
+[data-theme="sunset"] .ai-response-bubble,
+[data-theme="midnight"] .ai-response-bubble {
+  background-color: #1a120c !important;
+  color: #fef3c7 !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+  box-shadow: 0 4px 20px -2px rgba(20, 10, 4, 0.6);
+}
+[data-theme="sunset"] .ai-response-bubble p,
+[data-theme="sunset"] .ai-response-bubble li,
+[data-theme="midnight"] .ai-response-bubble p,
+[data-theme="midnight"] .ai-response-bubble li {
+  color: #fef3c7 !important;
+}
+[data-theme="sunset"] .ai-response-bubble strong,
+[data-theme="midnight"] .ai-response-bubble strong {
+  color: #fffbeb !important;
+}
+[data-theme="sunset"] .ai-response-bubble code,
+[data-theme="midnight"] .ai-response-bubble code {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fde68a !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+[data-theme="sunset"] .ai-response-bubble .ai-bubble-header,
+[data-theme="midnight"] .ai-response-bubble .ai-bubble-header {
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2) !important;
+  color: #d97706 !important;
+}
+
+/* Emerald Theme */
+[data-theme="emerald"] .ai-response-bubble {
+  background-color: #062117 !important;
+  color: #ecfdf5 !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+  box-shadow: 0 4px 20px -2px rgba(2, 22, 14, 0.6);
+}
+[data-theme="emerald"] .ai-response-bubble p,
+[data-theme="emerald"] .ai-response-bubble li {
+  color: #ecfdf5 !important;
+}
+[data-theme="emerald"] .ai-response-bubble strong {
+  color: #ffffff !important;
+}
+[data-theme="emerald"] .ai-response-bubble code {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #6ee7b7 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+[data-theme="emerald"] .ai-response-bubble .ai-bubble-header {
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2) !important;
+  color: #10b981 !important;
+}
+

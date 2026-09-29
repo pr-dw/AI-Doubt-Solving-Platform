@@ -202,42 +202,46 @@ export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onG
             </div>
 
             {activeModeDemo === 'assist' && (
-              <div className="text-slate-900 leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-1.5 pb-2 mb-2.5 border-b border-slate-100 dark:border-slate-800">
-                  <span className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 text-xs">
-                    <HelpCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+              <div className="ai-response-bubble p-4 rounded-xl shadow-md leading-relaxed text-xs sm:text-sm">
+                <div className="ai-bubble-header flex items-center gap-1.5 pb-2 mb-2.5 border-b">
+                  <span className="font-bold text-amber-400 flex items-center gap-1.5 text-xs">
+                    <HelpCircle className="h-3.5 w-3.5 text-amber-400" />
                     <span>Assist Mode (Guiding Nudge)</span>
                   </span>
                 </div>
-                <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/60 text-xs sm:text-sm">
-                  <span className="text-amber-600 dark:text-amber-400 shrink-0 font-bold text-base">💡</span>
-                  <p className="text-slate-900 dark:text-slate-100 font-medium leading-relaxed">
-                    Maybe research the <code className="px-1.5 py-0.5 rounded bg-amber-100/90 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-mono text-xs font-semibold">tac</code> command for Linux terminal to print and read file contents in reverse order.
+                <div className="flex items-start gap-2.5 text-xs sm:text-sm font-medium leading-relaxed">
+                  <span className="text-amber-400 shrink-0 font-bold text-base">💡</span>
+                  <p className="leading-relaxed">
+                    Maybe research the <code>tac</code> command for Linux terminal to print and read file contents in reverse order.
                   </p>
                 </div>
               </div>
             )}
 
             {activeModeDemo === 'eli5' && (
-              <div className="space-y-2 text-slate-900 leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <p className="font-bold text-purple-900 dark:text-purple-300 flex items-center gap-1.5 text-xs pb-2 border-b border-slate-100 dark:border-slate-800">
-                  <Lightbulb className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-                  <span>ELI5 Analogy:</span>
-                </p>
-                <p className="text-slate-900 dark:text-slate-100 font-normal text-xs sm:text-sm">
-                  Think of reading normal files like walking down stairs from step 1 to 10 with <code className="px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 font-mono text-xs font-semibold">cat</code>. Reading it backwards is like walking from step 10 back up to step 1 with <code className="px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 font-mono text-xs font-semibold">tac</code> (which is literally "cat" spelled backwards!).
+              <div className="ai-response-bubble p-4 rounded-xl shadow-md space-y-2 leading-relaxed text-xs sm:text-sm">
+                <div className="ai-bubble-header flex items-center gap-1.5 pb-2 mb-2.5 border-b">
+                  <span className="font-bold text-purple-400 flex items-center gap-1.5 text-xs">
+                    <Lightbulb className="h-3.5 w-3.5 text-purple-400" />
+                    <span>ELI5 Analogy:</span>
+                  </span>
+                </div>
+                <p className="font-normal text-xs sm:text-sm leading-relaxed">
+                  Think of reading normal files like walking down stairs from step 1 to 10 with <code>cat</code>. Reading it backwards is like walking from step 10 back up to step 1 with <code>tac</code> (which is literally "cat" spelled backwards!).
                 </p>
               </div>
             )}
 
             {activeModeDemo === 'detailed' && (
-              <div className="space-y-2 text-slate-900 leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <p className="font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5 text-xs pb-2 border-b border-slate-100 dark:border-slate-800">
-                  <GraduationCap className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Comprehensive Academic Explanation:</span>
-                </p>
-                <p className="text-slate-900 dark:text-slate-100 font-normal text-xs sm:text-sm">
-                  In UNIX and Linux systems, the standard <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-mono text-xs font-semibold">cat</code> utility concatenates and prints files in sequential line order. To display files in reverse line order, GNU coreutils provides the <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-mono text-xs font-semibold">tac</code> utility, which buffers records and streams lines starting from the last newline delimiter.
+              <div className="ai-response-bubble p-4 rounded-xl shadow-md space-y-2 leading-relaxed text-xs sm:text-sm">
+                <div className="ai-bubble-header flex items-center gap-1.5 pb-2 mb-2.5 border-b">
+                  <span className="font-bold text-indigo-400 flex items-center gap-1.5 text-xs">
+                    <GraduationCap className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>Comprehensive Academic Explanation:</span>
+                  </span>
+                </div>
+                <p className="font-normal text-xs sm:text-sm leading-relaxed">
+                  In UNIX and Linux systems, the standard <code>cat</code> utility concatenates and prints files in sequential line order. To display files in reverse line order, GNU coreutils provides the <code>tac</code> utility, which buffers records and streams lines starting from the last newline delimiter.
                 </p>
               </div>
             )}
