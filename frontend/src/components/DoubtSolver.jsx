@@ -394,7 +394,7 @@ export default function DoubtSolver({
     return codeParts.map((part, i) => {
       if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
         return (
-          <code key={i} className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-mono text-[11px] border border-slate-200/60 dark:border-slate-700/60">
+          <code key={i} className="px-1.5 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-indigo-950 dark:text-indigo-300 font-mono text-[11px] font-semibold border border-slate-300 dark:border-slate-700">
             {part.slice(1, -1)}
           </code>
         );
@@ -402,7 +402,7 @@ export default function DoubtSolver({
       const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
       return boldParts.map((bPart, j) => {
         if (bPart.startsWith('**') && bPart.endsWith('**') && bPart.length >= 4) {
-          return <strong key={`${i}-${j}`} className="font-bold text-slate-900 dark:text-slate-100">{bPart.slice(2, -2)}</strong>;
+          return <strong key={`${i}-${j}`} className="font-bold text-slate-950 dark:text-white">{bPart.slice(2, -2)}</strong>;
         }
         return bPart;
       });
@@ -420,9 +420,9 @@ export default function DoubtSolver({
         const code = lines.slice(1).join('\n') || lines[0];
 
         return (
-          <div key={index} className="my-2.5 rounded-xl overflow-hidden border border-slate-700 bg-slate-900 font-mono text-xs shadow-xs">
-            <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-800 border-b border-slate-700 text-slate-400">
-              <span className="text-[11px] font-semibold uppercase">{language || 'code'}</span>
+          <div key={index} className="my-3 rounded-xl overflow-hidden border border-slate-700 bg-slate-950 font-mono text-xs shadow-md">
+            <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-900 border-b border-slate-800 text-slate-300">
+              <span className="text-[11px] font-semibold uppercase tracking-wider">{language || 'code'}</span>
               <button
                 type="button"
                 onClick={() => handleCopy(code, `code-${index}-${Math.random()}`)}
@@ -432,7 +432,7 @@ export default function DoubtSolver({
                 <span>Copy Code</span>
               </button>
             </div>
-            <pre className="p-3.5 overflow-x-auto text-emerald-300 leading-relaxed text-xs">
+            <pre className="p-3.5 overflow-x-auto text-emerald-400 leading-relaxed text-xs">
               <code>{code}</code>
             </pre>
           </div>
@@ -441,28 +441,28 @@ export default function DoubtSolver({
 
       const paras = part.split(/\n\n+/);
       return (
-        <div key={index} className="space-y-2">
+        <div key={index} className="space-y-2.5">
           {paras.map((para, pIdx) => {
             const trimmed = para.trim();
             if (!trimmed) return null;
 
             if (trimmed.startsWith('#### ')) {
               return (
-                <h4 key={pIdx} className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 mt-2.5 mb-1">
+                <h4 key={pIdx} className="text-xs sm:text-sm font-bold text-slate-950 dark:text-slate-100 mt-3 mb-1">
                   {renderInlineMarkdown(trimmed.replace('#### ', ''))}
                 </h4>
               );
             }
             if (trimmed.startsWith('### ')) {
               return (
-                <h3 key={pIdx} className="text-sm sm:text-base font-bold text-indigo-700 dark:text-indigo-400 mt-3 mb-1.5">
+                <h3 key={pIdx} className="text-sm sm:text-base font-bold text-indigo-950 dark:text-indigo-300 mt-3.5 mb-1.5 pb-1 border-b border-slate-200 dark:border-slate-800">
                   {renderInlineMarkdown(trimmed.replace('### ', ''))}
                 </h3>
               );
             }
             if (trimmed.startsWith('> ')) {
               return (
-                <blockquote key={pIdx} className="border-l-4 border-indigo-500 pl-3 py-1 my-2 text-xs italic text-indigo-900 dark:text-indigo-200 bg-indigo-50/50 dark:bg-indigo-950/30 rounded-r-lg">
+                <blockquote key={pIdx} className="border-l-4 border-indigo-600 pl-3.5 py-2 my-2 text-xs italic text-indigo-950 dark:text-indigo-200 bg-indigo-50/80 dark:bg-indigo-950/40 rounded-r-lg font-medium border-y border-r border-indigo-200/80 dark:border-indigo-900/40">
                   {renderInlineMarkdown(trimmed.replace('> ', ''))}
                 </blockquote>
               );
@@ -471,13 +471,13 @@ export default function DoubtSolver({
             const lines = trimmed.split('\n');
             if (lines.length > 1 && lines.some(l => l.trim().startsWith('- ') || l.trim().startsWith('* ') || /^\d+\.\s/.test(l.trim()))) {
               return (
-                <ul key={pIdx} className="space-y-1.5 my-1.5 pl-1 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                <ul key={pIdx} className="space-y-1.5 my-1.5 pl-1 text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-normal">
                   {lines.map((l, lIdx) => {
                     const lTrim = l.trim();
                     if (lTrim.startsWith('- ') || lTrim.startsWith('* ')) {
                       return (
                         <li key={lIdx} className="flex items-start gap-2">
-                          <span className="text-indigo-500 shrink-0 font-bold">•</span>
+                          <span className="text-indigo-700 dark:text-indigo-400 shrink-0 font-bold">•</span>
                           <span>{renderInlineMarkdown(lTrim.substring(2))}</span>
                         </li>
                       );
@@ -485,7 +485,7 @@ export default function DoubtSolver({
                       const numMatch = lTrim.match(/^(\d+\.)\s*(.*)$/);
                       return (
                         <li key={lIdx} className="flex items-start gap-2">
-                          <span className="font-semibold text-indigo-600 dark:text-indigo-400 shrink-0">{numMatch ? numMatch[1] : '•'}</span>
+                          <span className="font-bold text-indigo-700 dark:text-indigo-400 shrink-0">{numMatch ? numMatch[1] : '•'}</span>
                           <span>{renderInlineMarkdown(numMatch ? numMatch[2] : lTrim)}</span>
                         </li>
                       );
@@ -497,7 +497,7 @@ export default function DoubtSolver({
             }
 
             return (
-              <p key={pIdx} className="text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+              <p key={pIdx} className="text-xs sm:text-sm leading-relaxed text-slate-900 dark:text-slate-100 font-normal">
                 {renderInlineMarkdown(trimmed)}
               </p>
             );
@@ -507,7 +507,7 @@ export default function DoubtSolver({
     });
   };
 
-  // Structured Markdown renderer with dedicated Assist Mode Socratic card styling
+  // Structured Markdown renderer with dedicated high-contrast Assist Mode Socratic cards
   const renderFormattedText = (text) => {
     if (!text) return null;
 
@@ -530,39 +530,39 @@ export default function DoubtSolver({
         return {
           type: 'validation',
           badge: '🎯 Understanding Validation',
-          cardClass: 'bg-amber-50/80 dark:bg-amber-950/25 border-amber-300/70 dark:border-amber-700/50 text-amber-950 dark:text-amber-100',
-          titleClass: 'text-amber-900 dark:text-amber-300 font-bold',
+          cardClass: 'bg-amber-50/90 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/60 shadow-xs',
+          titleBadgeClass: 'text-amber-950 dark:text-amber-200 font-bold bg-amber-100 dark:bg-amber-900/50 border border-amber-300/90 dark:border-amber-700 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5',
         };
       }
       if (h.includes('what to study') || h.includes('study & research') || h.includes('📚')) {
         return {
           type: 'study',
           badge: '📚 What to Study & Research',
-          cardClass: 'bg-indigo-50/80 dark:bg-indigo-950/25 border-indigo-300/70 dark:border-indigo-700/50 text-indigo-950 dark:text-indigo-100',
-          titleClass: 'text-indigo-900 dark:text-indigo-300 font-bold',
+          cardClass: 'bg-indigo-50/90 dark:bg-indigo-950/30 border border-indigo-300 dark:border-indigo-700/60 shadow-xs',
+          titleBadgeClass: 'text-indigo-950 dark:text-indigo-200 font-bold bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-300/90 dark:border-indigo-700 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5',
         };
       }
       if (h.includes('guiding clue') || h.includes('💡')) {
         return {
           type: 'clue',
           badge: '💡 Guiding Clue',
-          cardClass: 'bg-emerald-50/80 dark:bg-emerald-950/25 border-emerald-300/70 dark:border-emerald-700/50 text-emerald-950 dark:text-emerald-100',
-          titleClass: 'text-emerald-900 dark:text-emerald-300 font-bold',
+          cardClass: 'bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-700/60 shadow-xs',
+          titleBadgeClass: 'text-emerald-950 dark:text-emerald-200 font-bold bg-emerald-100 dark:bg-emerald-900/50 border border-emerald-300/90 dark:border-emerald-700 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5',
         };
       }
       if (h.includes('checkpoint challenge') || h.includes('🔍')) {
         return {
           type: 'challenge',
           badge: '🔍 Checkpoint Challenge',
-          cardClass: 'bg-purple-50/80 dark:bg-purple-950/25 border-purple-300/70 dark:border-purple-700/50 text-purple-950 dark:text-purple-100',
-          titleClass: 'text-purple-900 dark:text-purple-300 font-bold',
+          cardClass: 'bg-purple-50/90 dark:bg-purple-950/30 border border-purple-300 dark:border-purple-700/60 shadow-xs',
+          titleBadgeClass: 'text-purple-950 dark:text-purple-200 font-bold bg-purple-100 dark:bg-purple-900/50 border border-purple-300/90 dark:border-purple-700 px-2.5 py-1 rounded-lg inline-flex items-center gap-1.5',
         };
       }
       return null;
     };
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-3.5">
         {rawSections.map((sec, sIdx) => {
           const trimmed = sec.trim();
           if (!trimmed) return null;
@@ -577,12 +577,14 @@ export default function DoubtSolver({
               return (
                 <div 
                   key={sIdx} 
-                  className={`p-3.5 rounded-xl border shadow-xs transition-all ${config.cardClass}`}
+                  className={`p-3.5 sm:p-4 rounded-xl shadow-xs transition-all ${config.cardClass}`}
                 >
-                  <p className={`text-xs sm:text-sm mb-1.5 flex items-center gap-1.5 ${config.titleClass}`}>
-                    <span>{config.badge}</span>
-                  </p>
-                  <div className="text-xs sm:text-sm leading-relaxed">
+                  <div className="mb-2.5">
+                    <span className={`text-xs sm:text-sm shadow-2xs ${config.titleBadgeClass}`}>
+                      {config.badge}
+                    </span>
+                  </div>
+                  <div className="text-xs sm:text-sm leading-relaxed text-slate-900 dark:text-slate-100">
                     {renderContentBlocks(bodyContent, config.type)}
                   </div>
                 </div>
@@ -756,7 +758,7 @@ export default function DoubtSolver({
         </div>
 
         {/* Message Thread History */}
-        <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 rounded-xl bg-slate-100/70 dark:bg-slate-950/40 border border-slate-200/90 dark:border-slate-800/80 shadow-2xs">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 max-w-lg mx-auto">
               <div className="h-16 w-16 rounded-3xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 mb-4 shadow-xs">
@@ -771,7 +773,7 @@ export default function DoubtSolver({
 
               {/* Recommended Quick Question Chips */}
               <div className="w-full mt-6 text-left">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-2">
+                <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block mb-2">
                   Suggested Exam Questions (BCA Curriculum):
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -779,12 +781,12 @@ export default function DoubtSolver({
                     <div
                       key={idx}
                       onClick={() => handleAskDoubt(null, qp.text)}
-                      className="p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 cursor-pointer transition-all group"
+                      className="p-3 rounded-xl bg-white hover:bg-indigo-50/80 border border-slate-200 hover:border-indigo-300 cursor-pointer transition-all group shadow-2xs"
                     >
-                      <div className="text-[11px] font-semibold text-indigo-700 group-hover:text-indigo-900">
+                      <div className="text-[11px] font-bold text-indigo-900 group-hover:text-indigo-950">
                         {qp.title}
                       </div>
-                      <div className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                      <div className="text-[10px] text-slate-600 line-clamp-1 mt-0.5">
                         {qp.text}
                       </div>
                     </div>
@@ -810,40 +812,40 @@ export default function DoubtSolver({
                 )}
 
                 <div
-                  className={`max-w-3xl rounded-2xl p-4 text-xs sm:text-sm shadow-xs ${
+                  className={`max-w-3xl rounded-2xl p-4 sm:p-5 text-xs sm:text-sm ${
                     msg.sender === 'user'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-none ml-12'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-none ml-12 shadow-sm'
                       : msg.is_error
-                        ? 'bg-rose-50/80 border border-rose-200 text-rose-900 rounded-bl-none mr-8'
-                        : 'bg-slate-50 border border-slate-200 text-slate-800 rounded-bl-none mr-8'
+                        ? 'bg-rose-50/90 border border-rose-300 dark:border-rose-900/60 text-rose-950 dark:text-rose-100 rounded-bl-none mr-8 shadow-xs'
+                        : 'bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 rounded-bl-none mr-8 shadow-sm'
                   }`}
                 >
                   {/* AI Message metadata header */}
                   {msg.sender === 'ai' && (
-                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-200 text-[11px] text-slate-500">
+                    <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
                       <div className="flex items-center gap-2">
                         {msg.is_error ? (
-                          <span className="font-bold text-rose-600 flex items-center gap-1">
+                          <span className="font-bold text-rose-700 dark:text-rose-400 flex items-center gap-1">
                             Engine Communication Error
                           </span>
                         ) : (msg.mode_used || selectedMode) === 'assist' ? (
-                          <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                            <HelpCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                          <span className="font-bold text-amber-950 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
+                            <HelpCircle className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
                             <span>Assist Mode (Guided Socratic Research)</span>
                           </span>
                         ) : (msg.mode_used || selectedMode) === 'eli5' ? (
-                          <span className="font-bold text-purple-700 dark:text-purple-400 flex items-center gap-1.5">
-                            <Lightbulb className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                          <span className="font-bold text-purple-950 dark:text-purple-300 bg-purple-100/90 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-700/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
+                            <Lightbulb className="h-3.5 w-3.5 text-purple-700 dark:text-purple-400" />
                             <span>ELI5 Mode</span>
                           </span>
                         ) : (
-                          <span className="font-bold text-indigo-700 dark:text-indigo-400 flex items-center gap-1.5">
-                            <GraduationCap className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                          <span className="font-bold text-indigo-950 dark:text-indigo-300 bg-indigo-100/90 dark:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-700/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
+                            <GraduationCap className="h-3.5 w-3.5 text-indigo-700 dark:text-indigo-400" />
                             <span>Detailed Academic Mode</span>
                           </span>
                         )}
                         {msg.model_used && (
-                          <span className="text-[10px] text-slate-500 font-mono bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] text-slate-700 dark:text-slate-300 font-mono font-medium bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded">
                             {msg.model_used}
                           </span>
                         )}
@@ -851,7 +853,7 @@ export default function DoubtSolver({
                       {!msg.is_error && (
                         <button
                           onClick={() => handleCopy(msg.message_text, `msg-${msg.id}`)}
-                          className="hover:text-slate-900 flex items-center gap-1 cursor-pointer"
+                          className="hover:text-indigo-600 text-slate-600 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium hover:bg-slate-100 dark:hover:bg-slate-800 px-2 py-1 rounded-md transition-colors"
                           title="Copy answer"
                         >
                           {copiedId === `msg-${msg.id}` ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
@@ -865,8 +867,8 @@ export default function DoubtSolver({
                     <p className="whitespace-pre-wrap">{msg.message_text}</p>
                   ) : msg.is_error ? (
                     <div className="space-y-1">
-                      <p className="font-semibold text-rose-900 leading-relaxed">{msg.message_text}</p>
-                      <p className="text-[11px] text-rose-600">The AI reasoning service did not return an academic response.</p>
+                      <p className="font-semibold text-rose-950 leading-relaxed">{msg.message_text}</p>
+                      <p className="text-[11px] text-rose-700">The AI reasoning service did not return an academic response.</p>
                     </div>
                   ) : (
                     <div>{renderFormattedText(msg.message_text)}</div>

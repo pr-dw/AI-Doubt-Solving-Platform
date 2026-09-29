@@ -86,23 +86,43 @@
 ================================================================ */
 
 /* Light Theme (Default) */
+[data-theme="light"] body,
+body:not([data-theme]) {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4,
+[data-theme="light"] h5,
+[data-theme="light"] h6 {
+  color: #0f172a;
+}
+
 [data-theme="light"] .theme-toggle-btn {
-  background: rgba(241, 245, 249, 0.9);
-  border-color: rgba(226, 232, 240, 0.9);
-  color: #334155;
+  background: rgba(241, 245, 249, 0.95);
+  border-color: rgba(203, 213, 225, 0.9);
+  color: #1e293b;
 }
 [data-theme="light"] .theme-dropdown-menu {
   background: rgba(255, 255, 255, 0.98);
-  border: 1px solid #e2e8f0;
+  border: 1px solid #cbd5e1;
   color: #0f172a;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
 }
 [data-theme="light"] .theme-item-active {
   background: #eef2ff;
   border: 1px solid #c7d2fe;
-  color: #3730a3;
+  color: #312e81;
 }
 [data-theme="light"] .theme-item-inactive {
-  color: #475569;
+  color: #334155;
+}
+[data-theme="light"] .theme-item-inactive:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 /* ================================================================
