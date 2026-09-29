@@ -12,6 +12,7 @@
     background-color: #f8fafc;
     color: #0f172a;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -20,7 +21,7 @@
   }
 }
 
-/* Custom Scrollbar for Light Theme */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -39,7 +40,7 @@
   background: rgba(99, 102, 241, 0.7);
 }
 
-/* Premium Light Theme Glassmorphism & Surface Utilities */
+/* Base Glassmorphism & Surface Utilities */
 .glass-panel {
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(16px);
@@ -79,3 +80,429 @@
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
+
+/* ================================================================
+   THEME STYLES (Light, Dark, Midnight Indigo, Forest Emerald)
+================================================================ */
+
+/* Light Theme (Default) */
+[data-theme="light"] .theme-toggle-btn {
+  background: rgba(241, 245, 249, 0.9);
+  border-color: rgba(226, 232, 240, 0.9);
+  color: #334155;
+}
+[data-theme="light"] .theme-dropdown-menu {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+}
+[data-theme="light"] .theme-item-active {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #3730a3;
+}
+[data-theme="light"] .theme-item-inactive {
+  color: #475569;
+}
+
+/* ================================================================
+   1. MIDNIGHT DARK THEME
+================================================================ */
+[data-theme="dark"] body {
+  background-color: #0b0f19;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .glass-panel {
+  background: rgba(17, 24, 39, 0.88);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .glass-card {
+  background: rgba(30, 41, 59, 0.65);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .bg-white {
+  background-color: #111827 !important;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .bg-slate-50 {
+  background-color: #0b0f19 !important;
+}
+
+[data-theme="dark"] .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+[data-theme="dark"] .bg-slate-200 {
+  background-color: #334155 !important;
+}
+
+[data-theme="dark"] .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .border-slate-200,
+[data-theme="dark"] .border-slate-100 {
+  border-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+[data-theme="dark"] .theme-toggle-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .theme-dropdown-menu {
+  background: #111827;
+  border: 1px solid #334155;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .theme-dropdown-header {
+  border-color: #1e293b;
+}
+
+[data-theme="dark"] .theme-item-active {
+  background: rgba(99, 102, 241, 0.2);
+  border: 1px solid #6366f1;
+  color: #ffffff;
+}
+
+[data-theme="dark"] .theme-item-inactive {
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .theme-item-inactive:hover {
+  background-color: #1e293b !important;
+  color: #f8fafc;
+}
+
+/* ================================================================
+   2. CYBER MIDNIGHT INDIGO THEME
+================================================================ */
+[data-theme="midnight"] body {
+  background-color: #070a14;
+  color: #f1f5f9;
+}
+
+[data-theme="midnight"] h1,
+[data-theme="midnight"] h2,
+[data-theme="midnight"] h3,
+[data-theme="midnight"] h4,
+[data-theme="midnight"] h5,
+[data-theme="midnight"] h6 {
+  color: #f8fafc;
+}
+
+[data-theme="midnight"] .glass-panel {
+  background: rgba(13, 19, 36, 0.9);
+  border-color: rgba(99, 102, 241, 0.25);
+  box-shadow: 0 4px 25px -2px rgba(5, 10, 25, 0.6);
+}
+
+[data-theme="midnight"] .glass-card {
+  background: rgba(23, 29, 58, 0.65);
+  border-color: rgba(99, 102, 241, 0.2);
+}
+
+[data-theme="midnight"] .bg-white {
+  background-color: #0f172a !important;
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+[data-theme="midnight"] .bg-slate-50 {
+  background-color: #070a14 !important;
+}
+
+[data-theme="midnight"] .bg-slate-100 {
+  background-color: #17203b !important;
+}
+
+[data-theme="midnight"] .bg-slate-200 {
+  background-color: #27345b !important;
+}
+
+[data-theme="midnight"] .text-slate-900 {
+  color: #ffffff !important;
+}
+
+[data-theme="midnight"] .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+[data-theme="midnight"] .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="midnight"] .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="midnight"] .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+[data-theme="midnight"] .border-slate-200,
+[data-theme="midnight"] .border-slate-100 {
+  border-color: rgba(99, 102, 241, 0.22) !important;
+}
+
+[data-theme="midnight"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="midnight"] select,
+[data-theme="midnight"] textarea {
+  background-color: #0a0e1c !important;
+  color: #f8fafc !important;
+  border-color: #312e81 !important;
+}
+
+[data-theme="midnight"] .theme-toggle-btn {
+  background: #17203b;
+  border-color: #3730a3;
+  color: #38bdf8;
+}
+
+[data-theme="midnight"] .theme-dropdown-menu {
+  background: #0f172a;
+  border: 1px solid #3730a3;
+  color: #ffffff;
+}
+
+[data-theme="midnight"] .theme-dropdown-header {
+  border-color: #1e1b4b;
+}
+
+[data-theme="midnight"] .theme-item-active {
+  background: rgba(56, 189, 248, 0.18);
+  border: 1px solid #38bdf8;
+  color: #ffffff;
+}
+
+[data-theme="midnight"] .theme-item-inactive {
+  color: #cbd5e1;
+}
+
+[data-theme="midnight"] .theme-item-inactive:hover {
+  background-color: #17203b !important;
+  color: #38bdf8;
+}
+
+/* ================================================================
+   3. FOREST EMERALD THEME
+================================================================ */
+[data-theme="emerald"] body {
+  background-color: #04120e;
+  color: #ecfdf5;
+}
+
+[data-theme="emerald"] h1,
+[data-theme="emerald"] h2,
+[data-theme="emerald"] h3,
+[data-theme="emerald"] h4,
+[data-theme="emerald"] h5,
+[data-theme="emerald"] h6 {
+  color: #f0fdf4;
+}
+
+[data-theme="emerald"] .glass-panel {
+  background: rgba(6, 26, 20, 0.9);
+  border-color: rgba(16, 185, 129, 0.25);
+  box-shadow: 0 4px 25px -2px rgba(2, 16, 12, 0.6);
+}
+
+[data-theme="emerald"] .glass-card {
+  background: rgba(11, 38, 30, 0.65);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+[data-theme="emerald"] .bg-white {
+  background-color: #09201a !important;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+[data-theme="emerald"] .bg-slate-50 {
+  background-color: #04120e !important;
+}
+
+[data-theme="emerald"] .bg-slate-100 {
+  background-color: #0f3328 !important;
+}
+
+[data-theme="emerald"] .bg-slate-200 {
+  background-color: #184b3c !important;
+}
+
+[data-theme="emerald"] .text-slate-900 {
+  color: #ffffff !important;
+}
+
+[data-theme="emerald"] .text-slate-800 {
+  color: #ecfdf5 !important;
+}
+
+[data-theme="emerald"] .text-slate-700 {
+  color: #d1fae5 !important;
+}
+
+[data-theme="emerald"] .text-slate-600 {
+  color: #a7f3d0 !important;
+}
+
+[data-theme="emerald"] .text-slate-500 {
+  color: #6ee7b7 !important;
+}
+
+[data-theme="emerald"] .border-slate-200,
+[data-theme="emerald"] .border-slate-100 {
+  border-color: rgba(16, 185, 129, 0.22) !important;
+}
+
+[data-theme="emerald"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="emerald"] select,
+[data-theme="emerald"] textarea {
+  background-color: #051914 !important;
+  color: #f0fdf4 !important;
+  border-color: #065f46 !important;
+}
+
+[data-theme="emerald"] .theme-toggle-btn {
+  background: #0f3328;
+  border-color: #047857;
+  color: #34d399;
+}
+
+[data-theme="emerald"] .theme-dropdown-menu {
+  background: #09201a;
+  border: 1px solid #047857;
+  color: #ffffff;
+}
+
+[data-theme="emerald"] .theme-dropdown-header {
+  border-color: #064e3b;
+}
+
+[data-theme="emerald"] .theme-item-active {
+  background: rgba(52, 211, 153, 0.18);
+  border: 1px solid #34d399;
+  color: #ffffff;
+}
+
+[data-theme="emerald"] .theme-item-inactive {
+  color: #a7f3d0;
+}
+
+[data-theme="emerald"] .theme-item-inactive:hover {
+  background-color: #0f3328 !important;
+  color: #34d399;
+}
+
+/* ================================================================
+   SHARED DARK THEME ADAPTATIONS FOR CHIPS & BADGES
+================================================================ */
+[data-theme="dark"] .bg-indigo-50,
+[data-theme="midnight"] .bg-indigo-50,
+[data-theme="emerald"] .bg-indigo-50 {
+  background-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-purple-50,
+[data-theme="midnight"] .bg-purple-50,
+[data-theme="emerald"] .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-emerald-50,
+[data-theme="midnight"] .bg-emerald-50,
+[data-theme="emerald"] .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-amber-50,
+[data-theme="midnight"] .bg-amber-50,
+[data-theme="emerald"] .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-rose-50,
+[data-theme="midnight"] .bg-rose-50,
+[data-theme="emerald"] .bg-rose-50 {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-blue-50,
+[data-theme="midnight"] .bg-blue-50,
+[data-theme="emerald"] .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+[data-theme="dark"] .bg-sky-50,
+[data-theme="midnight"] .bg-sky-50,
+[data-theme="emerald"] .bg-sky-50 {
+  background-color: rgba(14, 165, 233, 0.15) !important;
+}
+
+/* Dark scrollbar track */
+[data-theme="dark"] ::-webkit-scrollbar-track,
+[data-theme="midnight"] ::-webkit-scrollbar-track,
+[data-theme="emerald"] ::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+/* Sidebar hover and active styling in dark themes */
+[data-theme="dark"] aside .hover\:bg-purple-50:hover,
+[data-theme="midnight"] aside .hover\:bg-purple-50:hover,
+[data-theme="emerald"] aside .hover\:bg-purple-50:hover {
+  background-color: rgba(168, 85, 247, 0.18) !important;
+  color: #f3e8ff !important;
+}
+
+[data-theme="dark"] aside .hover\:bg-indigo-50:hover,
+[data-theme="midnight"] aside .hover\:bg-indigo-50:hover,
+[data-theme="emerald"] aside .hover\:bg-indigo-50:hover {
+  background-color: rgba(99, 102, 241, 0.18) !important;
+  color: #e0e7ff !important;
+}
+
+[data-theme="dark"] aside .hover\:bg-emerald-50:hover,
+[data-theme="midnight"] aside .hover\:bg-emerald-50:hover,
+[data-theme="emerald"] aside .hover\:bg-emerald-50:hover {
+  background-color: rgba(16, 185, 129, 0.18) !important;
+  color: #d1fae5 !important;
+}
+

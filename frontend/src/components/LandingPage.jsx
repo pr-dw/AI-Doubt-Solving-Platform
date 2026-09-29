@@ -5,6 +5,7 @@ import {
   HelpCircle, Lightbulb, Lock, Layers, Play, Target
 } from 'lucide-react';
 import { api } from '../services/api';
+import ThemeToggle from './ThemeToggle';
 
 const EXPLANATION_MODES = [
   { 
@@ -69,7 +70,7 @@ export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onG
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-500 selection:text-white overflow-x-hidden">
+    <div className="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white overflow-x-hidden transition-colors duration-200">
       
       {/* Top Navigation */}
       <header className="sticky top-0 z-50 glass-panel border-b border-slate-200/90 bg-white/85 backdrop-blur-md shadow-xs">
@@ -87,6 +88,7 @@ export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onG
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeToggle />
             {user ? (
               <button
                 onClick={onGoToDashboard}

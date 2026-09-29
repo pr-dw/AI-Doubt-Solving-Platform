@@ -4,6 +4,7 @@ import {
   CheckCircle, BookOpen, Menu, Sparkles, Bot, Cpu, Check, ShieldCheck 
 } from 'lucide-react';
 import { api, clearAuthToken, getStoredAIModel, setStoredAIModel, AI_MODELS } from '../services/api';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActiveTab, onToggleSidebar, onGoToLanding }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -271,6 +272,9 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
               ))}
             </select>
           </div>
+
+          {/* Theme Selector Toggle */}
+          <ThemeToggle />
 
           {/* Notifications Dropdown */}
           {user && (

@@ -16,6 +16,10 @@ import ResourceLibrary from './components/ResourceLibrary';
 import AdminPanel from './components/AdminPanel';
 import StudentProfile from './components/StudentProfile';
 import api, { getStoredUser, clearAuthToken } from './services/api';
+import { initTheme } from './utils/theme';
+
+// Initialize theme immediately on mount
+initTheme();
 
 const STUDENT_TABS = [
   { id: 'doubts', label: 'AI Doubt Solver', icon: MessageSquare },
@@ -171,7 +175,7 @@ export default function App() {
   const currentTabs = user.role === 'admin' ? ADMIN_TABS : user.role === 'faculty' ? FACULTY_TABS : STUDENT_TABS;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white transition-colors duration-200">
       
       {/* Universal Top Navigation Bar */}
       <Navbar 
