@@ -1,12 +1,14 @@
 from rest_framework import serializers
 from .models import (
-    User, Subject, AcademicRecord, Resource,
+    User, Subject, AcademicRecord, Resource, PersonalNote,
     Conversation, Message, StudyGoal, Quiz,
     QuizAttempt, Notification, Roadmap,
-    Exam, StudentExamScore
+    Exam, StudentExamScore, MockExam, ExamPaperFormat
 )
 
 class UserSerializer(serializers.ModelSerializer):
+    last_active_date = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -16,6 +18,14 @@ class UserSerializer(serializers.ModelSerializer):
             'avatar', 'bio', 'date_joined'
         ]
         read_only_fields = ['id', 'date_joined']
+
+    def get_last_active_date(self, obj):
+        val = getattr(obj, 'last_active_date', None)
+        if not val:
+            return None
+        if hasattr(val, 'date'):
+            return str(val.date())
+        return str(val)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -58,6 +68,13 @@ class ResourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Resource
         fields = '__all__'
+
+
+class PersonalNoteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PersonalNote
+        fields = '__all__'
+        read_only_fields = ('user', 'created_at', 'updated_at')
 
 
 class MessageSerializer(serializers.ModelSerializer):
@@ -140,4 +157,23 @@ class StudentExamScoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentExamScore
         fields = '__all__'
+
+
+class MockExamSerializer(serializers.ModelSerializer):
+    subject_code = serializers.CharField(source='subject.code', read_only=True)
+    subject_name = serializers.CharField(source='subject.name', read_only=True)
+    user_name = serializers.CharField(source='user.name', read_only=True)
+
+    class Meta:
+        model = MockExam
+        fields = '__all__'
+        read_only_fields = ('user', 'created_at', 'updated_at')
+
+
+class ExamPaperFormatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExamPaperFormat
+        fields = '__all__'
+
+
 

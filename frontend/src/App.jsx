@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  MessageSquare, Compass, BarChart3, Target, Award, BookOpen, ShieldCheck, LogOut, GraduationCap, User,
-  Upload, FileText, Layers
+  MessageSquare, Compass, BarChart3, Target, Award, BookOpen, ShieldCheck, LogOut, GraduationCap,
+  Upload, FileText, Layers, Users, FileCheck
 } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
@@ -11,49 +11,72 @@ import DoubtSolver from './components/DoubtSolver';
 import PersonalisedStudyOrder from './components/PersonalisedStudyOrder';
 import FacultyExamPortal from './components/FacultyExamPortal';
 import PerformanceAnalytics from './components/PerformanceAnalytics';
-import StudyPlanner from './components/StudyPlanner';
 import QuizCenter from './components/QuizCenter';
 import ResourceLibrary from './components/ResourceLibrary';
 import AdminPanel from './components/AdminPanel';
 import StudentProfile from './components/StudentProfile';
-import { getStoredUser, clearAuthToken } from './services/api';
+import api, { getStoredUser, clearAuthToken } from './services/api';
 
 const STUDENT_TABS = [
   { id: 'doubts', label: 'AI Doubt Solver', icon: MessageSquare, badge: '6 Modes' },
-  { id: 'study-order', label: 'Personalised Study Order', icon: Target, badge: 'Max ROI' },
+  { id: 'study-order', label: 'Study Planner', icon: Compass, badge: 'Max ROI' },
   { id: 'analytics', label: 'Performance Analytics', icon: BarChart3 },
-  { id: 'planner', label: 'Study Planner', icon: Compass, badge: 'Streaks' },
-  { id: 'quiz', label: 'Quiz & Exam Prep', icon: Award },
+  { id: 'quiz', label: 'Quiz & Exam Prep', icon: Award, badge: 'AI & Tests' },
   { id: 'resources', label: 'Resource Library', icon: BookOpen },
-  { id: 'profile', label: 'Student Profile', icon: User, badge: 'Account' },
 ];
 
 const FACULTY_TABS = [
   { id: 'faculty-upload', label: 'Upload Exam Paper', icon: Upload, badge: 'AI Mapping' },
   { id: 'faculty-score', label: 'Score Students', icon: FileText, badge: 'Grading' },
   { id: 'faculty-exams', label: 'Uploaded Exams', icon: Layers },
-  { id: 'resources', label: 'Study Materials & Notes', icon: BookOpen },
-  { id: 'analytics', label: 'Performance Analytics', icon: BarChart3 },
+  { id: 'resources', label: 'Course Materials & Syllabus', icon: BookOpen },
 ];
 
 const ADMIN_TABS = [
-  { id: 'admin', label: 'System Overview & Telemetry', icon: ShieldCheck, badge: 'Admin' },
-  { id: 'faculty-upload', label: 'Upload Exam Paper', icon: Upload, badge: 'Faculty' },
-  { id: 'faculty-score', label: 'Score Students', icon: FileText, badge: 'Grading' },
-  { id: 'faculty-exams', label: 'Uploaded Exam Papers', icon: Layers },
-  { id: 'study-order', label: 'Study Order Engine', icon: Target, badge: 'AI' },
-  { id: 'resources', label: 'Resource Management', icon: BookOpen },
-  { id: 'analytics', label: 'Student Performance Metrics', icon: BarChart3 },
-  { id: 'quiz', label: 'Quiz Repository', icon: Award },
-  { id: 'doubts', label: 'Test AI Doubt Solver', icon: MessageSquare, badge: '6 Modes' },
+  { id: 'admin-users', label: 'User Governance', icon: Users, badge: 'Accounts' },
+  { id: 'admin-syllabus', label: 'Curriculum & Syllabus', icon: BookOpen, badge: 'Sem 1–6' },
+  { id: 'admin-paper-format', label: 'Exam Paper Formats', icon: FileCheck, badge: 'Blueprints' },
+  { id: 'admin', label: 'System Overview', icon: ShieldCheck, badge: 'Telemetry' },
 ];
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('doubts');
+  const [resourceSubTab, setResourceSubTab] = useState('college');
   const [pendingDoubtQuery, setPendingDoubtQuery] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [pinnedChats, setPinnedChats] = useState([]);
+  const [targetConversationId, setTargetConversationId] = useState(null);
+  const [viewLanding, setViewLanding] = useState(false);
+
+  const loadPinnedChats = async () => {
+    try {
+      const convs = await api.getConversations();
+      if (Array.isArray(convs)) {
+        setPinnedChats(convs.filter((c) => c.is_bookmarked));
+      }
+    } catch (err) {
+      console.error('Failed to load pinned chats:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadPinnedChats();
+    } else {
+      setPinnedChats([]);
+    }
+
+    const handlePinnedUpdate = () => {
+      loadPinnedChats();
+    };
+
+    window.addEventListener('pinned-chats-update', handlePinnedUpdate);
+    return () => {
+      window.removeEventListener('pinned-chats-update', handlePinnedUpdate);
+    };
+  }, [user]);
 
   useEffect(() => {
     // Check if user already has an active session
@@ -61,7 +84,7 @@ export default function App() {
     if (stored) {
       setUser(stored);
       if (stored.role === 'admin') {
-        setActiveTab('admin');
+        setActiveTab('admin-users');
       } else if (stored.role === 'faculty') {
         setActiveTab('faculty-upload');
       } else {
@@ -73,19 +96,28 @@ export default function App() {
       const u = getStoredUser();
       setUser(u);
       if (u?.role === 'admin') {
-        setActiveTab('admin');
+        setActiveTab('admin-users');
       } else if (u?.role === 'faculty') {
         setActiveTab('faculty-upload');
+      } else {
+        setActiveTab('doubts');
       }
     };
     window.addEventListener('auth-change', handleAuthChange);
     return () => window.removeEventListener('auth-change', handleAuthChange);
   }, []);
 
+  useEffect(() => {
+    if (user && user.role !== 'admin' && (activeTab === 'admin' || activeTab.startsWith('admin-'))) {
+      setActiveTab(user.role === 'faculty' ? 'faculty-upload' : 'doubts');
+    }
+  }, [user, activeTab]);
+
   const handleLoginSuccess = (userData) => {
     setUser(userData);
+    setViewLanding(false);
     if (userData.role === 'admin') {
-      setActiveTab('admin');
+      setActiveTab('admin-users');
     } else if (userData.role === 'faculty') {
       setActiveTab('faculty-upload');
     } else {
@@ -96,16 +128,36 @@ export default function App() {
   const handleLogout = () => {
     clearAuthToken();
     setUser(null);
+    setViewLanding(false);
     setActiveTab('doubts');
+    setTargetConversationId(null);
+    setResourceSubTab('college');
   };
 
-  // If not logged in, show the aesthetic Landing Page with direct Student & Admin login options!
-  if (!user) {
+  const handleUnpinChat = async (convId) => {
+    try {
+      await api.toggleBookmark(convId);
+      window.dispatchEvent(new CustomEvent('pinned-chats-update'));
+      loadPinnedChats();
+    } catch (err) {
+      console.error('Failed to unpin chat:', err);
+    }
+  };
+
+  const handleSelectPinnedChat = (chat) => {
+    setActiveTab('doubts');
+    setTargetConversationId(chat.id);
+  };
+
+  // If not logged in, or if user explicitly navigated to the Landing Page:
+  if (!user || viewLanding) {
     return (
       <>
         <LandingPage 
+          user={user}
           onLoginSuccess={handleLoginSuccess}
           onOpenAuthModal={() => setAuthModalOpen(true)}
+          onGoToDashboard={() => setViewLanding(false)}
         />
         <AuthModal 
           isOpen={authModalOpen}
@@ -129,6 +181,7 @@ export default function App() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        onGoToLanding={() => setViewLanding(true)}
       />
 
       {/* Main Workspace with Role-Specific Sidebar */}
@@ -142,6 +195,10 @@ export default function App() {
           onLogout={handleLogout}
           isOpen={sidebarOpen}
           setIsOpen={setSidebarOpen}
+          pinnedChats={pinnedChats}
+          onSelectPinnedChat={handleSelectPinnedChat}
+          onUnpinChat={handleUnpinChat}
+          activeConversationId={targetConversationId}
         />
 
         {/* Dynamic Dashboard Content */}
@@ -153,6 +210,12 @@ export default function App() {
                 onRequireAuth={() => setAuthModalOpen(true)}
                 initialQuery={pendingDoubtQuery}
                 onClearInitialQuery={() => setPendingDoubtQuery('')}
+                targetConversationId={targetConversationId}
+                onClearTargetConversationId={() => setTargetConversationId(null)}
+                onNavigateToPersonalLibrary={() => {
+                  setResourceSubTab('personal');
+                  setActiveTab('resources');
+                }}
               />
             )}
             {activeTab === 'study-order' && (
@@ -184,14 +247,23 @@ export default function App() {
             {activeTab === 'analytics' && (
               <PerformanceAnalytics user={user} onRequireAuth={() => setAuthModalOpen(true)} />
             )}
-            {activeTab === 'planner' && (
-              <StudyPlanner user={user} onRequireAuth={() => setAuthModalOpen(true)} />
-            )}
             {activeTab === 'quiz' && (
-              <QuizCenter user={user} onRequireAuth={() => setAuthModalOpen(true)} />
+              <QuizCenter 
+                user={user} 
+                onRequireAuth={() => setAuthModalOpen(true)}
+                onNavigateToPersonalLibrary={() => {
+                  setResourceSubTab('personal');
+                  setActiveTab('resources');
+                }}
+              />
             )}
             {activeTab === 'resources' && (
-              <ResourceLibrary user={user} />
+              <ResourceLibrary 
+                user={user} 
+                initialTab={resourceSubTab}
+                onTabChange={(tab) => setResourceSubTab(tab)}
+                onNavigateToDoubts={() => setActiveTab('doubts')}
+              />
             )}
             {activeTab === 'profile' && (
               <StudentProfile 
@@ -200,8 +272,23 @@ export default function App() {
                 onUpdateUser={(updated) => setUser(updated)}
               />
             )}
-            {activeTab === 'admin' && (
-              <AdminPanel user={user} />
+            {(activeTab === 'admin' || activeTab.startsWith('admin-')) && user?.role === 'admin' && (
+              <AdminPanel 
+                user={user} 
+                activeSubTab={
+                  activeTab === 'admin-syllabus' ? 'syllabus' :
+                  activeTab === 'admin-paper-format' ? 'paper-formats' :
+                  activeTab === 'admin' ? 'telemetry' :
+                  'users'
+                }
+                onNavigateTab={(tabKey) => {
+                  if (tabKey === 'users') setActiveTab('admin-users');
+                  else if (tabKey === 'syllabus') setActiveTab('admin-syllabus');
+                  else if (tabKey === 'paper-formats') setActiveTab('admin-paper-format');
+                  else if (tabKey === 'telemetry') setActiveTab('admin');
+                  else setActiveTab(tabKey);
+                }}
+              />
             )}
           </main>
 

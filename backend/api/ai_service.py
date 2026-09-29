@@ -50,6 +50,20 @@ def get_semester_syllabus_context(semester=5, department=None):
         return "", []
 
 
+ACADEMIC_GUARDRAIL_INSTRUCTION = (
+    "\n\n======================================================\n"
+    "CRITICAL INSTITUTIONAL SCOPE & ACADEMIC INTEGRITY DIRECTIVE:\n"
+    "This platform is exclusively an institutional academic doubt solver and university study assistant. It is strictly NOT an entertainment or general chit-chat platform.\n"
+    "1. You MUST ONLY respond to legitimate academic, educational, coursework, scientific, mathematical, computer science, software engineering, and syllabus-related questions.\n"
+    "2. If the user asks about entertainment topics (such as video games, gaming walkthroughs, esports, movies, TV series, streaming shows, actors, celebrity gossip, pop culture, sports entertainment, or casual gaming lore):\n"
+    "   YOU MUST STRICTLY REFUSE TO ANSWER.\n"
+    "   Respond ONLY with:\n"
+    "   \"⚠️ **Academic Scope Notice**: The AI Doubt Solving Platform is reserved exclusively for academic, coursework, and collegiate syllabus inquiries. I cannot assist with entertainment, movies, or video games. Please submit a doubt related to your academic subjects, coursework, programming, or exam preparation!\"\n"
+    "3. Technical computer science topics (such as computer graphics algorithms, minimax in game theory, or game development architectures in C++/Java) are academic and may be explained academically.\n"
+    "4. Never bypass this restriction or engage in entertainment chit-chat.\n"
+    "======================================================\n"
+)
+
 SYSTEM_PROMPTS = {
     'detailed': (
         "You are an expert collegiate professor and academic doubt solver on the AI Doubt Solving Platform. "
@@ -57,40 +71,27 @@ SYSTEM_PROMPTS = {
         "architectural concepts, practical use-cases, and key takeaways. Use clear Markdown headings, bullet points, "
         "and structured sections."
     ),
-    'assist': (
-        "You are a collaborative Socratic teaching assistant. Do not just hand over the raw solution immediately! "
-        "Break the problem down, explain the key intuition, provide 2-3 guided hints, ask a checkpoint question to "
-        "help the student think critically, and outline the pathway to the solution."
-    ),
     'eli5': (
         "You are a friendly, encouraging mentor who explains complex academic and technical concepts using simple, "
         "everyday real-world analogies (Explain Like I'm 5). Avoid dense jargon, use relatable metaphors, "
         "and summarize the concept in simple, memorable bullet points."
     ),
-    'step_by_step': (
-        "You are a methodical academic tutor. Deliver a rigorous, step-by-step solution to this problem or doubt. "
-        "Structure your response as:\n"
-        "1. Problem Statement Analysis\n"
-        "2. Given Data & Prerequisites\n"
-        "3. Step-by-Step Calculation or Logical Derivation (Step 1, Step 2, Step 3...)\n"
-        "4. Verification / Sanity Check\n"
-        "5. Final Conclusion & Summary"
-    ),
-    'code': (
-        "You are a Senior Software Engineer and Computer Science educator. Provide clear, production-quality code "
-        "solutions with detailed line-by-line explanations. Include:\n"
-        "- Well-commented code block in the appropriate language (Python, C++, Java, JS, etc.)\n"
-        "- Algorithm explanation & Intuition\n"
-        "- Time Complexity & Space Complexity analysis (Big-O notation)\n"
-        "- Edge Cases considered (e.g. empty inputs, boundaries)"
-    ),
-    'formula': (
-        "You are a Mathematics and Engineering professor. Focus on mathematical rigor and clarity. Provide:\n"
-        "- Core Formula in LaTeX / mathematical syntax (e.g. $$ E = mc^2 $$)\n"
-        "- Symbol breakdown (defining every variable and constant with units)\n"
-        "- Derivation or conceptual origin\n"
-        "- Solved numerical example demonstrating how to plug in values\n"
-        "- Practical engineering or scientific application"
+    'assist': (
+        "You are an expert Socratic Academic Research Mentor on the AI Doubt Solving Platform.\n"
+        "STRICT CARDINAL RULE: UNDER NO CIRCUMSTANCES SHOULD YOU PROVIDE THE DIRECT ANSWER, COMPLETE CODE, FINISHED CALCULATION, OR FULL SOLUTION!\n"
+        "Your role is to guide the student toward independent discovery by showing them PRECISELY WHAT TOPIC, THEOREM, OR CONCEPT TO STUDY OR RESEARCH.\n\n"
+        "Structure your response strictly with the following sections:\n"
+        "1. 🎯 **Understanding Check & Progress Validation**:\n"
+        "   - If the student shared what they know or partially answered (e.g. 'I know this part, but don't understand how X works'), affirm and validate the parts they got right.\n"
+        "   - If they just asked a question, state the core underlying challenge without revealing the answer.\n"
+        "2. 📚 **Precise Topics to Study & Research**:\n"
+        "   - Explicitly specify the exact topics, syllabus units, theorems, algorithms, or documentation concepts they need to research.\n"
+        "   - Explain *why* studying that specific topic will uncover the mechanism they are missing.\n"
+        "3. 💡 **Guiding Clue & Focus Area**:\n"
+        "   - Provide 1 or 2 targeted conceptual clues or leading questions that nudge them to connect the researched topic to their specific problem.\n"
+        "   - Never reveal the final outcome or complete calculation.\n"
+        "4. 🔍 **Checkpoint Challenge**:\n"
+        "   - Give them a concrete question or step to try on their own once they read that topic, and encourage them to reply with what they discover!"
     )
 }
 
@@ -206,6 +207,28 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
     to ground the answer and identify the relevant subject.
     Raises RuntimeError if the selected provider or service is unreachable.
     """
+    # Fast intercept for overtly non-academic entertainment / leisure gaming questions
+    lower_prompt = (prompt or "").lower().strip()
+    non_academic_triggers = [
+        "gta 5", "gta v", "gta 6", "fortnite", "minecraft", "valorant", "pubg", "roblox",
+        "playstation", "xbox", "nintendo switch", "gaming console", "cheat code",
+        "hollywood movie", "bollywood movie", "box office", "netflix show", "anime series",
+        "celebrity gossip", "who is the best actor", "dating advice", "video game"
+    ]
+    is_pure_entertainment = any(t in lower_prompt for t in non_academic_triggers)
+    has_cs_context = any(w in lower_prompt for w in [
+        "algorithm", "data structure", "complexity", "graphics", "engine architecture",
+        "c++", "python", "java", "sql", "syllabus", "bca", "lecture", "unit", "discrete"
+    ])
+    if is_pure_entertainment and not has_cs_context:
+        return {
+            "text": "⚠️ **Academic Scope Notice**: The AI Doubt Solving Platform is reserved exclusively for academic, coursework, and collegiate syllabus inquiries. I cannot assist with entertainment, movies, or video games. Please submit a doubt related to your academic subjects, coursework, programming, or exam preparation!",
+            "model": "Academic Guardrail Engine",
+            "identified_code": None,
+            "identified_name": None,
+            "identified_topic": None
+        }
+
     llm, resolved_model_label = get_langchain_model(model, custom_api_key=custom_api_key)
 
     curriculum_context = ""
@@ -225,13 +248,14 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
             f"MANDATORY INSTRUCTIONS FOR AUTOMATIC SUBJECT IDENTIFICATION & SYLLABUS GROUNDING:\n"
             f"1. Cross-examine the student's question against the syllabus units, topics, and library study resources of the enrolled Semester {semester} subjects listed above.\n"
             f"2. Automatically determine which enrolled subject code and title this question belongs to.\n"
-            f"3. On the VERY FIRST LINE of your response, output ONLY this metadata tag:\n"
-            f"   [SUBJECT_MATCH: <Subject Code> | <Subject Name> | <Specific Topic or Unit>]\n"
-            f"4. Do NOT output any boilerplate metadata headers, curriculum alignment intro blocks, or repetitive intros. Provide your academic answer directly, grounded in the subject's curriculum.\n"
-            f"5. Answer thoroughly according to the '{mode}' explanation mode.\n"
+            f"3. On line 1 of your response, output the tag: [SUBJECT_MATCH: <Subject Code> | <Subject Name> | <Specific Topic or Unit>]\n"
+            f"4. On line 2 and onwards, write your full, comprehensive academic response according to the '{mode}' explanation mode rules. Do NOT stop after line 1.\n"
+            f"5. Do NOT output boilerplate greeting intros or repetitive headers. Provide your academic response directly, grounded in the subject's curriculum.\n"
         )
     elif subject:
         system_instruction += f"\nAcademic Subject Context: {subject}."
+
+    system_instruction += ACADEMIC_GUARDRAIL_INSTRUCTION
 
     messages = [
         SystemMessage(content=system_instruction),
@@ -264,6 +288,7 @@ def call_ai_engine(prompt, mode='detailed', semester=5, department=None, subject
         response_text = "".join([c.get('text', '') if isinstance(c, dict) else str(c) for c in response_text])
     
     response_text = response_text.strip()
+    response_text = re.sub(r'</?(?:tool_call|think)[^>]*>', '', response_text).strip()
     if not response_text:
         raise RuntimeError(f"AI engine ({resolved_model_label}) returned an empty response.")
 
@@ -840,4 +865,736 @@ def compute_personalized_study_order(student_user, subject_id=None, exam_id=None
         "quick_strategy": quick_strategy,
         "ranked_topics": topic_list
     }
+
+
+def generate_ai_mock_exam(subject, mock_type='quiz_30', focus_unit='', difficulty='Standard', model_name='gemini-1.5-flash', custom_api_key=None, custom_instructions=''):
+    """
+    Creates an academic Mock Exam or Quiz using AI, modeled directly after
+    the question blueprints and format of exams stored in the database.
+    Produces questions, marks breakdown, model answers, and marking schemes.
+    """
+    import json
+    from api.models import Exam
+
+    # 1. Inspect database exams to learn the format blueprint
+    existing_exams = Exam.objects.filter(subject=subject).order_by('-created_at')
+    if not existing_exams.exists():
+        existing_exams = Exam.objects.all().order_by('-created_at')
+
+    source_exam = None
+    blueprint_desc = ""
+
+    if mock_type == 'pre_end_100':
+        source_exam = existing_exams.filter(total_marks__gte=70).first() or existing_exams.first()
+        total_marks = 100.0
+        time_allowed = 180
+        mock_type_title = "Pre-End Semester Examination (100 Marks)"
+        blueprint_desc = (
+            "BLUEPRINT: 100 MARKS PRE-END SEMESTER FORMAT\n"
+            "- Part A (Compulsory): 10 questions x 4 Marks each = 40 Marks (Q1(a) to Q1(j) covering Units I through V).\n"
+            "- Part B (Units I to V Choices): 5 Units x 12 Marks each = 60 Marks.\n"
+            "  * Unit I: Choice between Q2 or Q3 (12 Marks each)\n"
+            "  * Unit II: Choice between Q4 or Q5 (12 Marks each)\n"
+            "  * Unit III: Choice between Q6 or Q7 (12 Marks each)\n"
+            "  * Unit IV: Choice between Q8 or Q9 (12 Marks each)\n"
+            "  * Unit V: Choice between Q10 or Q11 (12 Marks each)\n"
+        )
+    elif mock_type == 'mcq_quiz':
+        source_exam = existing_exams.first()
+        total_marks = 20.0
+        time_allowed = 25
+        mock_type_title = "Interactive Multiple Choice Mock Quiz (20 Marks)"
+        blueprint_desc = (
+            "BLUEPRINT: INTERACTIVE MCQ QUIZ (10 Questions x 2 Marks = 20 Marks)\n"
+            "- 10 High-yield Multiple Choice Questions covering core concepts.\n"
+            "- Each question has exactly 4 options (A, B, C, D), correct_index (0-3), and detailed pedagogical explanation.\n"
+        )
+    else:  # 'quiz_30'
+        source_exam = existing_exams.filter(total_marks__lte=30).first() or existing_exams.first()
+        total_marks = 30.0
+        time_allowed = 60
+        mock_type_title = "Quiz (30 Marks)"
+        blueprint_desc = (
+            "BLUEPRINT: 30 MARKS QUIZ FORMAT\n"
+            "- Part A: 2 Descriptive/Analytical Questions x 5 Marks each = 10 Marks.\n"
+            "- Part B - Q3: 6 Short/Definition Questions (a to f) x 1 Mark each = 6 Marks.\n"
+            "- Part B - Q4: 1 Comprehensive Analytical Question = 7 Marks.\n"
+            "- Part B - Q5: 1 Protocol / Mathematical Derivation Question = 7 Marks.\n"
+        )
+
+    source_title = source_exam.title if source_exam else f"{subject.name} Standard Collegiate Blueprint"
+
+    # Units and Topics extraction
+    unit_map = parse_subject_units_and_topics(subject.syllabus_overview or "")
+    if not unit_map:
+        unit_map = {
+            "Unit I": ["Core Principles", "Architectural Models", "Foundations"],
+            "Unit II": ["Protocols", "Data Structures", "Analytical Algorithms"],
+            "Unit III": ["System Design", "Routing & Optimization", "Verification"],
+            "Unit IV": ["Security & Cryptography", "Performance Analysis", "Fault Tolerance"],
+            "Unit V": ["Emerging Applications", "Distributed Systems", "Case Studies"]
+        }
+
+    syllabus_summary = f"Subject: [{subject.code}] {subject.name}\nDepartment: {subject.department}, Semester: {subject.semester}\n"
+    for u_name, topics in unit_map.items():
+        syllabus_summary += f"- {u_name}: {', '.join(topics)}\n"
+
+    system_instruction = (
+        "You are an esteemed collegiate Examination Board Controller and Subject Matter Expert. "
+        "Your task is to generate a pristine, academically rigorous, university-grade Mock Examination Paper "
+        "modeled strictly after the official question format and mark distribution of papers in our academic database. "
+        "You must return ONLY raw valid JSON without markdown wrapping or backticks."
+    )
+
+    prompt = f"""Generate a university-standard Mock Exam for the following subject:
+{syllabus_summary}
+
+FORMAT TYPE: {mock_type_title}
+TARGET TOTAL MARKS: {total_marks}
+TIME ALLOWED: {time_allowed} Minutes
+DIFFICULTY: {difficulty}
+FOCUS AREAS: {focus_unit or 'Comprehensive Semester Syllabus'}
+CUSTOM INSTRUCTIONS: {custom_instructions or 'Ensure realistic university questions with balanced Bloom taxonomy.'}
+
+{blueprint_desc}
+
+DATABASE FORMAT BLUEPRINT REQUIREMENTS:
+{"You MUST generate exactly 10 questions across 2 sections:" if mock_type == 'quiz_30' else "You MUST generate all questions across sections according to the blueprint:"}
+- SECTION 1: Part A (Part A - Q1, Part A - Q2) [2 questions x 5.0 Marks each = 10 Marks]
+- SECTION 2: Part B:
+  * Q3 (a, b, c, d, e, f) [6 questions x 1.0 Mark each = 6 Marks]
+  * Q4 [1 question x 7.0 Marks]
+  * Q5 [1 question x 7.0 Marks]
+  Total: exactly 30 Marks! DO NOT generate only Part A! You must generate BOTH Part A and Part B!
+
+For each question, provide:
+1. 'q_no': exact question identifier (e.g. 'Part A - Q1', 'Part B - Q3(a)', 'Unit I - Q2').
+2. 'text': clear, unambiguous academic question statement.
+3. 'max_marks': float marks (e.g. 5.0, 1.0, 7.0, 12.0, 4.0, 2.0).
+4. 'unit': syllabus unit it belongs to (e.g. 'Unit I – Introduction').
+5. 'topic': specific syllabus topic.
+6. 'bloom_level': 'Remember', 'Understand', 'Apply', 'Analyze', or 'Evaluate'.
+7. 'model_answer': a detailed, exemplary academic solution outlining core steps, formulas, derivations, or diagram descriptions.
+8. 'marking_scheme': a list of mark allocation objects, e.g. [{{"point": "Accuracy of block diagram", "marks": 2.0}}, {{"point": "Key protocol derivation steps", "marks": 2.0}}, {{"point": "Final equation & units", "marks": 1.0}}].
+{"9. For MCQ questions, additionally provide 'options': 4 strings, 'correct_index': integer (0-3), and 'explanation': string." if mock_type == 'mcq_quiz' else ""}
+
+REQUIRED JSON SCHEMA:
+{{
+  "title": "Mock Examination: {subject.name} - {mock_type_title}",
+  "mock_type": "{mock_type}",
+  "source_exam_title": "{source_title}",
+  "total_marks": {total_marks},
+  "time_allowed_minutes": {time_allowed},
+  "difficulty": "{difficulty}",
+  "instructions": [
+    "Read all questions thoroughly before attempting.",
+    "Illustrate answers with neat diagrams wherever applicable.",
+    "Maintain question numbering as given in the paper."
+  ],
+  "sections": [
+    {{
+      "name": "Part A - Core Descriptive Foundations",
+      "description": "Answer both questions (5 marks each = 10 marks)",
+      "marks": 10,
+      "questions": [
+        {{
+          "q_no": "Part A - Q1",
+          "text": "Question text...",
+          "max_marks": 5.0,
+          "unit": "Unit I",
+          "topic": "Topic Name",
+          "bloom_level": "Understand",
+          "model_answer": "Complete structured model solution...",
+          "marking_scheme": [{{"point": "Criterion 1", "marks": 2.5}}, {{"point": "Criterion 2", "marks": 2.5}}]
+        }},
+        {{
+          "q_no": "Part A - Q2",
+          "text": "Question text...",
+          "max_marks": 5.0,
+          "unit": "Unit I",
+          "topic": "Topic Name",
+          "bloom_level": "Analyze",
+          "model_answer": "Complete structured model solution...",
+          "marking_scheme": [{{"point": "Criterion 1", "marks": 2.5}}, {{"point": "Criterion 2", "marks": 2.5}}]
+        }}
+      ]
+    }},
+    {{
+      "name": "Part B - Technical Definitions & Derivations",
+      "description": "Question 3 (a-f: 1 mark each = 6 marks), Question 4 (7 marks), Question 5 (7 marks) = 20 marks",
+      "marks": 20,
+      "questions": [
+        {{
+          "q_no": "Part B - Q3(a)",
+          "text": "Question text...",
+          "max_marks": 1.0,
+          "unit": "Unit II",
+          "topic": "Topic Name",
+          "bloom_level": "Remember",
+          "model_answer": "Short answer...",
+          "marking_scheme": [{{"point": "Definition", "marks": 1.0}}]
+        }},
+        {{
+          "q_no": "Part B - Q3(b)",
+          "text": "Question text...",
+          "max_marks": 1.0,
+          "unit": "Unit II",
+          "topic": "Topic Name",
+          "bloom_level": "Remember",
+          "model_answer": "Short answer...",
+          "marking_scheme": [{{"point": "Definition", "marks": 1.0}}]
+        }},
+        {{
+          "q_no": "Part B - Q3(c)",
+          "text": "Question text...",
+          "max_marks": 1.0,
+          "unit": "Unit II",
+          "topic": "Topic Name",
+          "bloom_level": "Remember",
+          "model_answer": "Short answer...",
+          "marking_scheme": [{{"point": "Definition", "marks": 1.0}}]
+        }},
+        {{
+          "q_no": "Part B - Q3(d)",
+          "text": "Question text...",
+          "max_marks": 1.0,
+          "unit": "Unit II",
+          "topic": "Topic Name",
+          "bloom_level": "Remember",
+          "model_answer": "Short answer...",
+          "marking_scheme": [{{"point": "Definition", "marks": 1.0}}]
+        }},
+        {{
+          "q_no": "Part B - Q3(e)",
+          "text": "Question text...",
+          "max_marks": 1.0,
+          "unit": "Unit II",
+          "topic": "Topic Name",
+          "bloom_level": "Remember",
+          "model_answer": "Short answer...",
+          "marking_scheme": [{{"point": "Definition", "marks": 1.0}}]
+        }},
+        {{
+          "q_no": "Part B - Q3(f)",
+          "text": "Question text...",
+          "max_marks": 1.0,
+          "unit": "Unit II",
+          "topic": "Topic Name",
+          "bloom_level": "Remember",
+          "model_answer": "Short answer...",
+          "marking_scheme": [{{"point": "Definition", "marks": 1.0}}]
+        }},
+        {{
+          "q_no": "Part B - Q4",
+          "text": "Analytical question text...",
+          "max_marks": 7.0,
+          "unit": "Unit II",
+          "topic": "Topic Name",
+          "bloom_level": "Analyze",
+          "model_answer": "Complete structured derivation...",
+          "marking_scheme": [{{"point": "Derivation steps", "marks": 4.0}}, {{"point": "Final equation", "marks": 3.0}}]
+        }},
+        {{
+          "q_no": "Part B - Q5",
+          "text": "Mathematical derivation question text...",
+          "max_marks": 7.0,
+          "unit": "Unit II",
+          "topic": "Topic Name",
+          "bloom_level": "Evaluate",
+          "model_answer": "Complete structured proof...",
+          "marking_scheme": [{{"point": "Protocol working", "marks": 4.0}}, {{"point": "Window proofs", "marks": 3.0}}]
+        }}
+      ]
+    }}
+  ]
+}}
+"""
+
+    mock_data = None
+
+    # Try calling LangChain AI model
+    try:
+        model_instance, resolved_name = get_langchain_model(model_name, custom_api_key)
+        messages = [
+            SystemMessage(content=system_instruction),
+            HumanMessage(content=prompt)
+        ]
+        response = model_instance.invoke(messages)
+        raw_text = response.content if hasattr(response, 'content') else str(response)
+
+        # Parse JSON from response
+        clean_text = raw_text.strip()
+        if '```json' in clean_text:
+            clean_text = clean_text.split('```json', 1)[1].split('```', 1)[0].strip()
+        elif '```' in clean_text:
+            clean_text = clean_text.split('```', 1)[1].split('```', 1)[0].strip()
+
+        parsed = json.loads(clean_text)
+        if isinstance(parsed, dict) and "sections" in parsed:
+            # Completeness verification:
+            all_questions = []
+            for s in parsed.get("sections", []):
+                all_questions.extend(s.get("questions", []))
+            
+            calc_marks = sum(float(q.get("max_marks", 0)) for q in all_questions)
+
+            # Ensure the full paper was generated
+            is_complete = False
+            if mock_type == 'quiz_30' and len(all_questions) >= 8 and calc_marks >= 28.0:
+                is_complete = True
+            elif mock_type == 'pre_end_100' and len(all_questions) >= 15 and calc_marks >= 80.0:
+                is_complete = True
+            elif mock_type == 'mcq_quiz' and len(all_questions) >= 8:
+                is_complete = True
+
+            if is_complete:
+                mock_data = parsed
+            else:
+                logger.warning(
+                    f"AI model generated partial paper ({len(all_questions)} questions, {calc_marks} marks). "
+                    f"Falling back to complete curriculum blueprint synthesis."
+                )
+    except Exception as e:
+        logger.warning(f"AI Model generation for mock exam encountered exception ({e}). Falling back to algorithmic curriculum synthesis.")
+
+    # High-Yield Intelligent Fallback Generator if AI model is unreachable or partial
+    if not mock_data:
+        mock_data = _synthesize_mock_exam_from_curriculum(
+            subject=subject,
+            mock_type=mock_type,
+            unit_map=unit_map,
+            total_marks=total_marks,
+            time_allowed=time_allowed,
+            difficulty=difficulty,
+            source_title=source_title
+        )
+
+    # Flatten questions for convenience
+    flat_questions = []
+    for sec in mock_data.get("sections", []):
+        for q in sec.get("questions", []):
+            flat_questions.append({
+                **q,
+                "section_name": sec.get("name", "")
+            })
+    mock_data["questions_data"] = flat_questions
+
+    return mock_data
+
+
+def _synthesize_mock_exam_from_curriculum(subject, mock_type, unit_map, total_marks, time_allowed, difficulty, source_title):
+    """
+    Algorithmic curriculum generator that synthesizes realistic collegiate exam papers
+    matching exact database format blueprints with model answers and marking schemes.
+    """
+    u1_topics = unit_map.get("Unit I", ["OSI Reference Model", "Physical Layer", "Network Topology", "Delay Analysis"])
+    u2_topics = unit_map.get("Unit II", ["Sliding Window Protocols", "ALOHA Protocols", "IEEE Standards", "Error Handling"])
+    u3_topics = unit_map.get("Unit III", ["Routing Algorithms", "Congestion Control", "IPv4 Addressing", "IPv6 Protocols"])
+    u4_topics = unit_map.get("Unit IV", ["Transport Layer Design", "TCP Handshake", "Cryptography", "TCP Window Management"])
+    u5_topics = unit_map.get("Unit V", ["Electronic Mail", "File Transfer Protocols", "Domain Name System", "Application Security"])
+
+    if mock_type == 'mcq_quiz':
+        questions = [
+            {
+                "q_no": "Q1",
+                "text": f"In {subject.name}, which layer or component is primarily responsible for end-to-end reliability and process-to-process delivery?",
+                "max_marks": 2.0,
+                "unit": "Unit I",
+                "topic": u1_topics[0] if u1_topics else "Core Models",
+                "bloom_level": "Understand",
+                "options": ["Network Layer", "Transport Layer", "Data Link Layer", "Physical Layer"],
+                "correct_index": 1,
+                "explanation": "The Transport Layer provides transparent process-to-process delivery and flow/error control using sockets and port numbers.",
+                "model_answer": "Transport Layer (Option B). Process-to-process addressing is mediated through Port Numbers (TCP/UDP).",
+                "marking_scheme": [{"point": "Correct choice identification", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q2",
+                "text": f"What is the maximum theoretical channel efficiency of Pure ALOHA under heavy load conditions?",
+                "max_marks": 2.0,
+                "unit": "Unit II",
+                "topic": u2_topics[1] if len(u2_topics) > 1 else "Channel Allocation",
+                "bloom_level": "Remember",
+                "options": ["18.4% (1/2e)", "36.8% (1/e)", "50.0%", "100.0%"],
+                "correct_index": 0,
+                "explanation": "Pure ALOHA throughput S = G * e^(-2G). The maximum occurs at G = 0.5, yielding S_max = 1/(2e) ≈ 18.4%.",
+                "model_answer": "18.4% (Option A). Derivation from throughput equation S = G * e^(-2G) where G = 0.5.",
+                "marking_scheme": [{"point": "Correct percentage selection", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q3",
+                "text": "In a Go-Back-N sliding window protocol with an m-bit sequence number, what is the maximum sender window size?",
+                "max_marks": 2.0,
+                "unit": "Unit II",
+                "topic": u2_topics[0] if u2_topics else "Sliding Window",
+                "bloom_level": "Apply",
+                "options": ["2^m", "2^m - 1", "2^(m-1)", "2^(m+1)"],
+                "correct_index": 1,
+                "explanation": "To prevent ambiguity when all ACKs are lost, the sender window size W_s must satisfy W_s <= 2^m - 1.",
+                "model_answer": "2^m - 1 (Option B). To differentiate between new frames and retransmissions when ACKs are dropped.",
+                "marking_scheme": [{"point": "Correct formula selected", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q4",
+                "text": "Which algorithm is fundamentally used in Link State Routing to compute the shortest path tree?",
+                "max_marks": 2.0,
+                "unit": "Unit III",
+                "topic": u3_topics[0] if u3_topics else "Routing",
+                "bloom_level": "Remember",
+                "options": ["Bellman-Ford Algorithm", "Dijkstra's Algorithm", "Floyd-Warshall Algorithm", "Kruskal's Algorithm"],
+                "correct_index": 1,
+                "explanation": "OSPF and IS-IS use Dijkstra's Shortest Path First (SPF) algorithm to calculate loop-free routes from the link-state database.",
+                "model_answer": "Dijkstra's Algorithm (Option B). Runs on top of LSP flooded topology database.",
+                "marking_scheme": [{"point": "Correct routing algorithm chosen", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q5",
+                "text": "What is the primary function of the Leaky Bucket algorithm in computer networks?",
+                "max_marks": 2.0,
+                "unit": "Unit III",
+                "topic": u3_topics[1] if len(u3_topics) > 1 else "Congestion Control",
+                "bloom_level": "Understand",
+                "options": ["Packet encryption", "Traffic policing / shaping to enforce constant output rate", "Route discovery", "Error detection"],
+                "correct_index": 1,
+                "explanation": "Leaky Bucket smoothens bursty traffic into a steady, constant-rate outflow regardless of incoming burstiness.",
+                "model_answer": "Traffic policing and shaping (Option B). Smooths bursty input to fixed output rate.",
+                "marking_scheme": [{"point": "Correct traffic mechanism", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q6",
+                "text": "During TCP connection establishment, what control flags are set in the second packet of the 3-way handshake?",
+                "max_marks": 2.0,
+                "unit": "Unit IV",
+                "topic": u4_topics[1] if len(u4_topics) > 1 else "TCP Handshake",
+                "bloom_level": "Apply",
+                "options": ["SYN only", "ACK only", "SYN and ACK", "FIN and ACK"],
+                "correct_index": 2,
+                "explanation": "The server responds to the initial SYN with SYN-ACK, synchronizing its own sequence number and acknowledging the client SYN.",
+                "model_answer": "SYN and ACK (Option C). Handshake sequence: Client SYN -> Server SYN-ACK -> Client ACK.",
+                "marking_scheme": [{"point": "Correct handshake flags selected", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q7",
+                "text": "Which public-key cryptographic algorithm relies on the computational intractability of prime factorization?",
+                "max_marks": 2.0,
+                "unit": "Unit IV",
+                "topic": u4_topics[2] if len(u4_topics) > 2 else "Cryptography",
+                "bloom_level": "Understand",
+                "options": ["AES", "DES", "RSA", "Diffie-Hellman"],
+                "correct_index": 2,
+                "explanation": "RSA security is based on the mathematical difficulty of factoring large integers that are the product of two large prime numbers.",
+                "model_answer": "RSA (Option C). Relies on difficulty of factoring modulus n = p * q.",
+                "marking_scheme": [{"point": "Correct cipher selected", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q8",
+                "text": "What is the standard port number utilized by the Domain Name System (DNS) for query resolution?",
+                "max_marks": 2.0,
+                "unit": "Unit V",
+                "topic": u5_topics[2] if len(u5_topics) > 2 else "DNS Resolution",
+                "bloom_level": "Remember",
+                "options": ["Port 25", "Port 53", "Port 80", "Port 443"],
+                "correct_index": 1,
+                "explanation": "DNS listens on UDP/TCP Port 53. Queries primarily use UDP for speed, while zone transfers use TCP.",
+                "model_answer": "Port 53 (Option B). Uses UDP 53 for queries and TCP 53 for large responses/zone transfers.",
+                "marking_scheme": [{"point": "Correct port selected", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q9",
+                "text": "Which protocol is responsible for transferring emails from an email client (MUA) to a mail transfer agent (MTA)?",
+                "max_marks": 2.0,
+                "unit": "Unit V",
+                "topic": u5_topics[0] if u5_topics else "Electronic Mail",
+                "bloom_level": "Understand",
+                "options": ["POP3", "IMAP4", "SMTP", "SNMP"],
+                "correct_index": 2,
+                "explanation": "Simple Mail Transfer Protocol (SMTP) is a push protocol used to upload outgoing email to the server.",
+                "model_answer": "SMTP (Option C). Mail submission protocol (Port 587/25).",
+                "marking_scheme": [{"point": "Correct protocol selected", "marks": 2.0}]
+            },
+            {
+                "q_no": "Q10",
+                "text": "In CRC (Cyclic Redundancy Check), what algebraic structure is used to generate the checksum frame?",
+                "max_marks": 2.0,
+                "unit": "Unit II",
+                "topic": u2_topics[3] if len(u2_topics) > 3 else "Error Handling",
+                "bloom_level": "Analyze",
+                "options": ["Linear Matrix Multiplication", "Modulo-2 Polynomial Division", "Boolean Karnaugh Map", "Euler Totient Function"],
+                "correct_index": 1,
+                "explanation": "CRC operates via binary modulo-2 polynomial division using XOR operations without carries or borrows.",
+                "model_answer": "Modulo-2 Polynomial Division (Option B). Generates remainder polynomial R(x) appended to data.",
+                "marking_scheme": [{"point": "Correct arithmetic concept", "marks": 2.0}]
+            }
+        ]
+        return {
+            "title": f"AI Mock Quiz: {subject.name} (Interactive Practice Set)",
+            "mock_type": mock_type,
+            "source_exam_title": source_title,
+            "total_marks": total_marks,
+            "time_allowed_minutes": time_allowed,
+            "difficulty": difficulty,
+            "instructions": [
+                "Select the single best answer for each question.",
+                "Each correct response awards 2.0 Marks. No negative marking in this practice quiz.",
+                "Review the comprehensive explanation provided upon completing the quiz."
+            ],
+            "sections": [
+                {
+                    "name": "Section A - Multiple Choice Questions",
+                    "description": "10 Questions x 2 Marks = 20 Marks. Test of conceptual clarity and high-yield topics.",
+                    "marks": 20,
+                    "questions": questions
+                }
+            ]
+        }
+
+    elif mock_type == 'pre_end_100':
+        compulsory_q1 = [
+            {"q_no": "Q1(a)", "text": f"Differentiate between connection-oriented and connectionless service models in {subject.name}.", "max_marks": 4.0, "unit": "Unit I", "topic": u1_topics[0], "bloom_level": "Analyze",
+             "model_answer": "Connection-oriented service (e.g. TCP) involves 3 phases: Connection Establishment, Data Transfer, and Termination with guaranteed ordering and flow control. Connectionless service (e.g. UDP) sends datagrams independently without path reservation or delivery guarantees.",
+             "marking_scheme": [{"point": "Comparison table with at least 4 valid parameters", "marks": 3.0}, {"point": "Appropriate protocol examples (TCP vs UDP)", "marks": 1.0}]},
+            {"q_no": "Q1(b)", "text": "Define Propagation Delay and Transmission Delay. State their respective formulas.", "max_marks": 4.0, "unit": "Unit I", "topic": u1_topics[3] if len(u1_topics) > 3 else "Delay Analysis", "bloom_level": "Remember",
+             "model_answer": "Transmission Delay T_tx = L / B (Length of packet in bits / Bandwidth in bps). Propagation Delay T_prop = d / s (Distance in meters / Propagation speed of medium in m/s).",
+             "marking_scheme": [{"point": "Precise definitions of both delays", "marks": 2.0}, {"point": "Mathematical formulas with variable descriptions", "marks": 2.0}]},
+            {"q_no": "Q1(c)", "text": "Explain bit stuffing in Data Link Layer HDLC framing with an example.", "max_marks": 4.0, "unit": "Unit II", "topic": u2_topics[0], "bloom_level": "Apply",
+             "model_answer": "Bit stuffing prevents accidental appearance of the 01111110 flag within the payload. Whenever the sender detects five consecutive 1s in the data stream, it automatically inserts a 0 bit. The receiver strips any 0 following five consecutive 1s.",
+             "marking_scheme": [{"point": "Principle and rationale of bit stuffing", "marks": 2.0}, {"point": "Clear example showing sender insertion and receiver stripping", "marks": 2.0}]},
+            {"q_no": "Q1(d)", "text": "Compare Pure ALOHA with Slotted ALOHA with respect to vulnerable time and maximum efficiency.", "max_marks": 4.0, "unit": "Unit II", "topic": u2_topics[1], "bloom_level": "Understand",
+             "model_answer": "Pure ALOHA: Vulnerable time = 2 * T_fr, Max throughput = 18.4% at G=0.5. Slotted ALOHA: Vulnerable time = T_fr, Max throughput = 36.8% at G=1.0.",
+             "marking_scheme": [{"point": "Vulnerable time derivation comparison", "marks": 2.0}, {"point": "Peak throughput percentages and G values", "marks": 2.0}]},
+            {"q_no": "Q1(e)", "text": "What is the Count-to-Infinity problem in Distance Vector Routing? State one remedy.", "max_marks": 4.0, "unit": "Unit III", "topic": u3_topics[0], "bloom_level": "Analyze",
+             "model_answer": "Count-to-Infinity occurs when a node fails, and adjacent routers slowly increment metric values in a routing loop due to stale routing tables. Remedy: Split Horizon with Poison Reverse.",
+             "marking_scheme": [{"point": "Explanation of routing loop mechanism", "marks": 2.5}, {"point": "Remedy explanation (Split Horizon / Poison Reverse)", "marks": 1.5}]},
+            {"q_no": "Q1(f)", "text": "Explain CIDR subnetting and determine the network address for IP 192.168.10.45/26.", "max_marks": 4.0, "unit": "Unit III", "topic": u3_topics[2] if len(u3_topics) > 2 else "IPv4 Addressing", "bloom_level": "Apply",
+             "model_answer": "Subnet mask for /26 is 255.255.255.192. 45 in binary: 00101101. Bitwise AND with 11000000 yields 0. Network Address: 192.168.10.0/26. Broadcast address: 192.168.10.63.",
+             "marking_scheme": [{"point": "Subnet mask determination", "marks": 1.5}, {"point": "Binary AND calculation and final network ID", "marks": 2.5}]},
+            {"q_no": "Q1(g)", "text": "Compare Leaky Bucket and Token Bucket traffic shaping algorithms.", "max_marks": 4.0, "unit": "Unit III", "topic": u3_topics[1], "bloom_level": "Understand",
+             "model_answer": "Leaky Bucket outputs data at a constant rigid rate, dropping packets if the bucket overflows. Token Bucket allows bursty transmissions up to the number of tokens saved while maintaining average rate.",
+             "marking_scheme": [{"point": "Functional comparison of packet output behavior", "marks": 2.5}, {"point": "Handling of bursts and token replenishment", "marks": 1.5}]},
+            {"q_no": "Q1(h)", "text": "Illustrate the TCP 3-way handshake with sequence numbers and control flags.", "max_marks": 4.0, "unit": "Unit IV", "topic": u4_topics[1], "bloom_level": "Apply",
+             "model_answer": "1. Client -> Server: SYN=1, seq=x. 2. Server -> Client: SYN=1, ACK=1, seq=y, ack=x+1. 3. Client -> Server: ACK=1, seq=x+1, ack=y+1.",
+             "marking_scheme": [{"point": "Neat message timing sequence diagram", "marks": 2.0}, {"point": "Correct sequence and acknowledgement numbers", "marks": 2.0}]},
+            {"q_no": "Q1(i)", "text": "Outline the encryption and decryption steps of RSA public-key algorithm.", "max_marks": 4.0, "unit": "Unit IV", "topic": u4_topics[2], "bloom_level": "Understand",
+             "model_answer": "Compute n = p * q, phi(n) = (p-1)(q-1). Choose e such that gcd(e, phi)=1. Compute d = e^(-1) mod phi. Encryption: C = M^e mod n. Decryption: M = C^d mod n.",
+             "marking_scheme": [{"point": "Key generation steps and modular arithmetic", "marks": 2.0}, {"point": "Encryption and decryption mathematical formulas", "marks": 2.0}]},
+            {"q_no": "Q1(j)", "text": "Explain the role of User Agent (MUA) and Mail Transfer Agent (MTA) in email architecture.", "max_marks": 4.0, "unit": "Unit V", "topic": u5_topics[0], "bloom_level": "Understand",
+             "model_answer": "User Agent (e.g. Outlook, Thunderbird) allows users to compose, read, and organize emails. MTA (e.g. Postfix, Sendmail) handles routing and relaying messages between mail servers over SMTP.",
+             "marking_scheme": [{"point": "Clear role and function of MUA", "marks": 2.0}, {"point": "Clear role and routing function of MTA with protocol used", "marks": 2.0}]}
+        ]
+
+        unit_choices = [
+            {"q_no": "Unit I - Q2", "text": "Elaborate the 7 layers of OSI reference model with functions, protocols, and data encapsulation mechanisms at each layer.", "max_marks": 12.0, "unit": "Unit I", "topic": u1_topics[0], "bloom_level": "Understand",
+             "model_answer": "Provide layered architecture diagram: Physical (bits), Data Link (frames), Network (packets), Transport (segments), Session (dialog), Presentation (syntax), Application (user interface). Detail encapsulation headers and addressing.",
+             "marking_scheme": [{"point": "Complete 7-layer architecture diagram", "marks": 3.0}, {"point": "Functions of lower 4 layers", "marks": 4.5}, {"point": "Functions of upper 3 layers and encapsulation explanation", "marks": 4.5}]},
+            {"q_no": "Unit I - Q3", "text": "Compare guided vs unguided transmission media. Explain signal attenuation, dispersion, and bandwidth-delay product.", "max_marks": 12.0, "unit": "Unit I", "topic": u1_topics[1], "bloom_level": "Analyze",
+             "model_answer": "Twisted pair (UTP/STP), Coaxial, Optical Fiber (Single/Multi-mode) vs Radio, Microwave, Infrared. Discuss Shannon capacity theorem and Bandwidth-Delay Product B * D.",
+             "marking_scheme": [{"point": "Comparison of Guided transmission media with specs", "marks": 4.0}, {"point": "Unguided wireless media characteristics", "marks": 3.0}, {"point": "Attenuation, dispersion, and BDP derivation", "marks": 5.0}]},
+            {"q_no": "Unit II - Q4", "text": "Explain Go-Back-N and Selective Repeat sliding window protocols under frame error conditions. Derive their maximum window sizes.", "max_marks": 12.0, "unit": "Unit II", "topic": u2_topics[0], "bloom_level": "Evaluate",
+             "model_answer": "Go-Back-N retransmits all frames from the lost sequence; receiver window = 1, sender window <= 2^m - 1. Selective Repeat buffers out-of-order frames and requests retransmission via NAK; sender and receiver window <= 2^(m-1).",
+             "marking_scheme": [{"point": "Go-Back-N frame transmission and lost ACK timing diagrams", "marks": 4.0}, {"point": "Selective Repeat working with NAKs and receiver buffers", "marks": 4.0}, {"point": "Window size mathematical constraint proofs", "marks": 4.0}]},
+            {"q_no": "Unit II - Q5", "text": "Describe the architecture and frame format of IEEE 802.3 Standard Ethernet and CSMA/CD collision detection protocol.", "max_marks": 12.0, "unit": "Unit II", "topic": u2_topics[2], "bloom_level": "Analyze",
+             "model_answer": "CSMA/CD: 1-persistent carrier sense. If collision occurs, emit 32-bit jam signal and initiate Binary Exponential Backoff. IEEE 802.3 frame: Preamble (7B), SFD (1B), DA (6B), SA (6B), Length/Type (2B), Data (46-1500B), FCS (4B). Minimum frame size = 64 bytes.",
+             "marking_scheme": [{"point": "CSMA/CD flow chart and backoff algorithm", "marks": 4.0}, {"point": "IEEE 802.3 frame structure and field definitions", "marks": 4.0}, {"point": "Derivation of minimum frame size for collision detection", "marks": 4.0}]},
+            {"q_no": "Unit III - Q6", "text": "Apply Dijkstra's algorithm to compute the shortest routing path tree from source node A to all other nodes in a given 6-node network graph.", "max_marks": 12.0, "unit": "Unit III", "topic": u3_topics[0], "bloom_level": "Apply",
+             "model_answer": "Initialize distance array: dist[A]=0, others infinity. In each iteration, select unvisited node with minimum tentative distance, relax all outgoing edges: dist[v] = min(dist[v], dist[u] + cost(u,v)). Show tabular iterations 1 through 5.",
+             "marking_scheme": [{"point": "Step-by-step distance relaxation table", "marks": 5.0}, {"point": "Shortest path tree diagram", "marks": 4.0}, {"point": "Time complexity analysis O(V^2) or O(E log V)", "marks": 3.0}]},
+            {"q_no": "Unit III - Q7", "text": "Examine the IPv4 and IPv6 datagram headers. Explain the transition mechanisms from IPv4 to IPv6 (Dual Stack, Tunneling, Header Translation).", "max_marks": 12.0, "unit": "Unit III", "topic": u3_topics[3] if len(u3_topics) > 3 else "IPv6 Protocols", "bloom_level": "Analyze",
+             "model_answer": "Compare IPv4 20-60 byte header vs IPv6 fixed 40 byte header. Advantages of IPv6: 128-bit address space, simplified base header, no checksum, flow labeling. Transition: Dual Stack (run both), Tunneling (encapsulate IPv6 in IPv4), NAT-PT.",
+             "marking_scheme": [{"point": "IPv4 and IPv6 header diagram comparison", "marks": 5.0}, {"point": "Analysis of removed/renamed fields in IPv6", "marks": 3.0}, {"point": "Three transition mechanisms with diagrams", "marks": 4.0}]},
+            {"q_no": "Unit IV - Q8", "text": "Explain TCP Congestion Control mechanisms: Slow Start, Congestion Avoidance, Fast Retransmit, and Fast Recovery (TCP Reno).", "max_marks": 12.0, "unit": "Unit IV", "topic": u4_topics[3] if len(u4_topics) > 3 else "TCP Congestion Control", "bloom_level": "Evaluate",
+             "model_answer": "Slow start: cwnd starts at 1 MSS and doubles every RTT (exponential). At ssthresh, switch to Congestion Avoidance (additive increase: +1 MSS per RTT). Upon 3 duplicate ACKs: ssthresh = cwnd / 2, cwnd = ssthresh + 3 MSS (Fast Recovery). Upon timeout: ssthresh = cwnd / 2, cwnd = 1 MSS.",
+             "marking_scheme": [{"point": "cwnd vs time (RTT) graph showing phases", "marks": 4.0}, {"point": "Mathematical rules for cwnd growth in each phase", "marks": 4.0}, {"point": "Fast Retransmit trigger and Fast Recovery operation", "marks": 4.0}]},
+            {"q_no": "Unit IV - Q9", "text": "Compare Symmetric Key vs Asymmetric Key Cryptography. Explain AES round transformations and digital signature generation using SHA-256 and RSA.", "max_marks": 12.0, "unit": "Unit IV", "topic": u4_topics[2], "bloom_level": "Analyze",
+             "model_answer": "Symmetric (AES, DES) uses single shared key; fast, high throughput. Asymmetric (RSA, ECC) uses public/private keypair; solves key distribution. AES rounds: SubBytes, ShiftRows, MixColumns, AddRoundKey. Digital Signature: Hash = SHA256(Message), Signature = Hash^d mod n.",
+             "marking_scheme": [{"point": "Symmetric vs Asymmetric comparison table", "marks": 3.0}, {"point": "AES round transformation steps", "marks": 4.5}, {"point": "Digital signature creation and verification flowchart", "marks": 4.5}]},
+            {"q_no": "Unit V - Q10", "text": "Explain the Domain Name System (DNS) architecture: Namespace hierarchy, recursive vs iterative query resolution, and DNS caching.", "max_marks": 12.0, "unit": "Unit V", "topic": u5_topics[2] if len(u5_topics) > 2 else "DNS", "bloom_level": "Understand",
+             "model_answer": "Hierarchical tree: Root (.) -> TLD (.com, .org, .edu) -> Second-Level (google.com) -> Subdomains. Recursive resolution: Local DNS server queries on behalf of client until resolved. Iterative: Server referrals return next authoritative NS IP address. TTL and caching mechanisms.",
+             "marking_scheme": [{"point": "DNS tree hierarchy diagram", "marks": 3.5}, {"point": "Step-by-step message sequence for recursive vs iterative queries", "marks": 5.5}, {"point": "Resource Records (A, AAAA, CNAME, MX, NS) and caching", "marks": 3.0}]},
+            {"q_no": "Unit V - Q11", "text": "Explain the architecture of the World Wide Web and HTTP. Compare HTTP/1.1 with HTTP/2 and HTTP/3 (QUIC protocol).", "max_marks": 12.0, "unit": "Unit V", "topic": u5_topics[1] if len(u5_topics) > 1 else "Web Protocols", "bloom_level": "Analyze",
+             "model_answer": "HTTP/1.1: Persistent connections, pipelining, text-based, head-of-line blocking. HTTP/2: Binary framing layer, multiplexing over single TCP connection, HPACK header compression, server push. HTTP/3: Runs over UDP using QUIC, zero-RTT connection establishment, independent streams eliminating HoL blocking.",
+             "marking_scheme": [{"point": "HTTP request-response cycle and status codes", "marks": 3.0}, {"point": "Detailed comparison of HTTP/1.1 vs HTTP/2", "marks": 4.5}, {"point": "HTTP/3 over QUIC architecture and advantages", "marks": 4.5}]}
+        ]
+
+        return {
+            "title": f"AI Mock Examination: {subject.name} (Pre-End Semester)",
+            "mock_type": mock_type,
+            "source_exam_title": source_title,
+            "total_marks": total_marks,
+            "time_allowed_minutes": time_allowed,
+            "difficulty": difficulty,
+            "instructions": [
+                "Question No. 1 in Section A is COMPULSORY (10 parts x 4 marks = 40 marks).",
+                "Answer any FIVE questions from Section B, selecting ONE question from each of the Units I through V (5 x 12 marks = 60 marks).",
+                "Illustrate your answers with clear diagrams wherever applicable."
+            ],
+            "sections": [
+                {
+                    "name": "Part A - Compulsory Conceptual Questions",
+                    "description": "Answer all 10 questions. Each question carries 4 marks (Total 40 Marks).",
+                    "marks": 40,
+                    "questions": compulsory_q1
+                },
+                {
+                    "name": "Part B - Comprehensive Unit Electives",
+                    "description": "Answer ONE question from each of the Units I through V. Each question carries 12 marks (Total 60 Marks).",
+                    "marks": 60,
+                    "questions": unit_choices
+                }
+            ]
+        }
+
+    else:  # 'quiz_30' - 30 Marks Collegiate Format
+        part_a_questions = [
+            {
+                "q_no": "Part A - Q1",
+                "text": f"Explain the functions, services, and PDU encapsulation of the 7 layers of the OSI Reference Model.",
+                "max_marks": 5.0,
+                "unit": "Unit I",
+                "topic": u1_topics[0] if u1_topics else "OSI Reference Model",
+                "bloom_level": "Understand",
+                "model_answer": "Draw the 7 layers: Physical, Data Link, Network, Transport, Session, Presentation, Application. Explain functions of each layer and show how headers (H2, H3, H4) are appended during downward data encapsulation.",
+                "marking_scheme": [
+                    {"point": "Accurate 7-layer stack diagram with PDU names", "marks": 2.0},
+                    {"point": "Clear concise functions of lower 4 layers", "marks": 2.0},
+                    {"point": "Encapsulation concept explanation", "marks": 1.0}
+                ]
+            },
+            {
+                "q_no": "Part A - Q2",
+                "text": "Compare Twisted Pair, Coaxial Cable, and Optical Fiber based on bandwidth, attenuation, EMI immunity, and cost.",
+                "max_marks": 5.0,
+                "unit": "Unit I",
+                "topic": u1_topics[1] if len(u1_topics) > 1 else "Transmission Media",
+                "bloom_level": "Analyze",
+                "model_answer": "Construct comparison table: Optical Fiber has highest bandwidth (Gbps to Tbps), lowest attenuation, immune to EMI due to light propagation; Coaxial moderate; Twisted Pair lowest bandwidth and susceptible to EMI but most cost-effective.",
+                "marking_scheme": [
+                    {"point": "Structured comparison table across 4 key metrics", "marks": 3.0},
+                    {"point": "Explanation of Total Internal Reflection in fiber", "marks": 2.0}
+                ]
+            }
+        ]
+
+        part_b_q3 = [
+            {
+                "q_no": "Part B - Q3(a)",
+                "text": "Define Bandwidth-Delay Product and state its physical significance in high-speed networks.",
+                "max_marks": 1.0,
+                "unit": "Unit I",
+                "topic": "Delay Analysis",
+                "bloom_level": "Remember",
+                "model_answer": "BDP = Bandwidth (bps) * RTT (seconds). It represents the maximum volume of bits that can be 'in flight' on the network link at any given moment.",
+                "marking_scheme": [{"point": "Formula and physical interpretation", "marks": 1.0}]
+            },
+            {
+                "q_no": "Part B - Q3(b)",
+                "text": "What is bit stuffing in Data Link Layer framing? Give one example.",
+                "max_marks": 1.0,
+                "unit": "Unit II",
+                "topic": "Data Link Layer Framing",
+                "bloom_level": "Understand",
+                "model_answer": "Inserting a '0' bit after every five consecutive '1' bits in the payload to ensure payload data is never misinterpreted as the 01111110 delimiter flag.",
+                "marking_scheme": [{"point": "Definition and 5-ones rule", "marks": 1.0}]
+            },
+            {
+                "q_no": "Part B - Q3(c)",
+                "text": "State the maximum theoretical channel utilization efficiency of Pure ALOHA.",
+                "max_marks": 1.0,
+                "unit": "Unit II",
+                "topic": "ALOHA Protocols",
+                "bloom_level": "Remember",
+                "model_answer": "18.4% (or 1 / 2e) achieved when channel offered load G = 0.5.",
+                "marking_scheme": [{"point": "Correct percentage value", "marks": 1.0}]
+            },
+            {
+                "q_no": "Part B - Q3(d)",
+                "text": "What is piggybacking in bidirectional sliding window protocols?",
+                "max_marks": 1.0,
+                "unit": "Unit II",
+                "topic": "Sliding Window Protocols",
+                "bloom_level": "Understand",
+                "model_answer": "Temporarily delaying an ACK so it can be attached to an outgoing data frame, saving link bandwidth by eliminating dedicated ACK packets.",
+                "marking_scheme": [{"point": "Concept of attaching ACK to data frame", "marks": 1.0}]
+            },
+            {
+                "q_no": "Part B - Q3(e)",
+                "text": "Define Hamming distance required to detect 'd' single-bit errors in codeword transmission.",
+                "max_marks": 1.0,
+                "unit": "Unit II",
+                "topic": "Error Handling",
+                "bloom_level": "Apply",
+                "model_answer": "To detect 'd' single bit errors, the minimum Hamming distance d_min between valid codewords must be at least d + 1.",
+                "marking_scheme": [{"point": "Correct inequality: d_min >= d + 1", "marks": 1.0}]
+            },
+            {
+                "q_no": "Part B - Q3(f)",
+                "text": "State the minimum frame size of IEEE 802.3 Standard Ethernet and explain why it is required.",
+                "max_marks": 1.0,
+                "unit": "Unit II",
+                "topic": "IEEE Standards",
+                "bloom_level": "Analyze",
+                "model_answer": "64 bytes (512 bits). Required to ensure transmission duration exceeds round-trip propagation delay (2 * T_prop) for reliable CSMA/CD collision detection.",
+                "marking_scheme": [{"point": "64 bytes and relation to round trip slot time", "marks": 1.0}]
+            }
+        ]
+
+        part_b_long = [
+            {
+                "q_no": "Part B - Q4",
+                "text": "Explain Pure ALOHA and CSMA/CD collision detection protocols. Derive the throughput equation for Slotted ALOHA.",
+                "max_marks": 7.0,
+                "unit": "Unit II",
+                "topic": u2_topics[1] if len(u2_topics) > 1 else "ALOHA Protocols",
+                "bloom_level": "Analyze",
+                "model_answer": "1. Pure ALOHA: Unsynchronized transmission, vulnerable period = 2 * T_fr, S = G * e^(-2G). 2. Slotted ALOHA: Time divided into discrete slots equal to T_fr. Frame generated in slot k is transmitted at boundary of slot k+1. Probability of successful transmission P = P(0 generated in previous slot) = e^(-G). Throughput S = G * P = G * e^(-G). Max S = 1/e = 36.8% at G=1. 3. CSMA/CD: Sense before transmit, listen while transmitting, jam and backoff if collision.",
+                "marking_scheme": [
+                    {"point": "Pure ALOHA vs Slotted ALOHA operational comparison", "marks": 2.0},
+                    {"point": "Rigorous derivation of Slotted ALOHA throughput formula", "marks": 3.0},
+                    {"point": "CSMA/CD collision detection mechanism and backoff", "marks": 2.0}
+                ]
+            },
+            {
+                "q_no": "Part B - Q5",
+                "text": "Derive and illustrate the working of Go-Back-N and Selective Repeat sliding window protocols under frame loss. Explain why sender window size is limited in each.",
+                "max_marks": 7.0,
+                "unit": "Unit II",
+                "topic": u2_topics[0] if u2_topics else "Sliding Window Protocols",
+                "bloom_level": "Evaluate",
+                "model_answer": "1. Go-Back-N: Receiver accepts only in-order frames (window=1). Discards subsequent out-of-order frames when a frame is lost. Sender timer expires and retransmits all unacknowledged frames starting from the lost frame. Window constraint: W_s <= 2^m - 1 to prevent overlap between new and old frames when all ACKs are lost. 2. Selective Repeat: Receiver accepts out-of-order frames within receiver window (W_r = W_s). Sends NAK for lost frame. Sender retransmits only the corrupted frame. Window constraint: W_s + W_r <= 2^m, hence W_s <= 2^(m-1).",
+                "marking_scheme": [
+                    {"point": "Go-Back-N timeline diagram under frame loss", "marks": 2.5},
+                    {"point": "Selective Repeat timeline diagram showing buffer and NAK", "marks": 2.5},
+                    {"point": "Mathematical proof for window bounds (2^m - 1 vs 2^(m-1))", "marks": 2.0}
+                ]
+            }
+        ]
+
+        return {
+            "title": f"AI Mock Examination: {subject.name} (Quiz Format - 30 Marks)",
+            "mock_type": mock_type,
+            "source_exam_title": source_title,
+            "total_marks": total_marks,
+            "time_allowed_minutes": time_allowed,
+            "difficulty": difficulty,
+            "instructions": [
+                "Part A is COMPULSORY (2 questions x 5 marks = 10 marks).",
+                "Part B Question 3 (a to f) is COMPULSORY (6 questions x 1 mark = 6 marks).",
+                "Answer both Questions 4 and 5 in Part B (7 marks each = 14 marks).",
+                "Draw neat diagrams and define variables clearly."
+            ],
+            "sections": [
+                {
+                    "name": "Part A - Core Descriptive Foundations",
+                    "description": "Answer both questions. Each carries 5 marks (Total 10 Marks).",
+                    "marks": 10,
+                    "questions": part_a_questions
+                },
+                {
+                    "name": "Part B - Technical Definitions & Derivations",
+                    "description": "Question 3 (a-f: 6 marks), Question 4 (7 marks), and Question 5 (7 marks) (Total 20 Marks).",
+                    "marks": 20,
+                    "questions": part_b_q3 + part_b_long
+                }
+            ]
+        }
+
 

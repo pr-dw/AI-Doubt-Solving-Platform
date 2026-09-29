@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  GraduationCap, Flame, Bell, Search, User as UserIcon, 
-  LogOut, Cpu, CheckCircle, ChevronDown, BookOpen, Menu, Sparkles, Bot 
+  GraduationCap, Flame, Bell, Search,
+  CheckCircle, BookOpen, Menu, Sparkles, Bot, Cpu, Check, ShieldCheck 
 } from 'lucide-react';
 import { api, clearAuthToken, getStoredAIModel, setStoredAIModel, AI_MODELS } from '../services/api';
 
-export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActiveTab, onToggleSidebar }) {
+export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActiveTab, onToggleSidebar, onGoToLanding }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [selectedAIModel, setSelectedAIModel] = useState(() => getStoredAIModel());
 
   useEffect(() => {
@@ -57,6 +56,16 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
     }
   };
 
+  const handleMarkAllRead = async () => {
+    try {
+      await api.markAllNotificationsRead();
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch (err) {
+      console.error("Failed to mark all as read", err);
+    }
+  };
+
   const handleSearch = async (e) => {
     const q = e.target.value;
     setSearchQuery(q);
@@ -97,18 +106,26 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
             </button>
           )}
 
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => setActiveTab('doubts')}>
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/25 ring-1 ring-slate-200">
+          <div 
+            className="flex items-center gap-3 cursor-pointer group" 
+            onClick={onGoToLanding || (() => setActiveTab('doubts'))}
+            title="Go to Landing Page"
+          >
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/25 ring-1 ring-slate-200 group-hover:scale-105 transition-transform">
               <GraduationCap className="h-6 w-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-700 bg-clip-text text-transparent">
-                  AI Doubt Solving
+                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-indigo-900 to-indigo-700 bg-clip-text text-transparent group-hover:from-indigo-600 group-hover:to-purple-600 transition-colors">
+                  AI Doubt Solving Platform
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium hidden md:block">
-                Intelligent Academic Assistant • Local Ollama
+                {user?.role === 'faculty' 
+                  ? 'Faculty Examination & Evaluation Portal' 
+                  : user?.role === 'admin' 
+                  ? 'Administrator Management & Control Console' 
+                  : 'Intelligent Academic Assistant • Student Learning Workspace'}
               </p>
             </div>
           </div>
@@ -120,7 +137,13 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search doubts, notes, solved PYQs, topics..."
+              placeholder={
+                user?.role === 'faculty' 
+                  ? "Search department courses, syllabus, past papers..." 
+                  : user?.role === 'admin' 
+                  ? "Search platform subjects, telemetry, resources..." 
+                  : "Search doubts, notes, solved PYQs, topics..."
+              }
               value={searchQuery}
               onChange={handleSearch}
               className="w-full pl-10 pr-4 py-1.5 text-xs rounded-full bg-slate-100/90 border border-slate-300 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all focus:bg-white"
@@ -141,7 +164,10 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
                   {searchResults.subjects.map(s => (
                     <div 
                       key={s.id} 
-                      onClick={() => { setActiveTab('doubts'); setSearchResults(null); }}
+                      onClick={() => { 
+                        setActiveTab(user?.role === 'faculty' ? 'faculty-exams' : 'doubts'); 
+                        setSearchResults(null); 
+                      }}
                       className="px-2 py-1.5 hover:bg-slate-100 rounded-lg cursor-pointer text-xs flex justify-between"
                     >
                       <span className="font-medium text-slate-800">{s.name}</span>
@@ -167,7 +193,7 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
                 </div>
               )}
 
-              {searchResults.quizzes?.length > 0 && (
+              {searchResults.quizzes?.length > 0 && user?.role !== 'faculty' && (
                 <div>
                   <div className="text-[11px] text-emerald-600 font-bold mb-1">Practice Quizzes</div>
                   {searchResults.quizzes.map(q => (
@@ -183,7 +209,7 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
                 </div>
               )}
 
-              {!searchResults.subjects?.length && !searchResults.resources?.length && !searchResults.quizzes?.length && (
+              {!searchResults.subjects?.length && !searchResults.resources?.length && (!searchResults.quizzes?.length || user?.role === 'faculty') && (
                 <p className="text-xs text-slate-500 text-center py-4">No matching results found.</p>
               )}
             </div>
@@ -193,15 +219,37 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
         {/* Right Section: Streak, Ollama status, Notifications, User */}
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* Study Streak Badge */}
-          {user && (
+          {/* Study Streak Badge - Only shown for students */}
+          {user && user.role === 'student' && (
             <div 
-              onClick={() => setActiveTab('planner')}
+              onClick={() => setActiveTab('study-order')}
               title="Consecutive Daily Study Streak"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-amber-700 cursor-pointer hover:scale-105 transition-transform shadow-xs"
             >
               <Flame className="h-4 w-4 text-amber-500 fill-amber-500 animate-pulse" />
-              <span className="text-xs font-bold">{user.streak_count || 7}d Streak</span>
+              <span className="text-xs font-bold">{user.streak_count || 1}d Streak</span>
+            </div>
+          )}
+
+          {/* Faculty Badge - Shown for faculty */}
+          {user && user.role === 'faculty' && (
+            <div 
+              title="Official Faculty Examination & Evaluation Portal"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 shadow-xs select-none"
+            >
+              <GraduationCap className="h-4 w-4 text-emerald-600" />
+              <span className="text-xs font-bold">Faculty Portal</span>
+            </div>
+          )}
+
+          {/* Admin Badge - Shown for admin */}
+          {user && user.role === 'admin' && (
+            <div 
+              title="Central Administrator & Governance Console"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 border border-purple-300 text-purple-700 shadow-xs select-none"
+            >
+              <ShieldCheck className="h-4 w-4 text-purple-600" />
+              <span className="text-xs font-bold">Admin Console</span>
             </div>
           )}
 
@@ -251,8 +299,24 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
               {showNotifications && (
                 <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 glass-panel rounded-2xl p-4 shadow-2xl z-50 border border-slate-200 bg-white/95 backdrop-blur-md">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-                    <span className="font-bold text-sm text-slate-800">Academic Alerts</span>
-                    <span className="text-xs font-semibold text-indigo-600">{unreadCount} new</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-slate-800">Academic Alerts</span>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold border border-indigo-200">
+                          {unreadCount} new
+                        </span>
+                      )}
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer flex items-center gap-1"
+                        title="Mark all notifications as read"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Mark all as read</span>
+                      </button>
+                    )}
                   </div>
                   <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto mt-2">
                     {notifications.length === 0 ? (
@@ -285,75 +349,7 @@ export default function Navbar({ user, setUser, onOpenAuth, activeTab, setActive
             </div>
           )}
 
-          {/* User Account / Profile Button */}
-          {user ? (
-            <div className="relative">
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 hover:border-slate-300 hover:bg-slate-200/60 transition-all text-left cursor-pointer"
-              >
-                {user.avatar ? (
-                  <img 
-                    src={user.avatar} 
-                    alt={user.name || 'User'} 
-                    className="h-7 w-7 rounded-lg object-cover border border-slate-200" 
-                  />
-                ) : (
-                  <div className="h-7 w-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center font-bold text-xs text-white">
-                    {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                )}
-                <div className="hidden sm:block">
-                  <div className="text-xs font-semibold text-slate-800 leading-tight truncate max-w-[100px]">
-                    {user.name || user.email.split('@')[0]}
-                  </div>
-                  <div className="text-[10px] text-indigo-600 font-medium capitalize">
-                    {user.role} • Sem {user.semester}
-                  </div>
-                </div>
-                <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
-              </button>
-
-              {showUserMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 glass-panel rounded-2xl p-3 shadow-2xl z-50 border border-slate-200 bg-white/95 backdrop-blur-md">
-                  <div className="p-2 border-b border-slate-200">
-                    <p className="text-xs font-bold text-slate-800">{user.name}</p>
-                    <p className="text-[11px] text-slate-500">{user.email}</p>
-                    <div className="mt-2 text-[10px] text-slate-700 bg-slate-50 px-2 py-1 rounded border border-slate-200">
-                      <div>Roll: <span className="text-indigo-600 font-mono font-medium">{user.roll_number || '2023/BCA/042'}</span></div>
-                      <div>Dept: {user.department}</div>
-                    </div>
-                  </div>
-                  <div className="py-1">
-                    <button
-                      onClick={() => { setActiveTab('profile'); setShowUserMenu(false); }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-lg flex items-center gap-2 cursor-pointer font-medium"
-                    >
-                      <UserIcon className="h-3.5 w-3.5 text-indigo-600" /> Student Profile & Settings
-                    </button>
-                    <button
-                      onClick={() => { setActiveTab('analytics'); setShowUserMenu(false); }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-lg flex items-center gap-2 cursor-pointer"
-                    >
-                      <UserIcon className="h-3.5 w-3.5 text-slate-500" /> My Academic Performance
-                    </button>
-                    <button
-                      onClick={() => { setActiveTab('admin'); setShowUserMenu(false); }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-700 hover:bg-slate-100 rounded-lg flex items-center gap-2 cursor-pointer"
-                    >
-                      <Cpu className="h-3.5 w-3.5 text-purple-600" /> System & Model Overview
-                    </button>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-2 mt-1 cursor-pointer font-medium"
-                    >
-                      <LogOut className="h-3.5 w-3.5" /> Sign Out
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
+          {!user && (
             <button
               onClick={onOpenAuth}
               className="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-semibold text-white shadow-lg shadow-indigo-600/30 transition-all cursor-pointer"

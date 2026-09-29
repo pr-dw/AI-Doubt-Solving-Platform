@@ -8,9 +8,13 @@ from .views import (
     StudyOrderView, ExamListView, ExamDetailView, ExamScoreUploadView, ExamPDFAnalyzeView,
     StudentListView,
     ResourceListView, PrivateFileUploadView, StudyGoalView, ToggleStudyGoalView,
+    PersonalNoteListView, PersonalNoteDetailView,
     QuizListView, QuizDetailView, SubmitQuizAttemptView,
-    NotificationListView, MarkNotificationReadView,
-    GlobalSearchView, AdminStatsView
+    NotificationListView, MarkNotificationReadView, MarkAllNotificationsReadView,
+    GlobalSearchView, AdminStatsView,
+    MockExamGenerateView, MockExamListView, MockExamDetailView, MockExamBlueprintsView,
+    SubjectDetailView, AdminUserManagementView, AdminUserDetailView,
+    AdminPaperFormatView, AdminPaperFormatDetailView
 )
 
 urlpatterns = [
@@ -30,6 +34,7 @@ urlpatterns = [
 
     # Subjects & Academics
     path('subjects/', SubjectListView.as_view(), name='subject-list'),
+    path('subjects/<int:pk>/', SubjectDetailView.as_view(), name='subject-detail'),
     path('academic/records/', AcademicRecordView.as_view(), name='academic-records'),
     path('analytics/report/', AnalyticsReportView.as_view(), name='analytics-report'),
 
@@ -52,6 +57,8 @@ urlpatterns = [
 
     # Resources
     path('resources/', ResourceListView.as_view(), name='resource-list'),
+    path('personal-notes/', PersonalNoteListView.as_view(), name='personal-note-list'),
+    path('personal-notes/<int:pk>/', PersonalNoteDetailView.as_view(), name='personal-note-detail'),
 
     # Study Planner & Goals
     path('study/goals/', StudyGoalView.as_view(), name='study-goals'),
@@ -64,9 +71,21 @@ urlpatterns = [
 
     # Notifications
     path('notifications/', NotificationListView.as_view(), name='notification-list'),
+    path('notifications/read-all/', MarkAllNotificationsReadView.as_view(), name='mark-all-notifications-read'),
     path('notifications/<int:pk>/read/', MarkNotificationReadView.as_view(), name='mark-notification-read'),
 
-    # Search & Admin Stats
+    # Search & Admin Management
     path('search/', GlobalSearchView.as_view(), name='global-search'),
     path('admin/stats/', AdminStatsView.as_view(), name='admin-stats'),
+    path('admin/users/', AdminUserManagementView.as_view(), name='admin-users'),
+    path('admin/users/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
+    path('admin/paper-formats/', AdminPaperFormatView.as_view(), name='admin-paper-formats'),
+    path('admin/paper-formats/<int:pk>/', AdminPaperFormatDetailView.as_view(), name='admin-paper-format-detail'),
+
+    # AI Mock Exams & Question Papers
+    path('mock-exams/generate/', MockExamGenerateView.as_view(), name='mock-exam-generate'),
+    path('mock-exams/blueprints/', MockExamBlueprintsView.as_view(), name='mock-exam-blueprints'),
+    path('mock-exams/', MockExamListView.as_view(), name='mock-exam-list'),
+    path('mock-exams/<int:pk>/', MockExamDetailView.as_view(), name='mock-exam-detail'),
 ]
+

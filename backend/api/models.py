@@ -42,7 +42,7 @@ class User(AbstractUser):
     roll_number = models.CharField(max_length=50, blank=True)
     streak_count = models.IntegerField(default=1)
     longest_streak = models.IntegerField(default=1)
-    last_active_date = models.DateField(default=timezone.now)
+    last_active_date = models.DateField(default=timezone.localdate)
     avatar = models.CharField(max_length=500, blank=True)
     bio = models.TextField(blank=True, default='Passionate learner solving academic doubts with AI.')
 
@@ -119,11 +119,8 @@ class Resource(models.Model):
 class Conversation(models.Model):
     MODE_CHOICES = (
         ('detailed', 'Detailed Explanation'),
-        ('assist', 'Assist Mode'),
         ('eli5', "Explain Like I'm 5"),
-        ('step_by_step', 'Step-by-Step Solutions'),
-        ('code', 'Code Explanation'),
-        ('formula', 'Formula Explanation'),
+        ('assist', 'Assist Mode (Guided Research)'),
     )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='conversations')
@@ -153,6 +150,28 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.sender} @ {self.timestamp}: {self.message_text[:40]}"
+
+
+class PersonalNote(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='personal_notes')
+    title = models.CharField(max_length=255)
+    subject = models.ForeignKey(Subject, on_delete=models.SET_NULL, null=True, blank=True, related_name='personal_notes')
+    subject_code = models.CharField(max_length=50, blank=True)
+    subject_name = models.CharField(max_length=255, blank=True)
+    topic = models.CharField(max_length=255, blank=True)
+    summary = models.TextField(blank=True)
+    content = models.TextField(blank=True)
+    pdf_url = models.TextField(blank=True)
+    download_count = models.IntegerField(default=0)
+    conversation = models.ForeignKey(Conversation, on_delete=models.SET_NULL, null=True, blank=True, related_name='personal_notes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.title}"
 
 
 class StudyGoal(models.Model):
@@ -265,4 +284,53 @@ class StudentExamScore(models.Model):
 
     def __str__(self):
         return f"{self.student.email} - {self.exam.title}: {self.total_marks_obtained}/{self.exam.total_marks}"
+
+
+class MockExam(models.Model):
+    MOCK_TYPE_CHOICES = (
+        ('quiz_30', 'Collegiate Quiz (30 Marks)'),
+        ('pre_end_100', 'Pre-End Semester Exam (100 Marks)'),
+        ('mcq_quiz', 'Interactive MCQ Mock Quiz'),
+    )
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mock_exams')
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name='mock_exams')
+    title = models.CharField(max_length=255)
+    mock_type = models.CharField(max_length=30, choices=MOCK_TYPE_CHOICES, default='quiz_30')
+    source_exam_title = models.CharField(max_length=255, blank=True)
+    total_marks = models.FloatField(default=30.0)
+    time_allowed_minutes = models.IntegerField(default=60)
+    difficulty = models.CharField(max_length=30, default='Standard')
+    instructions = models.JSONField(default=list, blank=True)
+    sections = models.JSONField(default=list, blank=True)
+    questions_data = models.JSONField(default=list, blank=True)
+    model_used = models.CharField(max_length=100, default='gemini-1.5-flash')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.email} - {self.title} ({self.total_marks} Marks)"
+
+
+class ExamPaperFormat(models.Model):
+    name = models.CharField(max_length=200)
+    exam_type = models.CharField(max_length=100)
+    total_marks = models.IntegerField(default=30)
+    time_allowed_minutes = models.IntegerField(default=60)
+    has_sets = models.BooleanField(default=True)
+    paper_sets = models.JSONField(default=list, blank=True)
+    sections_data = models.JSONField(default=list, blank=True)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['total_marks', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.total_marks} Marks)"
+
 

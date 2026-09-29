@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   FileText, Upload, Plus, Trash2, CheckCircle2, AlertTriangle, 
   Award, ExternalLink, ChevronRight, Sparkles, Layers, Check, 
-  RefreshCw, Sliders, ArrowRight, Save, Edit3, Clock, Users
+  RefreshCw, Sliders, ArrowRight, Save, Edit3, Clock, Users, X
 } from 'lucide-react';
 import { api, getStoredAIModel, AI_MODELS } from '../services/api';
 
@@ -15,7 +15,7 @@ const OFFICIAL_EXAM_TYPES = [
 
 const QUESTION_PAPER_SETS = ['Set A', 'Set B', 'Set C', 'Set D', 'Set E'];
 
-export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavigateTab }) {
+export default function FacultyExamPortal({ user, activeSubTab: externalSubTab, onNavigateTab }) {
   const [activeSubTab, setActiveSubTab] = useState(externalSubTab || 'upload-paper');
 
   useEffect(() => {
@@ -26,6 +26,9 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
 
   const switchTab = (tab) => {
     setActiveSubTab(tab);
+    setSuccessMsg('');
+    setErrorMsg('');
+    setExamSavedSuccess(null);
     if (onNavigateTab) {
       if (tab === 'upload-paper') onNavigateTab('faculty-upload');
       else if (tab === 'record-marks') onNavigateTab('faculty-score');
@@ -86,9 +89,21 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
     return () => window.removeEventListener('ai-model-change', handleModelSync);
   }, []);
 
+  // Reset all scoring, selection, and alert states whenever logged-in user changes or mounts
   useEffect(() => {
+    setSuccessMsg('');
+    setErrorMsg('');
+    setExamSavedSuccess(null);
+    setEvaluatedStudyOrder(null);
+    setStudentQuestionScores([]);
+    setExamStudentScores([]);
+    setSelectedExamId('');
+    setSelectedStudentEmail('');
+    setEditingExamId(null);
+    setQpFile(null);
+    setAkFile(null);
     loadInitialData();
-  }, []);
+  }, [user?.id, user?.email]);
 
   const loadInitialData = async () => {
     try {
@@ -202,12 +217,18 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
 
   const handleExamChange = (examId) => {
     setSelectedExamId(examId);
+    setSuccessMsg('');
+    setErrorMsg('');
+    setExamSavedSuccess(null);
     setEvaluatedStudyOrder(null);
     loadExamDetailsAndScores(examId, selectedStudentEmail);
   };
 
   const handleStudentEmailChange = (newEmail) => {
     setSelectedStudentEmail(newEmail);
+    setSuccessMsg('');
+    setErrorMsg('');
+    setEvaluatedStudyOrder(null);
     const currExam = exams.find(e => String(e.id) === String(selectedExamId));
     if (currExam) {
       populateScoresForStudent(currExam, examStudentScores, newEmail);
@@ -355,6 +376,17 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
         qCount: targetExam.questions_data?.length || 0,
         pdfUrl: targetExam.question_paper_pdf
       });
+
+      // Reset form fields after successful save
+      setEditingExamId(null);
+      setQpFile(null);
+      setAkFile(null);
+      setExamForm(prev => ({
+        ...prev,
+        question_paper_pdf: '',
+        answer_key_pdf: '',
+        questions: []
+      }));
     } catch (err) {
       console.error('Failed to save exam paper:', err);
       setErrorMsg(err.message || 'Failed to save exam paper.');
@@ -511,13 +543,11 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
 
       const result = await api.uploadExamScores(selectedExamId, payload);
       setSuccessMsg(`Marks successfully saved for ${selectedStudentEmail}! (${result.total_marks_obtained}/${totalAttemptableMax} marks)`);
+      setTimeout(() => {
+        setSuccessMsg(prev => (prev.includes(selectedStudentEmail) ? '' : prev));
+      }, 6000);
 
       await loadExamDetailsAndScores(selectedExamId, selectedStudentEmail);
-
-      const studyOrderRes = await api.getStudyOrder(null, null, selectedStudentEmail);
-      if (studyOrderRes?.study_order) {
-        setEvaluatedStudyOrder(studyOrderRes.study_order);
-      }
     } catch (err) {
       console.error('Failed to upload marks:', err);
       setErrorMsg(err.message || 'Failed to save student marks.');
@@ -598,8 +628,16 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
 
             {/* Exam Saved Success Banner */}
             {examSavedSuccess && (
-              <div className="p-6 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-700 text-white shadow-lg space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="p-6 rounded-2xl bg-linear-to-r from-emerald-600 to-teal-700 text-white shadow-lg space-y-3 relative">
+                <button
+                  type="button"
+                  onClick={() => setExamSavedSuccess(null)}
+                  className="absolute top-4 right-4 p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                  title="Dismiss banner"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <div className="flex items-center justify-between pr-8">
                   <div className="flex items-center gap-2 font-black text-sm">
                     <CheckCircle2 className="h-5 w-5" />
                     <span>Exam Saved to Database Successfully!</span>
@@ -1075,7 +1113,7 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
                   <span>Enter Student Marks by Question</span>
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Select an uploaded paper and an enrolled student to record their question-wise marks. The AI engine recalculates their Personalised Study Order immediately.
+                  Select an uploaded paper and an enrolled student to record their question-wise marks.
                 </p>
               </div>
 
@@ -1398,15 +1436,15 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
                     {submitting ? (
                       <>
                         <RefreshCw className="h-4 w-4 animate-spin" />
-                        <span>Computing Study Order...</span>
+                        <span>Saving Marks...</span>
                       </>
                     ) : (
                       <>
                         <Check className="h-4 w-4" />
                         <span>
                           {isCurrentStudentGraded
-                            ? 'Update Student Marks & Recalculate Study Order'
-                            : 'Save Student Marks & Generate Study Order'
+                            ? 'Update Student Marks'
+                            : 'Save Student Marks'
                           }
                         </span>
                       </>
@@ -1416,54 +1454,6 @@ export default function FacultyExamPortal({ activeSubTab: externalSubTab, onNavi
               </form>
             )}
           </div>
-
-          {/* Real-time Generated Study Order Preview */}
-          {evaluatedStudyOrder && (
-            <div className="p-6 rounded-3xl bg-linear-to-b from-slate-900 to-indigo-950 text-white border border-indigo-500/20 shadow-xl space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-amber-400" />
-                  <h3 className="text-sm font-bold tracking-tight">
-                    Engine Ranked Study Order for {selectedStudentEmail}
-                  </h3>
-                </div>
-                <span className="text-xs text-indigo-300 font-semibold">
-                  {evaluatedStudyOrder.ranked_topics?.length || 0} Topics Ranked (Worst to Best)
-                </span>
-              </div>
-
-              {evaluatedStudyOrder.quick_strategy && (
-                <p className="text-xs text-indigo-200 bg-white/10 p-3 rounded-xl border border-white/10 leading-relaxed">
-                  💡 <span className="font-bold">Student Guidance:</span> {evaluatedStudyOrder.quick_strategy}
-                </p>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                {evaluatedStudyOrder.ranked_topics?.slice(0, 4).map((t, idx) => (
-                  <div key={idx} className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                        t.priority === 'CRITICAL' ? 'bg-rose-500 text-white' : 'bg-amber-400 text-slate-950'
-                      }`}>
-                        Rank #{t.rank} • {t.priority}
-                      </span>
-                      <span className="text-xs font-bold text-amber-300">
-                        {t.recovery_potential}
-                      </span>
-                    </div>
-
-                    <div className="font-bold text-xs text-white">{t.topic}</div>
-                    <div className="text-[11px] text-slate-300 leading-snug">{t.reasoning}</div>
-                    
-                    <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-white/10">
-                      <span>Score: {t.marks_obtained}/{t.max_marks} ({t.percentage}%)</span>
-                      <span>Est: {t.estimated_minutes} mins</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 

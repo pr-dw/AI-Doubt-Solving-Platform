@@ -198,6 +198,8 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
   }
 
   const activeUser = profile || user;
+  const isFaculty = activeUser.role === 'faculty';
+  const isAdmin = activeUser.role === 'admin';
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
@@ -240,8 +242,14 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                   className="h-20 w-20 rounded-2xl object-cover shadow-lg ring-4 ring-indigo-50 border border-slate-200"
                 />
               ) : (
-                <div className="h-20 w-20 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-extrabold text-2xl shadow-lg shadow-indigo-500/25 ring-4 ring-indigo-50 shrink-0">
-                  {activeUser.name ? activeUser.name.charAt(0).toUpperCase() : 'S'}
+                <div className={`h-20 w-20 rounded-2xl ${
+                  isAdmin
+                    ? 'bg-linear-to-tr from-purple-700 via-indigo-700 to-slate-900 shadow-purple-500/25 ring-purple-50'
+                    : isFaculty 
+                    ? 'bg-linear-to-tr from-emerald-600 via-teal-600 to-indigo-600 shadow-emerald-500/25 ring-emerald-50' 
+                    : 'bg-linear-to-tr from-indigo-600 via-indigo-500 to-purple-600 shadow-indigo-500/25 ring-indigo-50'
+                } flex items-center justify-center text-white font-extrabold text-2xl shadow-lg ring-4 shrink-0`}>
+                  {activeUser.name ? activeUser.name.charAt(0).toUpperCase() : (isAdmin ? 'A' : isFaculty ? 'F' : 'S')}
                 </div>
               )}
 
@@ -267,14 +275,24 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                  {activeUser.name || 'Scholar Student'}
+                  {activeUser.name || (isAdmin ? 'System Administrator' : isFaculty ? 'Faculty Instructor' : 'Scholar Student')}
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {activeUser.role}
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${
+                  isAdmin
+                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    : isFaculty 
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                    : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                }`}>
+                  {isAdmin ? 'System Administrator' : isFaculty ? 'Faculty Member' : activeUser.role}
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
+                  isAdmin 
+                    ? 'bg-purple-50 text-purple-700 border-purple-200'
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                }`}>
                   <ShieldCheck className="h-3 w-3" />
-                  <span>College Registered</span>
+                  <span>{isAdmin ? 'Root Clearance Verified' : isFaculty ? 'Faculty Registry Verified' : 'College Registered'}</span>
                 </span>
               </div>
 
@@ -282,117 +300,265 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                 {activeUser.email}
               </p>
 
-              <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
-                <span className="inline-flex items-center gap-1 font-mono text-[11px] text-indigo-700 font-semibold bg-slate-100 px-2 py-0.5 rounded">
-                  <Hash className="h-3 w-3" /> Roll: {activeUser.roll_number || '2023/BCA/042'}
-                </span>
-                <span>•</span>
-                <span>{activeUser.department}</span>
-                <span>•</span>
-                <span>Semester {activeUser.semester} (Sec {activeUser.section})</span>
-              </div>
+              {isAdmin ? (
+                <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] text-purple-700 font-semibold bg-purple-50 border border-purple-200 px-2 py-0.5 rounded">
+                    <Hash className="h-3 w-3" /> Admin ID: ADM-{String(activeUser.id || 1).padStart(4, '0')}
+                  </span>
+                  <span>•</span>
+                  <span>System Administration & Institutional Oversight</span>
+                  <span>•</span>
+                  <span className="text-purple-700 font-medium">Root Access Controller</span>
+                </div>
+              ) : isFaculty ? (
+                <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] text-emerald-700 font-semibold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
+                    <Hash className="h-3 w-3" /> Faculty ID: FAC-{String(activeUser.id || 1).padStart(4, '0')}
+                  </span>
+                  <span>•</span>
+                  <span>{activeUser.department}</span>
+                  <span>•</span>
+                  <span className="text-slate-700 font-medium">Course Instructor & Examiner</span>
+                </div>
+              ) : (
+                <div className="text-xs text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] text-indigo-700 font-semibold bg-slate-100 px-2 py-0.5 rounded">
+                    <Hash className="h-3 w-3" /> Roll: {activeUser.roll_number || '2412044050108'}
+                  </span>
+                  <span>•</span>
+                  <span>{activeUser.department}</span>
+                  <span>•</span>
+                  <span>Semester {activeUser.semester} (Sec {activeUser.section})</span>
+                </div>
+              )}
             </div>
           </div>
 
         </div>
       </div>
 
-      {/* Academic Metric Quick Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        
-        {/* Streak Count */}
-        <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-bold uppercase">Study Streak</span>
-            <Flame className="h-5 w-5 text-amber-500 fill-amber-500" />
+      {/* Metric Quick Cards */}
+      {isAdmin ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="glass-panel rounded-2xl p-5 border border-purple-100 bg-white shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-bold uppercase">Administrative Authority</span>
+              <Shield className="h-5 w-5 text-purple-600" />
+            </div>
+            <div className="text-xl font-black text-slate-900 mt-2 truncate">
+              Institutional Governance
+            </div>
+            <div className="text-[10px] text-purple-700 font-medium mt-1">
+              Full Control: User Accounts, Curriculum & Exam Blueprints
+            </div>
           </div>
-          <div className="text-3xl font-black text-slate-900 mt-2">
-            {activeUser.streak_count || 1} <span className="text-sm font-semibold text-slate-500">Days</span>
-          </div>
-          <div className="text-[10px] text-amber-600 font-medium mt-1">
-            Personal Best: {activeUser.longest_streak || activeUser.streak_count || 1} Days
+
+          <div className="glass-panel rounded-2xl p-5 border border-purple-100 bg-white shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-bold uppercase">System Clearance Level</span>
+              <ShieldCheck className="h-5 w-5 text-purple-600" />
+            </div>
+            <div className="text-xl font-black text-slate-900 mt-2">
+              Root Super Administrator
+            </div>
+            <div className="text-[10px] text-purple-700 font-medium mt-1">
+              Platform Architecture, Telemetry & Multi-Semester Curriculum
+            </div>
           </div>
         </div>
+      ) : isFaculty ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-bold uppercase">Teaching Department</span>
+              <BookOpen className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div className="text-xl font-black text-slate-900 mt-2 truncate">
+              {activeUser.department || 'Computer Application (BCA)'}
+            </div>
+            <div className="text-[10px] text-emerald-700 font-medium mt-1">
+              Authorized Course Instructor & Question Paper Author
+            </div>
+          </div>
 
-        {/* Current Semester */}
-        <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-500 font-bold uppercase">Academic Level</span>
-            <GraduationCap className="h-5 w-5 text-indigo-600" />
-          </div>
-          <div className="text-3xl font-black text-slate-900 mt-2">
-            Sem {activeUser.semester || 5}
-          </div>
-          <div className="text-[10px] text-indigo-600 font-medium mt-1">
-            Section {activeUser.section || 'A'} • Verified Enrollment
+          <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-bold uppercase">Portal Role & Clearance</span>
+              <ShieldCheck className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div className="text-xl font-black text-slate-900 mt-2">
+              Faculty / Examiner
+            </div>
+            <div className="text-[10px] text-indigo-600 font-medium mt-1">
+              Exam Intake, AI Topic Mapping & Student Evaluation
+            </div>
           </div>
         </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Streak Count */}
+          <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-bold uppercase">Study Streak</span>
+              <Flame className="h-5 w-5 text-amber-500 fill-amber-500" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 mt-2">
+              {activeUser.streak_count || 1} <span className="text-sm font-semibold text-slate-500">Days</span>
+            </div>
+            <div className="text-[10px] text-amber-600 font-medium mt-1">
+              Personal Best: {activeUser.longest_streak || activeUser.streak_count || 1} Days
+            </div>
+          </div>
 
-      </div>
+          {/* Current Semester */}
+          <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-bold uppercase">Academic Level</span>
+              <GraduationCap className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div className="text-3xl font-black text-slate-900 mt-2">
+              Sem {activeUser.semester || 5}
+            </div>
+            <div className="text-[10px] text-indigo-600 font-medium mt-1">
+              Section {activeUser.section || 'A'} • Verified Enrollment
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* Left Column: Official College Registry (Admin Controlled) */}
+        {/* Left Column: Official Registry Data (Admin Controlled) */}
         <div className="lg:col-span-1 space-y-4">
           <div className="glass-panel rounded-2xl p-6 border border-slate-200 bg-white shadow-xs space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-indigo-600" />
-                <span>College Registry Data</span>
+                <BookOpen className={`h-4 w-4 ${isAdmin ? 'text-purple-600' : 'text-indigo-600'}`} />
+                <span>{isAdmin ? 'System Governance Records' : isFaculty ? 'Faculty Registry Records' : 'College Registry Data'}</span>
               </h3>
               <span className="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold flex items-center gap-1">
                 <Lock className="h-3 w-3 text-slate-400" />
-                <span>Admin Managed</span>
+                <span>{isAdmin ? 'Root Clearance' : 'Admin Managed'}</span>
               </span>
             </div>
 
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Official academic fields are provisioned by college administration based on registered enrollment records.
+              {isAdmin
+                ? 'Master administrative parameters and global system access privileges for this account.'
+                : isFaculty 
+                ? 'Official faculty appointments and teaching permissions are managed by college administration.' 
+                : 'Official academic fields are provisioned by college administration based on registered enrollment records.'}
             </p>
 
-            <div className="space-y-2.5 text-xs">
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Full Official Name</span>
-                <span className="font-bold text-slate-800">{activeUser.name || 'Scholar Student'}</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Enrolled Program</span>
-                <span className="font-bold text-slate-800">{activeUser.department}</span>
-              </div>
-
-              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Roll / University ID</span>
-                <span className="font-mono font-bold text-indigo-700">{activeUser.roll_number || '2023/BCA/042'}</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Semester</span>
-                  <span className="font-bold text-slate-800">Semester {activeUser.semester}</span>
+            {isAdmin ? (
+              <div className="space-y-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-100">
+                  <span className="text-[10px] uppercase font-bold text-purple-700 block mb-0.5">Admin Full Name</span>
+                  <span className="font-bold text-slate-900">{activeUser.name || 'System Administrator'}</span>
                 </div>
+
                 <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Section</span>
-                  <span className="font-bold text-slate-800">Section {activeUser.section}</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Department Assignment</span>
+                  <span className="font-bold text-slate-800">System Administration & Oversight</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Administrative ID</span>
+                  <span className="font-mono font-bold text-purple-700">ADM-{String(activeUser.id || 1).padStart(4, '0')}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Clearance Role</span>
+                  <span className="font-bold text-slate-800">Super Administrator / Platform Root</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Account Status</span>
+                  <span className="font-bold text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Active Institutional Superuser</span>
+                  </span>
                 </div>
               </div>
-            </div>
+            ) : isFaculty ? (
+              <div className="space-y-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Faculty Name</span>
+                  <span className="font-bold text-slate-800">{activeUser.name || 'Faculty Member'}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Assigned Department</span>
+                  <span className="font-bold text-slate-800">{activeUser.department}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Faculty / Employee ID</span>
+                  <span className="font-mono font-bold text-emerald-700">FAC-{String(activeUser.id || 1).padStart(4, '0')}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Academic Designation</span>
+                  <span className="font-bold text-slate-800">Course Instructor & Paper Setter</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">System Status</span>
+                  <span className="font-bold text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Authorized Faculty Examiner</span>
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Full Official Name</span>
+                  <span className="font-bold text-slate-800">{activeUser.name || 'Scholar Student'}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Enrolled Program</span>
+                  <span className="font-bold text-slate-800">{activeUser.department}</span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Roll / University ID</span>
+                  <span className="font-mono font-bold text-indigo-700">{activeUser.roll_number || '2412044050108'}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Semester</span>
+                    <span className="font-bold text-slate-800">Semester {activeUser.semester}</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Section</span>
+                    <span className="font-bold text-slate-800">Section {activeUser.section}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Institutional Information Card */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1.5">
             <div className="font-bold flex items-center gap-1.5 text-slate-900">
-              <Shield className="h-4 w-4 text-emerald-600" />
-              <span>Institutional Records Notice</span>
+              <Shield className={`h-4 w-4 ${isAdmin ? 'text-purple-600' : 'text-emerald-600'}`} />
+              <span>Institutional Governance Notice</span>
             </div>
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Official student academic credentials and department enrollments are synchronised directly with college records. For any corrections to your official name or roll number, please contact your department administration.
+              {isAdmin
+                ? 'System administrator accounts hold full institutional jurisdiction over user roles, multi-semester BCA curriculum definitions, and exam blueprints.'
+                : isFaculty 
+                ? 'Official faculty credentials and department assignments are maintained by the Dean of Academics and institutional registry.' 
+                : 'Official student academic credentials and department enrollments are synchronised directly with college records. For any corrections to your official name or roll number, please contact your department administration.'}
             </p>
           </div>
         </div>
 
-        {/* Right Column: Dynamic Area (Normally shows Profile Details, shows Password Form when clicked) */}
+        {/* Right Column: Dynamic Area */}
         <div className="lg:col-span-2">
           <div className="glass-panel rounded-2xl p-6 border border-slate-200 bg-white shadow-xs">
             
@@ -402,11 +568,15 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                 <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-100">
                   <div>
                     <h3 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                      <User className="h-4 w-4 text-indigo-600" />
-                      <span>Student Profile Details</span>
+                      <User className={`h-4 w-4 ${isAdmin ? 'text-purple-600' : 'text-indigo-600'}`} />
+                      <span>{isAdmin ? 'System Administrator Profile & Governance' : isFaculty ? 'Faculty Profile & Settings' : 'Student Profile Details'}</span>
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      View institutional contact information and customize your personal academic bio.
+                      {isAdmin
+                        ? 'Institutional contact information, system administrative responsibilities, and governance credentials.'
+                        : isFaculty 
+                        ? 'View institutional contact information and update your academic bio and research areas.' 
+                        : 'View institutional contact information and customize your personal academic bio.'}
                     </p>
                   </div>
 
@@ -420,13 +590,21 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                           setErrorMsg('');
                           setSuccessMsg('');
                         }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold transition-all cursor-pointer"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          isAdmin 
+                            ? 'bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200' 
+                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200'
+                        }`}
                       >
                         <Edit3 className="h-3.5 w-3.5" />
                         <span>Edit Details</span>
                       </button>
                     ) : (
-                      <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+                      <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${
+                        isAdmin 
+                          ? 'text-purple-600 bg-purple-50 border-purple-200' 
+                          : 'text-indigo-600 bg-indigo-50 border-indigo-200'
+                      }`}>
                         Editing Active
                       </span>
                     )}
@@ -441,7 +619,7 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer shadow-2xs"
                     >
-                      <KeyRound className="h-3.5 w-3.5 text-indigo-600" />
+                      <KeyRound className={`h-3.5 w-3.5 ${isAdmin ? 'text-purple-600' : 'text-indigo-600'}`} />
                       <span>Change Password</span>
                     </button>
                   </div>
@@ -453,7 +631,7 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                     {/* Email (Read-Only) */}
                     <div>
                       <label className="text-[11px] font-semibold text-slate-700 block mb-1">
-                        Email Address <span className="text-slate-400 font-normal">(College Login)</span>
+                        Email Address <span className="text-slate-400 font-normal">({isAdmin ? 'Superuser Login' : isFaculty ? 'Faculty Login' : 'College Login'})</span>
                       </label>
                       <div className="relative">
                         <input
@@ -488,10 +666,12 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-[11px] font-semibold text-slate-700">
-                        Personal Academic Bio & Goals
+                        {isAdmin ? 'Administrative Bio & Operational Notes' : isFaculty ? 'Faculty Academic Bio & Teaching Philosophy' : 'Personal Academic Bio & Goals'}
                       </label>
                       {isEditingBio ? (
-                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                          isAdmin ? 'text-purple-600 bg-purple-50' : 'text-indigo-600 bg-indigo-50'
+                        }`}>
                           Editable
                         </span>
                       ) : (
@@ -506,10 +686,12 @@ export default function StudentProfile({ user, onRequireAuth, onUpdateUser }) {
                       disabled={!isEditingBio}
                       value={bio}
                       onChange={(e) => setBio(e.target.value)}
-                      placeholder={isEditingBio ? "Share your academic interests, focus areas, or project goals..." : "No academic bio provided yet. Click 'Edit Details' to add your bio."}
+                      placeholder={isEditingBio 
+                        ? (isAdmin ? "Share administrative notes, platform responsibilities, and institutional governance guidelines..." : isFaculty ? "Share your academic background, areas of expertise, research interests, and teaching approach..." : "Share your academic interests, focus areas, or project goals...") 
+                        : (isAdmin ? "No administrative bio provided yet. Click 'Edit Details' to add notes." : "No academic bio provided yet. Click 'Edit Details' to add your bio.")}
                       className={`w-full px-3.5 py-2.5 text-xs rounded-xl leading-relaxed transition-all ${
                         isEditingBio
-                          ? 'bg-white border-2 border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 shadow-xs'
+                          ? isAdmin ? 'bg-white border-2 border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 text-slate-900 shadow-xs' : 'bg-white border-2 border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-900 shadow-xs'
                           : 'bg-slate-50 border border-slate-200 text-slate-700 cursor-default'
                       }`}
                     />

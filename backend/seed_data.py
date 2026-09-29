@@ -93,14 +93,14 @@ def run_seed():
             "department": "Computer Application (BCA)",
             "semester": 5,
             "section": "A",
-            "roll_number": "2023/BCA/042",
+            "roll_number": "2412044050108",
             "streak_count": 8,
             "longest_streak": 14,
             "bio": "BCA Final Year Student. Solving doubts with AI."
         }
     )
     student.name = "Student Scholar"
-    student.roll_number = "2023/BCA/042"
+    student.roll_number = "2412044050108"
     student.bio = "BCA Final Year Student. Solving doubts with AI."
     student.set_password("123456")
     student.save()

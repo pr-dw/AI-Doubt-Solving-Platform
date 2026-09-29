@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Sparkles, Send, BookOpen, Bookmark, BookmarkCheck, Copy, 
+  Sparkles, Send, BookOpen, Pin, PinOff, Copy, 
   Check, RefreshCw, MessageSquare, Plus, Trash2, Cpu,
-  HelpCircle, Code2, Sigma, ListOrdered, Lightbulb, GraduationCap,
-  AlertTriangle, ChevronDown, Layers, Bot, Settings
+  HelpCircle, Lightbulb, GraduationCap,
+  AlertTriangle, ChevronDown, Layers, Bot, Settings,
+  FileText, FileDown, ArrowRight, Download, CheckCircle2, X
 } from 'lucide-react';
-import { api, getStoredAIModel, setStoredAIModel, AI_MODELS } from '../services/api';
+import confetti from 'canvas-confetti';
+import { api, getStoredAIModel, AI_MODELS } from '../services/api';
+import { generateNotesPDF } from '../utils/pdfGenerator';
 
 const EXPLANATION_MODES = [
   { id: 'detailed', label: 'Detailed Explanation', icon: GraduationCap, desc: 'In-depth academic concepts & theoretical principles' },
-  { id: 'assist', label: 'Assist Mode (Socratic)', icon: HelpCircle, desc: 'Guided hints & critical checkpoint questions' },
   { id: 'eli5', label: "Explain Like I'm 5 (ELI5)", icon: Lightbulb, desc: 'Everyday analogies & simple conceptual metaphors' },
-  { id: 'step_by_step', label: 'Step-by-Step Derivation', icon: ListOrdered, desc: 'Rigorous calculation & logical step proofs' },
-  { id: 'code', label: 'Code & Complexity', icon: Code2, desc: 'Production-ready syntax & Big-O complexity' },
-  { id: 'formula', label: 'Formula & Proof', icon: Sigma, desc: 'LaTeX notation & mathematical symbol breakdowns' },
+  { id: 'assist', label: 'Assist Mode (Guided Research)', icon: HelpCircle, desc: 'Directs what to study & hints without spoiling direct answers' },
 ];
 
 const QUICK_PROMPTS = [
@@ -23,7 +23,15 @@ const QUICK_PROMPTS = [
   { title: 'IT Act 2000 Key Provisions', text: 'What are the core objectives and major offences under the Indian Information Technology (IT) Act 2000 regarding hacking and data privacy?' },
 ];
 
-export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClearInitialQuery }) {
+export default function DoubtSolver({ 
+  user, 
+  onRequireAuth, 
+  initialQuery, 
+  onClearInitialQuery, 
+  onNavigateToPersonalLibrary,
+  targetConversationId,
+  onClearTargetConversationId
+}) {
   const [subjects, setSubjects] = useState([]);
   const [selectedMode, setSelectedMode] = useState('detailed');
   const [selectedModel, setSelectedModel] = useState(() => getStoredAIModel());
@@ -35,6 +43,17 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
   const [copiedId, setCopiedId] = useState(null);
   const messagesEndRef = useRef(null);
 
+  // Create Notes State
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [noteTitle, setNoteTitle] = useState('');
+  const [noteSubjectCode, setNoteSubjectCode] = useState('');
+  const [noteSubjectName, setNoteSubjectName] = useState('');
+  const [noteTopic, setNoteTopic] = useState('');
+  const [noteSummary, setNoteSummary] = useState('');
+  const [isGeneratingNotes, setIsGeneratingNotes] = useState(false);
+  const [noteSuccessData, setNoteSuccessData] = useState(null);
+  const [noteError, setNoteError] = useState('');
+
   useEffect(() => {
     if (initialQuery) {
       setQuery(initialQuery);
@@ -43,6 +62,15 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
       }
     }
   }, [initialQuery]);
+
+  useEffect(() => {
+    if (targetConversationId) {
+      loadConversationDetail(targetConversationId);
+      if (onClearTargetConversationId) {
+        onClearTargetConversationId();
+      }
+    }
+  }, [targetConversationId]);
 
   useEffect(() => {
     loadSubjects();
@@ -107,7 +135,8 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
       setCurrentConversation(data);
       setMessages(data.messages || []);
       if (data.mode) {
-        setSelectedMode(data.mode);
+        const validMode = ['detailed', 'eli5', 'assist'].includes(data.mode) ? data.mode : 'detailed';
+        setSelectedMode(validMode);
       }
     } catch (err) {
       console.error(err);
@@ -196,7 +225,7 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleToggleBookmark = async (convId) => {
+  const handleTogglePin = async (convId) => {
     if (!convId) return;
     try {
       const res = await api.toggleBookmark(convId);
@@ -204,6 +233,7 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
       if (currentConversation?.id === convId) {
         setCurrentConversation(prev => ({ ...prev, is_bookmarked: res.is_bookmarked }));
       }
+      window.dispatchEvent(new CustomEvent('pinned-chats-update'));
     } catch (err) {
       console.error(err);
     }
@@ -218,8 +248,142 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
       if (currentConversation?.id === convId) {
         startNewConversation();
       }
+      window.dispatchEvent(new CustomEvent('pinned-chats-update'));
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleOpenCreateNotes = () => {
+    if (!user) {
+      onRequireAuth();
+      return;
+    }
+    if (messages.length === 0) {
+      alert("No doubt messages found in this chat. Ask an academic question or select an existing conversation to create study notes and PDF!");
+      return;
+    }
+
+    const firstUserMsg = messages.find(m => m.sender === 'user')?.message_text || '';
+    const firstAiMsg = messages.find(m => m.sender === 'ai' && !m.is_error);
+
+    const detectedSubject = 
+      currentConversation?.subject_code 
+      || firstAiMsg?.identified_subject?.code 
+      || (subjects[0]?.code || 'CS502');
+
+    const matchedSubjectObj = subjects.find(s => s.code === detectedSubject);
+    const detectedSubjectName = matchedSubjectObj?.name || (detectedSubject === 'CS502' ? 'Computer Networks' : 'Academic Subject');
+
+    const defaultTitle = currentConversation?.title && currentConversation.title !== 'New Doubt Session'
+      ? `${currentConversation.title} — Revision Notes`
+      : firstUserMsg.length > 0 
+        ? `${firstUserMsg.slice(0, 36).trim()}... — Study Notes`
+        : 'AI Doubt Session Revision Notes';
+
+    const defaultTopic = currentConversation?.title || firstAiMsg?.identified_topic || 'Academic Doubt Revision';
+
+    const questionsCount = messages.filter(m => m.sender === 'user').length;
+    const keyTakeawayPreview = `Revision guide compiling ${questionsCount} student doubt(s) regarding ${defaultTopic}. Includes verified AI explanations, key principles, step-by-step logic, code, and formula derivations.`;
+
+    setNoteTitle(defaultTitle);
+    setNoteSubjectCode(detectedSubject);
+    setNoteSubjectName(detectedSubjectName);
+    setNoteTopic(defaultTopic);
+    setNoteSummary(keyTakeawayPreview);
+    setNoteSuccessData(null);
+    setNoteError('');
+    setIsNoteModalOpen(true);
+  };
+
+  const handleGenerateAndSaveNotes = async () => {
+    if (!noteTitle.trim()) {
+      setNoteError('Please provide a title for your study notes.');
+      return;
+    }
+
+    setIsGeneratingNotes(true);
+    setNoteError('');
+
+    try {
+      // 1. Generate formatted PDF with jsPDF
+      const { blob, filename, download } = generateNotesPDF({
+        title: noteTitle.trim(),
+        subjectCode: noteSubjectCode,
+        subjectName: noteSubjectName,
+        studentName: user?.name || user?.email || 'Student',
+        messages,
+        summary: noteSummary,
+      });
+
+      // 2. Prepare structured text transcript
+      const fullContent = messages.map(m => {
+        const prefix = m.sender === 'user' ? '### Student Question:\n' : `### AI Solution (${m.mode_used || 'Standard'} Mode):\n`;
+        return `${prefix}${m.message_text}\n`;
+      }).join('\n---\n\n');
+
+      // 3. Upload PDF to backend file storage
+      let uploadedPdfUrl = '';
+      try {
+        const fileObj = new File([blob], filename, { type: 'application/pdf' });
+        const uploadRes = await api.uploadFile(fileObj, 'resource');
+        uploadedPdfUrl = uploadRes.file_url;
+      } catch (uploadErr) {
+        console.warn('Backend file upload fallback:', uploadErr);
+        uploadedPdfUrl = URL.createObjectURL(blob);
+      }
+
+      // 4. Save note record to backend
+      const notePayload = {
+        title: noteTitle.trim(),
+        subject_code: noteSubjectCode,
+        subject_name: noteSubjectName,
+        topic: noteTopic.trim() || noteTitle.trim(),
+        summary: noteSummary.trim(),
+        content: fullContent,
+        pdf_url: uploadedPdfUrl,
+        conversation: currentConversation?.id || null,
+      };
+
+      const savedNote = await api.createPersonalNote(notePayload);
+
+      // 5. Also cache note in localStorage
+      try {
+        const cacheKey = user?.id ? `personal_notes_cache_${user.id}` : 'personal_notes_cache';
+        const localCached = JSON.parse(localStorage.getItem(cacheKey) || '[]');
+        const updatedCache = [
+          {
+            ...savedNote,
+            downloadFilename: filename
+          },
+          ...localCached.filter(n => n.id !== savedNote.id)
+        ];
+        localStorage.setItem(cacheKey, JSON.stringify(updatedCache));
+      } catch (cacheErr) {
+        console.warn('Local storage cache warning:', cacheErr);
+      }
+
+      // 6. Confetti effect
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      } catch {
+        // ignore
+      }
+
+      setNoteSuccessData({
+        ...savedNote,
+        download,
+        filename,
+      });
+    } catch (err) {
+      console.error('Note generation error:', err);
+      setNoteError(err.message || 'Failed to generate study notes and PDF. Please try again.');
+    } finally {
+      setIsGeneratingNotes(false);
     }
   };
 
@@ -333,13 +497,15 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
                     <span className="capitalize">{c.mode}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className={`flex items-center gap-1 transition-opacity ${c.is_bookmarked ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleToggleBookmark(c.id); }}
-                    title="Bookmark conversation"
-                    className="p-1 hover:text-amber-500 text-slate-400 cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); handleTogglePin(c.id); }}
+                    title={c.is_bookmarked ? "Unpin chat from sidebar" : "Pin chat to sidebar"}
+                    className={`p-1 rounded transition-colors cursor-pointer ${
+                      c.is_bookmarked ? 'text-amber-500 hover:text-amber-600' : 'text-slate-400 hover:text-amber-500'
+                    }`}
                   >
-                    {c.is_bookmarked ? <BookmarkCheck className="h-3.5 w-3.5 text-amber-500" /> : <Bookmark className="h-3.5 w-3.5" />}
+                    <Pin className={`h-3.5 w-3.5 ${c.is_bookmarked ? 'text-amber-500 fill-amber-500' : ''}`} />
                   </button>
                   <button
                     onClick={(e) => handleDeleteConversation(e, c.id)}
@@ -367,7 +533,7 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
             <span className="truncate font-semibold text-slate-700">{activeModelMeta.name.split('(')[0]}</span>
           </div>
           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
-            LangChain
+            Active AI
           </span>
         </div>
       </div>
@@ -375,71 +541,75 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
       {/* Main Chat Canvas */}
       <div className="flex-1 glass-panel rounded-2xl p-4 flex flex-col border border-slate-200 bg-white shadow-xs overflow-hidden">
         
-        {/* Unified Controls: Mode Dropdown & Model Engine Dropdown */}
+        {/* Controls: Mode Selector & Create Notes */}
         <div className="pb-3 border-b border-slate-200">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             
-            {/* 1. Mode Selector Dropdown */}
-            <div>
-              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
-                Explanation Mode
-              </label>
-              <select
-                value={selectedMode}
-                onChange={(e) => setSelectedMode(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-indigo-700 focus:outline-none focus:border-indigo-500 font-bold"
-              >
-                {EXPLANATION_MODES.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="w-full sm:w-56">
+                <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
+                  Explanation Mode
+                </label>
+                <select
+                  value={selectedMode}
+                  onChange={(e) => setSelectedMode(e.target.value)}
+                  className="w-full px-3 py-1.5 text-xs rounded-xl bg-slate-50 border border-slate-300 text-indigo-700 focus:outline-none focus:border-indigo-500 font-bold"
+                >
+                  {EXPLANATION_MODES.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* CREATE NOTES BUTTON */}
+              <div className="pt-0 sm:pt-4">
+                <button
+                  type="button"
+                  onClick={handleOpenCreateNotes}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                    messages.length > 0
+                      ? 'bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white shadow-emerald-600/20 ring-2 ring-emerald-500/20'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200'
+                  }`}
+                  title="Generate study notes and revision PDF from this conversation for your Personal Library"
+                >
+                  <FileDown className="h-3.5 w-3.5 text-emerald-200" />
+                  <span>Create Notes</span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/20 text-white font-mono font-bold tracking-wider">
+                    PDF
+                  </span>
+                </button>
+              </div>
             </div>
 
-            {/* 2. AI Model Engine Dropdown (LangChain Integrated) */}
-            <div>
-              <label className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
-                AI Model Engine
-              </label>
-              <select
-                value={selectedModel}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedModel(val);
-                  setStoredAIModel(val);
-                }}
-                className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 border border-slate-300 text-slate-800 focus:outline-none focus:border-indigo-500 font-bold cursor-pointer"
-              >
-                {AI_MODELS.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.name}
-                  </option>
-                ))}
-              </select>
+            <div className="flex-1 flex items-center justify-between sm:justify-end gap-3 text-[11px] text-slate-500 pt-1 sm:pt-4">
+              <span className="truncate hidden xl:inline">
+                💡 {EXPLANATION_MODES.find(m => m.id === selectedMode)?.desc}
+              </span>
+
+              {messages.length > 0 && (
+                <span className="text-[10px] font-semibold text-slate-400 hidden sm:inline">
+                  {messages.length} messages
+                </span>
+              )}
+
+              {currentConversation && (
+                <button
+                  onClick={() => handleTogglePin(currentConversation.id)}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                    currentConversation.is_bookmarked
+                      ? 'bg-amber-50 text-amber-800 border-amber-300 shadow-2xs hover:bg-amber-100'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-amber-600 hover:border-amber-200'
+                  }`}
+                  title={currentConversation.is_bookmarked ? "Unpin chat from sidebar" : "Pin chat to sidebar"}
+                >
+                  <Pin className={`h-3.5 w-3.5 ${currentConversation.is_bookmarked ? 'text-amber-500 fill-amber-500' : 'text-slate-400'}`} />
+                  <span>{currentConversation.is_bookmarked ? 'Pinned to Sidebar' : 'Pin to Sidebar'}</span>
+                </button>
+              )}
             </div>
-
-          </div>
-
-          {/* Sub-bar: Active Mode description & Bookmark trigger */}
-          <div className="flex items-center justify-between pt-2.5 mt-1 text-[11px] text-slate-500">
-            <span className="truncate pr-2">
-              💡 {EXPLANATION_MODES.find(m => m.id === selectedMode)?.desc}
-            </span>
-
-            {currentConversation && (
-              <button
-                onClick={() => handleToggleBookmark(currentConversation.id)}
-                className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                  currentConversation.is_bookmarked
-                    ? 'bg-amber-50 text-amber-700 border-amber-300'
-                    : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-amber-600'
-                }`}
-              >
-                {currentConversation.is_bookmarked ? <BookmarkCheck className="h-3.5 w-3.5 text-amber-500" /> : <Bookmark className="h-3.5 w-3.5" />}
-                <span>{currentConversation.is_bookmarked ? 'Saved' : 'Save Session'}</span>
-              </button>
-            )}
           </div>
         </div>
 
@@ -454,7 +624,7 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
                 Ask Any Academic Doubt
               </h3>
               <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                Powered by LangChain. Seamlessly swap reasoning backends between <strong>Google Gemini API</strong>, <strong>Ollama Qwen 2.5</strong>, <strong>Ollama Gemma 2</strong>, or <strong>OpenAI ChatGPT</strong>.
+                Get instant, syllabus-grounded academic doubt resolution with step-by-step logic, code demonstrations, and verified answers.
               </p>
 
               {/* Recommended Quick Question Chips */}
@@ -569,7 +739,7 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
               </div>
               <div className="glass-card px-4 py-3 rounded-2xl rounded-bl-none text-xs text-indigo-700 flex items-center gap-2 border border-indigo-200 bg-white shadow-xs">
                 <span className="h-2 w-2 rounded-full bg-indigo-500 animate-ping" />
-                <span>Invoking {activeModelMeta.name} via LangChain engine...</span>
+                <span>Generating academic explanation...</span>
               </div>
             </div>
           )}
@@ -613,6 +783,228 @@ export default function DoubtSolver({ user, onRequireAuth, initialQuery, onClear
         </form>
 
       </div>
+
+      {/* CREATE NOTES & PDF MODAL */}
+      {isNoteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs">
+          <div className="relative w-full max-w-2xl max-h-[90vh] flex flex-col bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-indigo-50/30">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-sm shadow-emerald-600/25">
+                  <FileDown className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">
+                    {noteSuccessData ? 'Notes & PDF Created!' : 'Create Notes from Doubt Session'}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {noteSuccessData 
+                      ? 'Saved to your Personal Library in Resource Library'
+                      : 'Generate structured academic notes and PDF from this chat transcript'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsNoteModalOpen(false)}
+                className="h-8 w-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-4">
+              {noteSuccessData ? (
+                /* Success View */
+                <div className="space-y-5 text-center py-4">
+                  <div className="h-16 w-16 rounded-3xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-xs">
+                    <CheckCircle2 className="h-8 w-8" />
+                  </div>
+
+                  <div className="max-w-md mx-auto space-y-1.5">
+                    <h4 className="text-base font-bold text-slate-900">
+                      Successfully Added to Your Personal Library!
+                    </h4>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Your discussion transcript has been structured into clean revision notes with an academic A4 PDF document generated and stored in your <strong>Personal Library</strong>.
+                    </p>
+                  </div>
+
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left max-w-md mx-auto space-y-2">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Document Summary</div>
+                    <div className="text-sm font-semibold text-slate-800 line-clamp-1">{noteSuccessData.title}</div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-mono font-bold text-[10px]">
+                        {noteSuccessData.subject_code || noteSubjectCode}
+                      </span>
+                      <span>•</span>
+                      <span>{messages.filter(m => m.sender === 'user').length} Question(s) Compiled</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+                    {noteSuccessData.download && (
+                      <button
+                        onClick={noteSuccessData.download}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
+                      >
+                        <Download className="h-4 w-4" />
+                        <span>Download PDF File</span>
+                      </button>
+                    )}
+
+                    {onNavigateToPersonalLibrary && (
+                      <button
+                        onClick={() => {
+                          setIsNoteModalOpen(false);
+                          onNavigateToPersonalLibrary();
+                        }}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-sm shadow-emerald-600/25 transition-all cursor-pointer"
+                      >
+                        <span>Open Personal Library</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* Note Creation Form */
+                <div className="space-y-4 text-xs">
+                  {noteError && (
+                    <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                      {noteError}
+                    </div>
+                  )}
+
+                  {/* Note Title */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Note Title <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={noteTitle}
+                      onChange={(e) => setNoteTitle(e.target.value)}
+                      placeholder="e.g. Computer Networks - Sliding Window Protocol Notes"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                    />
+                  </div>
+
+                  {/* Subject and Topic row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Academic Subject
+                      </label>
+                      <select
+                        value={noteSubjectCode}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setNoteSubjectCode(val);
+                          const sObj = subjects.find(s => s.code === val);
+                          if (sObj) setNoteSubjectName(sObj.name);
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                      >
+                        {subjects.map(s => (
+                          <option key={s.id} value={s.code}>
+                            {s.code} - {s.name}
+                          </option>
+                        ))}
+                        {!subjects.some(s => s.code === noteSubjectCode) && (
+                          <option value={noteSubjectCode}>{noteSubjectCode}</option>
+                        )}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="font-bold text-slate-700 block mb-1">
+                        Topic Name
+                      </label>
+                      <input
+                        type="text"
+                        value={noteTopic}
+                        onChange={(e) => setNoteTopic(e.target.value)}
+                        placeholder="e.g. Sliding Window Protocols"
+                        className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-indigo-500 focus:bg-white font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Executive Revision Summary */}
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                      <span>Executive Revision Summary</span>
+                      <span className="text-[10px] font-normal text-slate-400">Included on first page of PDF</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={noteSummary}
+                      onChange={(e) => setNoteSummary(e.target.value)}
+                      placeholder="Add key bullet points or summary highlights for fast revision..."
+                      className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-indigo-500 focus:bg-white leading-relaxed resize-none"
+                    />
+                  </div>
+
+                  {/* Chat Content Preview details */}
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 space-y-2">
+                    <div className="text-[11px] font-bold text-indigo-900 uppercase tracking-wider flex items-center justify-between">
+                      <span>Transcript to be Compiled</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white text-indigo-700 text-[10px] font-mono border border-indigo-200">
+                        {messages.length} messages
+                      </span>
+                    </div>
+
+                    <div className="text-[11px] text-indigo-700 space-y-1">
+                      <p>• {messages.filter(m => m.sender === 'user').length} question(s) asked by student</p>
+                      <p>• {messages.filter(m => m.sender === 'ai' && !m.is_error).length} verified AI explanation(s) with code, equations, and steps</p>
+                      <p>• Formatted with standard margin A4 pages, headers, footers & page numbering</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            {!noteSuccessData && (
+              <div className="px-6 py-3.5 border-t border-slate-100 flex items-center justify-between bg-slate-50">
+                <button
+                  type="button"
+                  onClick={() => setIsNoteModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 font-medium text-xs transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateAndSaveNotes}
+                  disabled={isGeneratingNotes || !noteTitle.trim()}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-2 shadow-sm shadow-emerald-600/25 transition-all cursor-pointer"
+                >
+                  {isGeneratingNotes ? (
+                    <>
+                      <Sparkles className="h-4 w-4 animate-spin text-emerald-200" />
+                      <span>Generating PDF & Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="h-4 w-4" />
+                      <span>Generate PDF & Save to Personal Library</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

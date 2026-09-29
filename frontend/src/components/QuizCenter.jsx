@@ -5,8 +5,10 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { api } from '../services/api';
+import MockExamCenter from './MockExamCenter';
 
-export default function QuizCenter({ user, onRequireAuth }) {
+export default function QuizCenter({ user, onRequireAuth, onNavigateToPersonalLibrary }) {
+  const [quizSection, setQuizSection] = useState('mock-generator'); // 'mock-generator', 'curriculum-quizzes'
   const [quizzes, setQuizzes] = useState([]);
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -106,22 +108,58 @@ export default function QuizCenter({ user, onRequireAuth }) {
 
   return (
     <div className="space-y-6">
-      
-      {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl glass-panel p-6 sm:p-8 border border-slate-200 bg-white shadow-xs">
-        <div className="max-w-2xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold mb-3">
-            <Award className="h-3.5 w-3.5" />
-            <span>Interactive Quiz & Viva Evaluation Engine</span>
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Curriculum Mock Tests & Exam Drills
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 mt-2 leading-relaxed">
-            Test conceptual retention with subject-wise quizzes, automated scoring, real-time timer countdowns, and comprehensive question explanations.
-          </p>
-        </div>
+      {/* Subtab Switcher: AI Mock Exam Generator vs Practice Quizzes */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-slate-200/70 border border-slate-300/80 w-fit">
+        <button
+          type="button"
+          onClick={() => { setQuizSection('mock-generator'); setActiveQuiz(null); }}
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            quizSection === 'mock-generator'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/80'
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>AI Mock Exam & Paper Generator</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuizSection('curriculum-quizzes')}
+          className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            quizSection === 'curriculum-quizzes'
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+              : 'text-slate-700 hover:text-slate-900 hover:bg-slate-200/80'
+          }`}
+        >
+          <Award className="h-4 w-4" />
+          <span>Interactive Practice Quizzes ({quizzes.length})</span>
+        </button>
       </div>
+
+      {quizSection === 'mock-generator' ? (
+        <MockExamCenter 
+          user={user} 
+          onRequireAuth={onRequireAuth} 
+          onNavigateToPersonalLibrary={onNavigateToPersonalLibrary} 
+        />
+      ) : (
+        <>
+          {/* Header for Curriculum Quizzes */}
+          <div className="relative overflow-hidden rounded-3xl glass-panel p-6 sm:p-8 border border-slate-200 bg-white shadow-xs">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold mb-3">
+                <Award className="h-3.5 w-3.5" />
+                <span>Interactive Quiz & Viva Evaluation Engine</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                Curriculum Practice Tests & Quizzes
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 mt-2 leading-relaxed">
+                Test conceptual retention with subject-wise quizzes, automated scoring, real-time timer countdowns, and comprehensive question explanations.
+              </p>
+            </div>
+          </div>
+
 
       {!activeQuiz ? (
         /* Quizzes Grid */
@@ -329,6 +367,8 @@ export default function QuizCenter({ user, onRequireAuth }) {
           )}
 
         </div>
+      )}
+        </>
       )}
 
     </div>

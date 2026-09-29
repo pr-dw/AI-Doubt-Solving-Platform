@@ -104,7 +104,7 @@ export default function PerformanceAnalytics({ user, onRequireAuth }) {
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
             <div className="text-[10px] text-slate-500 font-bold uppercase">Doubts Solved</div>
             <div className="text-2xl font-black text-slate-900 mt-1">{report?.total_queries_asked || 0}</div>
-            <div className="text-[10px] text-indigo-600 mt-1">Via local Ollama model</div>
+            <div className="text-[10px] text-indigo-600 mt-1">AI Guided Academic Doubts</div>
           </div>
 
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
@@ -119,7 +119,7 @@ export default function PerformanceAnalytics({ user, onRequireAuth }) {
               <span>Strong Subjects</span>
             </div>
             <div className="text-xs font-semibold text-emerald-800 mt-2 truncate">
-              {report?.strong_subjects?.join(', ') || 'Keep studying to identify!'}
+              {report?.strong_subjects?.length > 0 ? report.strong_subjects.join(', ') : (report?.subject_breakdown?.length > 0 ? 'Consistent performance across subjects' : 'Awaiting scored exams')}
             </div>
             <div className="text-[10px] text-emerald-600 mt-1">Scoring ≥ 80%</div>
           </div>
@@ -130,7 +130,7 @@ export default function PerformanceAnalytics({ user, onRequireAuth }) {
               <span>Focus Areas</span>
             </div>
             <div className="text-xs font-semibold text-amber-800 mt-2 truncate">
-              {report?.weak_subjects?.join(', ') || 'All subjects above 70%!'}
+              {report?.weak_subjects?.length > 0 ? report.weak_subjects.join(', ') : (report?.subject_breakdown?.length > 0 ? 'All subjects above 70% threshold' : 'Awaiting scored exams')}
             </div>
             <div className="text-[10px] text-amber-600 mt-1">Recommended for revision</div>
           </div>
@@ -148,42 +148,49 @@ export default function PerformanceAnalytics({ user, onRequireAuth }) {
                 <BarChart3 className="h-4 w-4 text-indigo-600" />
                 <span>Subject Assessment Scores</span>
               </h3>
-              <p className="text-[11px] text-slate-500">Current Semester Performance</p>
+              <p className="text-[11px] text-slate-500">Official Exam Aggregate Performance</p>
             </div>
             <span className="text-xs font-semibold text-indigo-600">Target: 85%+</span>
           </div>
 
           <div className="space-y-4 pt-1">
-            {report?.subject_breakdown?.map((item, idx) => {
-              const isHigh = item.score >= 80;
-              const isMedium = item.score >= 70 && item.score < 80;
-              return (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-800">
-                      {item.subject_name} <span className="text-[10px] text-slate-400 font-mono">({item.subject_code})</span>
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-500">{item.marks_obtained}/{item.max_marks}</span>
-                      <span className={`font-bold font-mono px-1.5 py-0.5 rounded text-[11px] ${
-                        isHigh ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : isMedium ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
-                        {item.score}% ({item.grade})
+            {!report?.subject_breakdown || report.subject_breakdown.length === 0 ? (
+              <div className="py-8 text-center bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-500 space-y-1">
+                <p className="font-semibold text-slate-700">No Graded Exam Papers Recorded Yet</p>
+                <p className="text-[11px] text-slate-400">Subject progress bars will populate once faculty grades your Quiz or Pre-End papers.</p>
+              </div>
+            ) : (
+              report.subject_breakdown.map((item, idx) => {
+                const isHigh = item.score >= 80;
+                const isMedium = item.score >= 70 && item.score < 80;
+                return (
+                  <div key={idx} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-800">
+                        {item.subject_name} <span className="text-[10px] text-slate-400 font-mono">({item.subject_code})</span>
                       </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-500">{item.marks_obtained}/{item.max_marks} Marks</span>
+                        <span className={`font-bold font-mono px-1.5 py-0.5 rounded text-[11px] ${
+                          isHigh ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : isMedium ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}>
+                          {item.score}% ({item.grade})
+                        </span>
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isHigh ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : isMedium ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'
+                        }`}
+                        style={{ width: `${item.score}%` }}
+                      />
                     </div>
                   </div>
-                  {/* Progress bar */}
-                  <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden border border-slate-200">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isHigh ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : isMedium ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'
-                      }`}
-                      style={{ width: `${item.score}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -220,40 +227,47 @@ export default function PerformanceAnalytics({ user, onRequireAuth }) {
       <div className="glass-panel rounded-2xl p-5 border border-slate-200 bg-white shadow-xs">
         <h3 className="font-bold text-sm text-slate-900 mb-3 flex items-center gap-2">
           <Calendar className="h-4 w-4 text-indigo-600" />
-          <span>Internal Assessment & Exam Record Log</span>
+          <span>Official Exam & Quiz Assessment Record Log</span>
         </h3>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200">
-              <tr>
-                <th className="py-2.5 px-3">Subject</th>
-                <th className="py-2.5 px-3">Exam Type</th>
-                <th className="py-2.5 px-3">Score</th>
-                <th className="py-2.5 px-3">Grade</th>
-                <th className="py-2.5 px-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {records.map(r => (
-                <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-2.5 px-3 font-semibold text-slate-900">
-                    {r.subject_details?.name} ({r.subject_details?.code})
-                  </td>
-                  <td className="py-2.5 px-3 text-slate-600">{r.exam_type}</td>
-                  <td className="py-2.5 px-3 font-mono font-bold text-indigo-700">
-                    {r.marks_obtained} / {r.max_marks} ({r.performance_score}%)
-                  </td>
-                  <td className="py-2.5 px-3 font-bold text-emerald-600">{r.grade}</td>
-                  <td className="py-2.5 px-3">
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
-                      Recorded
-                    </span>
-                  </td>
+          {records.length === 0 ? (
+            <div className="py-10 text-center bg-slate-50/70 rounded-2xl border border-slate-100 space-y-1">
+              <p className="text-xs font-bold text-slate-700">No Assessment Records Found</p>
+              <p className="text-[11px] text-slate-500">When faculty grades your Quiz 1, 2, 3 or Pre-End examinations, the detailed score logs will display here.</p>
+            </div>
+          ) : (
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th className="py-2.5 px-3">Subject</th>
+                  <th className="py-2.5 px-3">Exam Paper</th>
+                  <th className="py-2.5 px-3">Score</th>
+                  <th className="py-2.5 px-3">Grade</th>
+                  <th className="py-2.5 px-3">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {records.map(r => (
+                  <tr key={r.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-2.5 px-3 font-semibold text-slate-900">
+                      {r.subject_details?.name} ({r.subject_details?.code})
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-600 font-medium">{r.exam_type}</td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-indigo-700">
+                      {r.marks_obtained} / {r.max_marks} ({r.performance_score}%)
+                    </td>
+                    <td className="py-2.5 px-3 font-bold text-emerald-600">{r.grade}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold">
+                        Graded
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 

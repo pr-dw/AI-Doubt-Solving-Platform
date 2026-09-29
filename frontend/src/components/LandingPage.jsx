@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { 
   GraduationCap, Sparkles, Shield, User, ArrowRight, CheckCircle2, 
-  Flame, BookOpen, Compass, BarChart3, Award, Cpu, Code2, Sigma, 
-  HelpCircle, Lightbulb, ListOrdered, Lock, Layers, Play, Target
+  Flame, BookOpen, Compass, BarChart3, Award, Cpu,
+  HelpCircle, Lightbulb, Lock, Layers, Play, Target
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -15,13 +15,6 @@ const EXPLANATION_MODES = [
     desc: 'Deep theoretical foundations, system architectures, and curriculum-aligned principles.' 
   },
   { 
-    id: 'assist', 
-    title: 'Assist (Socratic)', 
-    icon: HelpCircle, 
-    color: 'from-amber-500 to-orange-500',
-    desc: 'Guided progressive hints and checkpoint questions that stimulate critical reasoning.' 
-  },
-  { 
     id: 'eli5', 
     title: "Explain Like I'm 5", 
     icon: Lightbulb, 
@@ -29,25 +22,11 @@ const EXPLANATION_MODES = [
     desc: 'Everyday analogies and intuitive metaphors that make dense topics instantly click.' 
   },
   { 
-    id: 'step_by_step', 
-    title: 'Step-by-Step Proof', 
-    icon: ListOrdered, 
-    color: 'from-blue-500 to-cyan-500',
-    desc: 'Methodical derivations, equation solving, edge-case checking, and validation.' 
-  },
-  { 
-    id: 'code', 
-    title: 'Code Walkthrough', 
-    icon: Code2, 
-    color: 'from-purple-500 to-pink-500',
-    desc: 'Optimal commented code snippets in Python, C++, and SQL with Big-O complexity analysis.' 
-  },
-  { 
-    id: 'formula', 
-    title: 'Formula & Proof', 
-    icon: Sigma, 
-    color: 'from-rose-500 to-red-500',
-    desc: 'Mathematical rigor rendered in LaTeX notation with complete variable breakdowns.' 
+    id: 'assist', 
+    title: 'Assist (Guided Research)', 
+    icon: HelpCircle, 
+    color: 'from-amber-500 to-orange-500',
+    desc: 'Points you directly to what topic to study and hints without spoiling answers.' 
   },
 ];
 
@@ -78,8 +57,16 @@ const PLATFORM_PILLARS = [
   },
 ];
 
-export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
+export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onGoToDashboard }) {
   const [activeModeDemo, setActiveModeDemo] = useState('eli5');
+
+  const handleAuthAction = () => {
+    if (user && onGoToDashboard) {
+      onGoToDashboard();
+    } else if (onOpenAuthModal) {
+      onOpenAuthModal();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-indigo-500 selection:text-white overflow-x-hidden">
@@ -100,13 +87,24 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={onOpenAuthModal}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white shadow-md shadow-indigo-600/30 transition-all cursor-pointer flex items-center gap-2"
-            >
-              <User className="h-4 w-4" />
-              <span>Sign In to Portal</span>
-            </button>
+            {user ? (
+              <button
+                onClick={onGoToDashboard}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white shadow-md shadow-indigo-600/30 transition-all cursor-pointer flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                <span>Go to Dashboard ({user.name || user.role})</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            ) : (
+              <button
+                onClick={onOpenAuthModal}
+                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-xs font-bold text-white shadow-md shadow-indigo-600/30 transition-all cursor-pointer flex items-center gap-2"
+              >
+                <User className="h-4 w-4" />
+                <span>Sign In to Portal</span>
+              </button>
+            )}
           </div>
 
         </div>
@@ -139,16 +137,20 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
           {/* Unified Single Login Button & CTA */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
             <button
-              onClick={onOpenAuthModal}
+              onClick={handleAuthAction}
               className="w-full sm:w-auto px-8 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer hover:scale-[1.02]"
             >
-              <span>Sign In to Account</span>
+              <span>{user ? 'Return to Dashboard' : 'Sign In to Account'}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
 
           <p className="text-xs text-slate-500">
-            One login for all roles — your dashboard automatically opens based on whether your account is a <strong>Student</strong>, <strong>Faculty</strong>, or <strong>Admin</strong>.
+            {user ? (
+              <span>Session active for <strong className="text-indigo-600 font-bold">{user.name || user.email}</strong> ({user.role}). Click above to resume without re-entering credentials.</span>
+            ) : (
+              <span>One login for all roles — your dashboard automatically opens based on whether your account is a <strong>Student</strong>, <strong>Faculty</strong>, or <strong>Admin</strong>.</span>
+            )}
           </p>
 
         </div>
@@ -205,38 +207,32 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
               </div>
             )}
 
-            {activeModeDemo === 'step_by_step' && (
-              <div className="space-y-2 text-slate-700 leading-relaxed bg-white p-3.5 rounded-xl border border-slate-200 font-mono text-xs shadow-xs">
-                <p className="text-indigo-700 font-bold">📋 Left-Right (LR) Rotation Execution Steps:</p>
-                <p>1. Detect imbalance: Balance Factor(Node A) = +2 and Balance Factor(Left Child B) = -1.</p>
-                <p>2. Sub-step 1: Perform Left Rotation on Child B &rarr; Node C moves up, B becomes left child of C.</p>
-                <p>3. Sub-step 2: Perform Right Rotation on Node A &rarr; Node C becomes the new root of the subtree.</p>
-                <p>4. Result: Subtree height strictly restored to O(log N) depth.</p>
-              </div>
-            )}
-
-            {activeModeDemo === 'code' && (
-              <div className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs text-emerald-400 overflow-x-auto">
-                <pre>{`def rotate_left_right(node_a):
-    # Step 1: Left rotation on left child
-    node_a.left = rotate_left(node_a.left)
-    # Step 2: Right rotation on root node
-    return rotate_right(node_a)
-# Time Complexity: O(1) pointer updates | Space: O(1)`}</pre>
-              </div>
-            )}
-
-            {activeModeDemo === 'formula' && (
-              <div className="space-y-2 text-slate-700 leading-relaxed bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-                <p className="text-indigo-700 font-bold">📐 Mathematical Height Invariant:</p>
-                <p className="font-mono text-center py-2 text-sm text-indigo-900 bg-indigo-50/60 rounded-lg">
-                  Balance Factor: BF(N) = Height(LeftSubtree) - Height(RightSubtree) ∈ &#123;-1, 0, +1&#125;
+            {activeModeDemo === 'assist' && (
+              <div className="space-y-2.5 text-slate-700 leading-relaxed bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+                <p className="font-bold text-amber-700 flex items-center gap-1.5">
+                  <HelpCircle className="h-4 w-4" />
+                  <span>Assist Mode (Guided Socratic Research):</span>
                 </p>
-                <p className="text-[11px] text-slate-500">Maximum AVL Tree Height bound: H(N) &lt; 1.4404 · log₂(N + 2) - 0.3277.</p>
+                <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200/60 text-xs">
+                  <p className="font-semibold text-amber-900">🎯 Understanding Validation:</p>
+                  <p className="text-amber-800 mt-0.5">You correctly recognized that a single rotation does not restore the AVL height invariant because the heavy grandchild lies on the inner subtree (a zigzag path).</p>
+                </div>
+                <div className="text-xs space-y-1">
+                  <p className="font-semibold text-indigo-900">📚 What to Study & Research:</p>
+                  <p className="text-slate-600">Research <strong>"AVL Tree Left-Right (LR) Double Rotation Decomposition"</strong> and the <strong>Balance Factor sign inversion rule</strong> in Unit 3 of your Data Structures syllabus.</p>
+                </div>
+                <div className="text-xs space-y-1">
+                  <p className="font-semibold text-emerald-800">💡 Guiding Clue:</p>
+                  <p className="text-slate-600">Notice what happens when you rotate the child node first: how does that transform a zigzag branch into a straight linear line?</p>
+                </div>
+                <div className="text-xs text-slate-600 pt-1 border-t border-slate-100">
+                  <p className="font-semibold text-purple-700">🔍 Checkpoint Challenge:</p>
+                  <p>Sketch a 3-node tree with keys 30 &rarr; 10 &rarr; 20 on scratch paper. Try rotating 10 left. What does the tree look like now?</p>
+                </div>
               </div>
             )}
 
-            {activeModeDemo !== 'eli5' && activeModeDemo !== 'step_by_step' && activeModeDemo !== 'code' && activeModeDemo !== 'formula' && (
+            {activeModeDemo === 'detailed' && (
               <div className="space-y-2 text-slate-700 leading-relaxed bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                 <p>🎓 <strong>Comprehensive Academic Explanation:</strong></p>
                 <p>An AVL Tree is a strictly self-balancing Binary Search Tree named after inventors Adelson-Velsky and Landis. Double rotations (LR and RL) resolve zigzag structural imbalances that single rotations cannot fix, maintaining strict O(log N) lookup and insertion invariants.</p>
@@ -246,15 +242,15 @@ export default function LandingPage({ onLoginSuccess, onOpenAuthModal }) {
         </div>
       </section>
 
-      {/* 6 Specialized Explanation Modes Showcase */}
+      {/* 3 Focused Academic Explanation Modes Showcase */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="text-center max-w-2xl mx-auto mb-12">
           <span className="text-xs font-bold text-indigo-600 uppercase tracking-wider">Pioneering AI Pedagogy</span>
           <h2 className="text-3xl font-extrabold text-slate-900 mt-2">
-            6 Specialized Explanation Modes
+            3 Focused Academic Modes
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 mt-2">
-            Every student learns differently. Choose the cognitive style that fits your study session.
+            Master every subject with 3 specialized modes: in-depth curriculum theory, everyday intuitive analogies, and Socratic guided research.
           </p>
         </div>
 

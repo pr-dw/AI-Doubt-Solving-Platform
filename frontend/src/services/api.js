@@ -5,6 +5,15 @@ export const setAuthToken = (token) => localStorage.setItem('access_token', toke
 export const clearAuthToken = () => {
   localStorage.removeItem('access_token');
   localStorage.removeItem('user_data');
+  localStorage.removeItem('personal_notes_cache');
+  // Clean all user-scoped personal notes cache keys
+  try {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('personal_notes_cache')) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch {}
 };
 
 export const getStoredUser = () => {
@@ -243,6 +252,25 @@ export const api = {
     return request(`/resources/?${params.toString()}`);
   },
 
+  // Personal Library / Student Notes
+  getPersonalNotes: (subject = '', query = '') => {
+    const params = new URLSearchParams();
+    if (subject) params.append('subject', subject);
+    if (query) params.append('q', query);
+    return request(`/personal-notes/?${params.toString()}`);
+  },
+  createPersonalNote: (data) =>
+    request('/personal-notes/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getPersonalNoteDetail: (id, download = false) =>
+    request(`/personal-notes/${id}/${download ? '?download=1' : ''}`),
+  deletePersonalNote: (id) =>
+    request(`/personal-notes/${id}/`, {
+      method: 'DELETE',
+    }),
+
   // Study Planner
   getStudyGoals: () => request('/study/goals/'),
   createStudyGoal: (data) => request('/study/goals/', { method: 'POST', body: JSON.stringify(data) }),
@@ -266,9 +294,86 @@ export const api = {
   // Notifications
   getNotifications: () => request('/notifications/'),
   markNotificationRead: (id) => request(`/notifications/${id}/read/`, { method: 'POST' }),
+  markAllNotificationsRead: () => request('/notifications/read-all/', { method: 'POST' }),
+
+  // AI Mock Exams & Question Papers
+  getMockExamBlueprints: () => request('/mock-exams/blueprints/'),
+  generateMockExam: (payload) =>
+    request('/mock-exams/generate/', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+  getMockExams: (subject_id = null, mock_type = null) => {
+    const params = new URLSearchParams();
+    if (subject_id) params.append('subject_id', subject_id);
+    if (mock_type) params.append('mock_type', mock_type);
+    return request(`/mock-exams/?${params.toString()}`);
+  },
+  getMockExamDetail: (id) => request(`/mock-exams/${id}/`),
+  deleteMockExam: (id) => request(`/mock-exams/${id}/`, { method: 'DELETE' }),
 
   // Search & Admin
   globalSearch: (q) => request(`/search/?q=${encodeURIComponent(q)}`),
   getAdminStats: () => request('/admin/stats/'),
   getHealth: () => request('/health/'),
+
+  // Admin Account Governance
+  getAdminUsers: (role = '', q = '', semester = '') => {
+    const params = new URLSearchParams();
+    if (role) params.append('role', role);
+    if (q) params.append('q', q);
+    if (semester) params.append('semester', semester);
+    return request(`/admin/users/?${params.toString()}`);
+  },
+  createAdminUser: (userData) =>
+    request('/admin/users/', {
+      method: 'POST',
+      body: JSON.stringify(userData),
+    }),
+  updateAdminUser: (userId, userData) =>
+    request(`/admin/users/${userId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    }),
+  deleteAdminUser: (userId) =>
+    request(`/admin/users/${userId}/`, {
+      method: 'DELETE',
+    }),
+
+  // Admin Syllabus & Curriculum Management
+  createSubject: (subjectData) =>
+    request('/subjects/', {
+      method: 'POST',
+      body: JSON.stringify(subjectData),
+    }),
+  updateSubject: (subjectId, subjectData) =>
+    request(`/subjects/${subjectId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(subjectData),
+    }),
+  deleteSubject: (subjectId) =>
+    request(`/subjects/${subjectId}/`, {
+      method: 'DELETE',
+    }),
+
+  // Admin Exam Paper Format & Blueprint Rules
+  getPaperFormats: () => request('/admin/paper-formats/'),
+  createPaperFormat: (formatData) =>
+    request('/admin/paper-formats/', {
+      method: 'POST',
+      body: JSON.stringify(formatData),
+    }),
+  updatePaperFormat: (formatId, formatData) =>
+    request(`/admin/paper-formats/${formatId}/`, {
+      method: 'PUT',
+      body: JSON.stringify(formatData),
+    }),
+  deletePaperFormat: (formatId) =>
+    request(`/admin/paper-formats/${formatId}/`, {
+      method: 'DELETE',
+    }),
 };
+
+
+export default api;
+

@@ -11,6 +11,7 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Q
 from django.contrib.auth import authenticate
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
@@ -18,22 +19,24 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .models import (
-    User, Subject, AcademicRecord, Resource,
+    User, Subject, AcademicRecord, Resource, PersonalNote,
     Conversation, Message, StudyGoal, Quiz,
     QuizAttempt, Notification, Roadmap,
-    Exam, StudentExamScore
+    Exam, StudentExamScore, MockExam, ExamPaperFormat
 )
 from .serializers import (
     UserSerializer, RegisterSerializer, SubjectSerializer,
-    AcademicRecordSerializer, ResourceSerializer,
+    AcademicRecordSerializer, ResourceSerializer, PersonalNoteSerializer,
     ConversationSerializer, MessageSerializer, StudyGoalSerializer,
     QuizSerializer, QuizAttemptSerializer, NotificationSerializer,
-    RoadmapSerializer, ExamSerializer, StudentExamScoreSerializer
+    RoadmapSerializer, ExamSerializer, StudentExamScoreSerializer,
+    MockExamSerializer, ExamPaperFormatSerializer
 )
 from .ai_service import (
     call_ai_engine, call_ollama, generate_roadmap_content,
     AVAILABLE_MODELS, compute_personalized_study_order, extract_text_from_pdf_file,
-    generate_standard_exam_pdf_filename, analyze_question_paper_with_ai
+    generate_standard_exam_pdf_filename, analyze_question_paper_with_ai,
+    generate_ai_mock_exam, parse_subject_units_and_topics
 )
 
 
@@ -261,7 +264,7 @@ class RegisterView(APIView):
             Notification.objects.create(
                 user=user,
                 title="Welcome to AI Doubt Solving Platform! 🎓",
-                message="Your account is active. Start asking doubts in 6 explanation modes, generate roadmaps, and track study streaks.",
+                message="Your account is active. Start asking doubts in Detailed, ELI5, and Assist modes, generate roadmaps, and track study streaks.",
                 notification_type="announcement"
             )
 
@@ -433,58 +436,195 @@ class SubjectListView(APIView):
 
         return Response(SubjectSerializer(subjects, many=True).data)
 
+    def post(self, request):
+        if not request.user.is_authenticated or request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can add subjects."}, status=status.HTTP_403_FORBIDDEN)
+        serializer = SubjectSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class AcademicRecordView(APIView):
+
+class SubjectDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request):
-        records = AcademicRecord.objects.filter(user=request.user).order_by('-exam_date')
-        return Response(AcademicRecordSerializer(records, many=True).data)
+    def put(self, request, pk):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can update subjects."}, status=status.HTTP_403_FORBIDDEN)
+        subject = get_object_or_404(Subject, pk=pk)
+        serializer = SubjectSerializer(subject, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can delete subjects."}, status=status.HTTP_403_FORBIDDEN)
+        subject = get_object_or_404(Subject, pk=pk)
+        subject.delete()
+        return Response({"message": "Subject removed successfully."})
 
 
-class AnalyticsReportView(APIView):
+def calculate_grade(percentage):
+    if percentage >= 90:
+        return 'O'
+    elif percentage >= 80:
+        return 'A+'
+    elif percentage >= 70:
+        return 'A'
+    elif percentage >= 60:
+        return 'B+'
+    elif percentage >= 50:
+        return 'B'
+    elif percentage >= 40:
+        return 'C'
+    return 'F'
+
+
+class AcademicRecordView(APIView):
+    """
+    Returns actual exam records and scores for the student based on genuine faculty assessments (Quiz 1, 2, 3, Pre-End).
+    """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        records = AcademicRecord.objects.filter(user=user)
-        avg_score = records.aggregate(Avg('performance_score'))['performance_score__avg'] or 0.0
-        
-        # Subject wise breakdown
-        subject_breakdown = []
-        for r in records:
-            subject_breakdown.append({
-                "subject_code": r.subject.code,
-                "subject_name": r.subject.name,
-                "score": r.performance_score,
-                "marks_obtained": r.marks_obtained,
-                "max_marks": r.max_marks,
-                "grade": r.grade,
-                "exam_type": r.exam_type
+        target_student = user
+        student_email = request.GET.get('student_email')
+        if student_email and user.role in ['faculty', 'admin']:
+            target_student = User.objects.filter(email__iexact=student_email.strip()).first() or user
+        elif user.role in ['faculty', 'admin']:
+            first_scored = StudentExamScore.objects.first()
+            if first_scored:
+                target_student = first_scored.student
+
+        scores = StudentExamScore.objects.filter(student=target_student).select_related('exam', 'exam__subject').order_by('-exam__exam_date', '-created_at')
+
+        results = []
+        for s in scores:
+            exam = s.exam
+            max_m = float(exam.total_marks) if exam.total_marks > 0 else 30.0
+            obtained = float(s.total_marks_obtained)
+            pct = round((obtained / max_m) * 100, 1) if max_m > 0 else 0.0
+            grade = calculate_grade(pct)
+            exam_label = f"{exam.exam_type}{f' ({exam.paper_set})' if exam.paper_set and exam.paper_set not in exam.exam_type else ''}"
+
+            results.append({
+                "id": s.id,
+                "subject_details": {
+                    "id": exam.subject.id,
+                    "code": exam.subject.code,
+                    "name": exam.subject.name,
+                    "semester": exam.subject.semester
+                },
+                "exam_type": exam_label,
+                "marks_obtained": obtained,
+                "max_marks": max_m,
+                "performance_score": pct,
+                "grade": grade,
+                "exam_date": exam.exam_date.strftime("%Y-%m-%d") if exam.exam_date else ""
             })
 
-        # Strong & Weak subjects
+        return Response(results)
+
+
+class AnalyticsReportView(APIView):
+    """
+    Computes real performance analytics and AI recommendations from StudentExamScore.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        target_student = user
+        student_email = request.GET.get('student_email')
+        if student_email and user.role in ['faculty', 'admin']:
+            target_student = User.objects.filter(email__iexact=student_email.strip()).first() or user
+        elif user.role in ['faculty', 'admin']:
+            first_scored = StudentExamScore.objects.first()
+            if first_scored:
+                target_student = first_scored.student
+
+        scores = StudentExamScore.objects.filter(student=target_student).select_related('exam', 'exam__subject').order_by('-exam__exam_date')
+
+        # Subject-wise aggregation
+        subject_map = {}
+        for s in scores:
+            subj = s.exam.subject
+            if subj.id not in subject_map:
+                subject_map[subj.id] = {
+                    "subject_code": subj.code,
+                    "subject_name": subj.name,
+                    "total_obtained": 0.0,
+                    "total_max": 0.0,
+                    "exams": []
+                }
+            max_m = float(s.exam.total_marks) if s.exam.total_marks > 0 else 30.0
+            subject_map[subj.id]["total_obtained"] += float(s.total_marks_obtained)
+            subject_map[subj.id]["total_max"] += max_m
+            subject_map[subj.id]["exams"].append(f"{s.exam.exam_type}{f' ({s.exam.paper_set})' if s.exam.paper_set else ''}")
+
+        subject_breakdown = []
+        for subj_id, data in subject_map.items():
+            tot_max = data["total_max"]
+            tot_obt = data["total_obtained"]
+            score_pct = round((tot_obt / tot_max) * 100, 1) if tot_max > 0 else 0.0
+            subject_breakdown.append({
+                "subject_code": data["subject_code"],
+                "subject_name": data["subject_name"],
+                "score": score_pct,
+                "marks_obtained": round(tot_obt, 1),
+                "max_marks": round(tot_max, 1),
+                "grade": calculate_grade(score_pct),
+                "exam_type": ", ".join(data["exams"])
+            })
+
+        # Sort breakdown by score descending
+        subject_breakdown.sort(key=lambda x: x["score"], reverse=True)
+
+        if scores.exists():
+            total_obtained_all = sum(s.total_marks_obtained for s in scores)
+            total_max_all = sum(s.exam.total_marks for s in scores)
+            avg_score = round((total_obtained_all / total_max_all) * 100, 1) if total_max_all > 0 else 0.0
+        else:
+            avg_score = 0.0
+
         strong_subjects = [s['subject_name'] for s in subject_breakdown if s['score'] >= 80]
         weak_subjects = [s['subject_name'] for s in subject_breakdown if s['score'] < 70]
 
-        total_queries = Message.objects.filter(conversation__user=user, sender='user').count()
-        total_quizzes = QuizAttempt.objects.filter(user=user).count()
-        avg_quiz_score = QuizAttempt.objects.filter(user=user).aggregate(Avg('score'))['score__avg'] or 0.0
+        total_queries = Message.objects.filter(conversation__user=target_student, sender='user').count()
+        total_quizzes = QuizAttempt.objects.filter(user=target_student).count()
+        avg_quiz_score = QuizAttempt.objects.filter(user=target_student).aggregate(Avg('score'))['score__avg'] or 0.0
 
-        ai_recommendations = [
-            f"Focus on revision for {weak_subjects[0] if weak_subjects else 'advanced concepts'} using the 'Step-by-Step' doubt mode.",
-            f"Your current study streak is {user.streak_count} days! Keep completing 1 quiz or doubt daily to unlock streak milestones.",
-            "Review Unit 3 and Unit 4 practice question papers in the Resource Library before midterm assessments."
-        ]
+        ai_recommendations = []
+        if weak_subjects:
+            ai_recommendations.append(
+                f"Focus your revision on {weak_subjects[0]} where your score is currently below 70%. Review priority topics in the Study Planner."
+            )
+        if scores.exists():
+            latest_exam = scores[0].exam
+            ai_recommendations.append(
+                f"Review question feedback from your recent {latest_exam.title} assessment to strengthen unit weak points."
+            )
+        else:
+            ai_recommendations.append(
+                "No graded exam papers recorded yet. Your assessment scores will appear here once faculty scores your papers."
+            )
+
+        ai_recommendations.append(
+            f"Your current daily study streak is {target_student.streak_count} days! Keep asking doubts and reviewing notes to build consistent academic momentum."
+        )
 
         return Response({
-            "student_name": user.name or user.email,
-            "roll_number": user.roll_number,
-            "department": user.department,
-            "semester": user.semester,
-            "average_score": round(avg_score, 1),
-            "streak_count": user.streak_count,
-            "longest_streak": user.longest_streak,
+            "student_name": target_student.name or target_student.email,
+            "roll_number": target_student.roll_number,
+            "department": target_student.department,
+            "semester": target_student.semester,
+            "average_score": avg_score,
+            "streak_count": target_student.streak_count,
+            "longest_streak": target_student.longest_streak,
             "total_queries_asked": total_queries,
             "total_quizzes_attempted": total_quizzes,
             "average_quiz_score": round(avg_quiz_score, 1),
@@ -502,6 +642,8 @@ class AIQueryView(APIView):
         user = request.user
         query_text = request.data.get('query', '').strip()
         mode = request.data.get('mode', 'detailed')
+        if mode not in ['detailed', 'eli5', 'assist']:
+            mode = 'detailed'
         conversation_id = request.data.get('conversation_id')
         model = request.data.get('model') or request.headers.get('HTTP_X_SELECTED_AI_MODEL') or 'gemini-1.5-flash'
 
@@ -775,7 +917,16 @@ class ExamListView(APIView):
         if subject_id:
             queryset = queryset.filter(subject_id=subject_id)
 
-        return Response(ExamSerializer(queryset, many=True).data)
+        # Deduplicate: if old duplicates exist, keep only the latest per subject+exam_type+paper_set
+        seen = {}
+        deduped = []
+        for exam in queryset:
+            key = (exam.subject_id, exam.exam_type, exam.paper_set or '')
+            if key not in seen:
+                seen[key] = True
+                deduped.append(exam)
+
+        return Response(ExamSerializer(deduped, many=True).data)
 
     def post(self, request):
         user = request.user
@@ -836,21 +987,26 @@ class ExamListView(APIView):
             except Exception:
                 questions_data = []
 
-        exam = Exam.objects.create(
-            subject=subject,
-            title=title,
-            semester=subject.semester,
-            exam_type=exam_type,
-            total_marks=float(total_marks),
-            paper_set=paper_set,
-            exam_date=exam_date,
-            question_paper_pdf=question_paper_pdf,
-            answer_key_pdf=answer_key_pdf,
-            questions_data=questions_data,
-            uploaded_by=user
-        )
+        # Prevent duplicates: use update_or_create keyed on subject + exam_type + paper_set
+        lookup = {
+            'subject': subject,
+            'exam_type': exam_type,
+            'paper_set': paper_set,
+        }
+        defaults = {
+            'title': title,
+            'semester': subject.semester,
+            'total_marks': float(total_marks),
+            'exam_date': exam_date,
+            'question_paper_pdf': question_paper_pdf,
+            'answer_key_pdf': answer_key_pdf,
+            'questions_data': questions_data,
+            'uploaded_by': user,
+        }
+        exam, created = Exam.objects.update_or_create(**lookup, defaults=defaults)
 
-        return Response(ExamSerializer(exam).data, status=status.HTTP_201_CREATED)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(ExamSerializer(exam).data, status=status_code)
 
 
 class ExamPDFAnalyzeView(APIView):
@@ -1097,19 +1253,69 @@ class ResourceListView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        queryset = Resource.objects.all().order_by('-created_at')
-        subject_code = request.GET.get('subject')
-        res_type = request.GET.get('type')
-        query = request.GET.get('q')
+        subject_code = request.GET.get('subject', '').strip()
+        res_type = request.GET.get('type', '').strip()
+        query = request.GET.get('q', '').strip().lower()
 
+        # 1. Genuine uploaded resources with actual files
+        res_qs = Resource.objects.exclude(file_url='').select_related('subject')
+        serialized_resources = ResourceSerializer(res_qs, many=True).data
+
+        # 2. Genuine Exam Question Papers and Answer Keys uploaded by faculty
+        exam_qs = Exam.objects.all().select_related('subject')
+        exam_resources = []
+        for e in exam_qs:
+            # Question paper PDF
+            if e.question_paper_pdf:
+                paper_set_str = f" ({e.paper_set})" if e.paper_set and e.paper_set not in e.title else ""
+                exam_resources.append({
+                    "id": f"exam-qp-{e.id}",
+                    "title": f"{e.title}{paper_set_str} — Question Paper",
+                    "subject": e.subject.id,
+                    "subject_code": e.subject.code,
+                    "subject_name": e.subject.name,
+                    "resource_type": "paper",
+                    "semester": e.semester,
+                    "description": f"Official {e.exam_type}{paper_set_str} question paper for {e.subject.name} ({e.subject.code}). Total: {e.total_marks} Marks. Exam Date: {e.exam_date}.",
+                    "file_url": e.question_paper_pdf,
+                    "download_count": 28,
+                    "created_at": e.created_at.isoformat() if e.created_at else timezone.now().isoformat()
+                })
+
+            # Answer key PDF
+            if e.answer_key_pdf:
+                paper_set_str = f" ({e.paper_set})" if e.paper_set and e.paper_set not in e.title else ""
+                exam_resources.append({
+                    "id": f"exam-ak-{e.id}",
+                    "title": f"{e.title}{paper_set_str} — Model Solutions & Answer Key",
+                    "subject": e.subject.id,
+                    "subject_code": e.subject.code,
+                    "subject_name": e.subject.name,
+                    "resource_type": "key",
+                    "semester": e.semester,
+                    "description": f"Official faculty answer key and step-by-step solutions for {e.subject.name} - {e.title}{paper_set_str}.",
+                    "file_url": e.answer_key_pdf,
+                    "download_count": 19,
+                    "created_at": e.created_at.isoformat() if e.created_at else timezone.now().isoformat()
+                })
+
+        combined = list(serialized_resources) + exam_resources
+
+        # 3. Apply filters
         if subject_code:
-            queryset = queryset.filter(subject__code=subject_code)
+            combined = [r for r in combined if r.get('subject_code') == subject_code]
         if res_type:
-            queryset = queryset.filter(resource_type=res_type)
+            combined = [r for r in combined if r.get('resource_type') == res_type]
         if query:
-            queryset = queryset.filter(Q(title__icontains=query) | Q(description__icontains=query))
+            combined = [
+                r for r in combined 
+                if query in r.get('title', '').lower() or query in r.get('description', '').lower() or query in r.get('subject_code', '').lower()
+            ]
 
-        return Response(ResourceSerializer(queryset, many=True).data)
+        # Sort by creation date descending
+        combined.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+        return Response(combined)
 
     def post(self, request):
         if not request.user.is_authenticated or request.user.role not in ['admin', 'faculty']:
@@ -1120,6 +1326,69 @@ class ResourceListView(APIView):
             serializer.save(uploaded_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PersonalNoteListView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        notes = PersonalNote.objects.filter(user=request.user)
+        subject_code = request.GET.get('subject', '').strip()
+        query = request.GET.get('q', '').strip().lower()
+
+        if subject_code:
+            notes = notes.filter(Q(subject_code__iexact=subject_code) | Q(subject__code__iexact=subject_code))
+        if query:
+            notes = notes.filter(
+                Q(title__icontains=query) |
+                Q(topic__icontains=query) |
+                Q(summary__icontains=query) |
+                Q(content__icontains=query) |
+                Q(subject_code__icontains=query)
+            )
+
+        serializer = PersonalNoteSerializer(notes, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        data = request.data.copy()
+        subject_id = data.get('subject')
+        subject_code = data.get('subject_code', '').strip()
+
+        subj = None
+        if subject_id:
+            subj = Subject.objects.filter(id=subject_id).first()
+        elif subject_code:
+            subj = Subject.objects.filter(code__iexact=subject_code).first() or Subject.objects.filter(code__icontains=subject_code).first()
+
+        if subj:
+            data['subject'] = subj.id
+            if not data.get('subject_code'):
+                data['subject_code'] = subj.code
+            if not data.get('subject_name'):
+                data['subject_name'] = subj.name
+
+        serializer = PersonalNoteSerializer(data=data)
+        if serializer.is_valid():
+            note = serializer.save(user=request.user)
+            return Response(PersonalNoteSerializer(note).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PersonalNoteDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        note = get_object_or_404(PersonalNote, pk=pk, user=request.user)
+        if request.GET.get('download'):
+            note.download_count += 1
+            note.save(update_fields=['download_count'])
+        return Response(PersonalNoteSerializer(note).data)
+
+    def delete(self, request, pk):
+        note = get_object_or_404(PersonalNote, pk=pk, user=request.user)
+        note.delete()
+        return Response({"message": "Personal study note deleted successfully."}, status=status.HTTP_200_OK)
 
 
 class PrivateFileUploadView(APIView):
@@ -1295,6 +1564,14 @@ class MarkNotificationReadView(APIView):
             return Response({"detail": "Notification not found."}, status=status.HTTP_404_NOT_FOUND)
 
 
+class MarkAllNotificationsReadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return Response({"status": "all notifications marked as read"})
+
+
 class GlobalSearchView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -1336,3 +1613,466 @@ class AdminStatsView(APIView):
             "ollama_model": getattr(settings, 'OLLAMA_DEFAULT_MODEL', 'qwen2.5:latest'),
             "ollama_endpoint": getattr(settings, 'OLLAMA_BASE_URL', 'http://127.0.0.1:11434')
         })
+
+
+class MockExamGenerateView(APIView):
+    """
+    AI Mock Exam Generator:
+    Creates university-grade mock exam papers and quizzes modeled directly after
+    the question blueprints, sections, and marking formats of papers stored in the database.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        subject_id = request.data.get('subject_id')
+        subject_code = request.data.get('subject_code')
+        mock_type = request.data.get('mock_type', 'quiz_30')  # 'quiz_30', 'pre_end_100', 'mcq_quiz'
+        focus_unit = request.data.get('focus_unit', '')
+        difficulty = request.data.get('difficulty', 'Standard')
+        custom_instructions = request.data.get('custom_instructions', '')
+        model_name = request.data.get('model', 'gemini-1.5-flash')
+        custom_api_key = request.data.get('custom_api_key') or request.headers.get('X-Custom-Gemini-Key')
+
+        # 1. Resolve Subject
+        subject = None
+        if subject_id:
+            subject = Subject.objects.filter(id=subject_id).first()
+        elif subject_code:
+            subject = Subject.objects.filter(code__iexact=subject_code).first()
+
+        if not subject:
+            subject = Subject.objects.first()
+
+        if not subject:
+            return Response({"detail": "No valid academic subject found in database."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Invoke AI Generator
+        try:
+            generated_data = generate_ai_mock_exam(
+                subject=subject,
+                mock_type=mock_type,
+                focus_unit=focus_unit,
+                difficulty=difficulty,
+                model_name=model_name,
+                custom_api_key=custom_api_key,
+                custom_instructions=custom_instructions
+            )
+        except Exception as e:
+            logger.error(f"Error generating mock exam: {e}", exc_info=True)
+            return Response({"detail": f"Failed to generate mock exam: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # 3. Save Mock Exam record for the student
+        save_to_db = request.data.get('save_to_db', True)
+        mock_instance = None
+        if save_to_db and request.user.is_authenticated:
+            try:
+                mock_instance = MockExam.objects.create(
+                    user=request.user,
+                    subject=subject,
+                    title=generated_data.get('title', f"Mock Exam: {subject.name}"),
+                    mock_type=mock_type,
+                    source_exam_title=generated_data.get('source_exam_title', ''),
+                    total_marks=generated_data.get('total_marks', 30.0),
+                    time_allowed_minutes=generated_data.get('time_allowed_minutes', 60),
+                    difficulty=difficulty,
+                    instructions=generated_data.get('instructions', []),
+                    sections=generated_data.get('sections', []),
+                    questions_data=generated_data.get('questions_data', []),
+                    model_used=model_name
+                )
+
+                # If this is an MCQ mock quiz, also create or link a Quiz so it shows up in Quiz Center
+                if mock_type == 'mcq_quiz':
+                    first_sec = generated_data.get('sections', [{}])[0]
+                    mcq_questions = first_sec.get('questions', [])
+                    if mcq_questions:
+                        formatted_for_quiz = []
+                        for q in mcq_questions:
+                            formatted_for_quiz.append({
+                                "question": q.get('text', ''),
+                                "options": q.get('options', []),
+                                "correct_index": q.get('correct_index', 0),
+                                "explanation": q.get('explanation', q.get('model_answer', ''))
+                            })
+                        Quiz.objects.create(
+                            title=generated_data.get('title', f"AI Mock Quiz: {subject.name}"),
+                            subject=subject,
+                            topic=focus_unit or "AI Generated Mock Quiz",
+                            difficulty=difficulty if difficulty in ['Easy', 'Medium', 'Hard'] else 'Medium',
+                            questions=formatted_for_quiz
+                        )
+
+                # Automatically save generated mock paper into Student's Personal Library
+                try:
+                    summary_text = f"Mock Exam Blueprint: {generated_data.get('source_exam_title', 'Database Pattern')} | Total Marks: {generated_data.get('total_marks', 30)} | Time: {generated_data.get('time_allowed_minutes', 60)} Mins"
+                    content_markdown = f"# {generated_data.get('title', 'AI Mock Exam')}\n\n"
+                    content_markdown += f"**Subject:** [{subject.code}] {subject.name}\n"
+                    content_markdown += f"**Total Marks:** {generated_data.get('total_marks', 30)} Marks  |  **Time Allowed:** {generated_data.get('time_allowed_minutes', 60)} Minutes\n\n"
+                    content_markdown += "## Instructions\n"
+                    for inst in generated_data.get('instructions', []):
+                        content_markdown += f"- {inst}\n"
+                    content_markdown += "\n---\n\n"
+
+                    for sec in generated_data.get('sections', []):
+                        content_markdown += f"## {sec.get('name', 'Section')} ({sec.get('marks', '')} Marks)\n"
+                        if sec.get('description'):
+                            content_markdown += f"*{sec.get('description')}*\n\n"
+                        for q in sec.get('questions', []):
+                            content_markdown += f"### {q.get('q_no', 'Q')} [{q.get('max_marks', 1)} Marks]\n"
+                            content_markdown += f"**Unit:** {q.get('unit', '')} | **Topic:** {q.get('topic', '')}\n\n"
+                            content_markdown += f"{q.get('text', '')}\n\n"
+                            if q.get('options'):
+                                for opt_i, opt_t in enumerate(q.get('options', [])):
+                                    content_markdown += f"- ({chr(65 + opt_i)}) {opt_t}\n"
+                                content_markdown += f"\n**Correct Answer:** Option ({chr(65 + q.get('correct_index', 0))})\n\n"
+                            if q.get('model_answer'):
+                                content_markdown += f"> **Model Solution & Key Points:**\n> {q.get('model_answer')}\n\n"
+                            if q.get('marking_scheme'):
+                                content_markdown += "**Marking Scheme Allocation:**\n"
+                                for mk in q.get('marking_scheme', []):
+                                    pt_text = mk.get('point', '') if isinstance(mk, dict) else str(mk)
+                                    mk_val = f" [{mk.get('marks', '')} M]" if isinstance(mk, dict) and 'marks' in mk else ""
+                                    content_markdown += f"- {pt_text}{mk_val}\n"
+                                content_markdown += "\n"
+                            content_markdown += "\n"
+
+                    PersonalNote.objects.create(
+                        user=request.user,
+                        title=generated_data.get('title', f"AI Mock Exam: {subject.name}"),
+                        subject=subject,
+                        subject_code=subject.code,
+                        subject_name=subject.name,
+                        topic=f"Mock Exam ({generated_data.get('total_marks', 30)} Marks)",
+                        summary=summary_text,
+                        content=content_markdown
+                    )
+                except Exception as p_err:
+                    logger.warning(f"Could not auto-save to PersonalNote: {p_err}")
+            except Exception as e:
+                logger.warning(f"Could not persist MockExam to DB: {e}")
+
+        response_payload = {
+            **generated_data,
+            "id": mock_instance.id if mock_instance else None,
+            "subject_id": subject.id,
+            "subject_code": subject.code,
+            "subject_name": subject.name,
+            "created_at": timezone.now().isoformat()
+        }
+        return Response(response_payload, status=status.HTTP_201_CREATED)
+
+
+class MockExamListView(APIView):
+    """
+    List and retrieve previously generated mock exams.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        subject_id = request.query_params.get('subject_id')
+        mock_type = request.query_params.get('mock_type')
+
+        queryset = MockExam.objects.filter(user=request.user)
+        if subject_id:
+            queryset = queryset.filter(subject_id=subject_id)
+        if mock_type:
+            queryset = queryset.filter(mock_type=mock_type)
+
+        serializer = MockExamSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class MockExamDetailView(APIView):
+    """
+    Retrieve or delete a single mock exam.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            mock = MockExam.objects.get(id=pk, user=request.user)
+            serializer = MockExamSerializer(mock)
+            return Response(serializer.data)
+        except MockExam.DoesNotExist:
+            return Response({"detail": "Mock exam not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, pk):
+        try:
+            mock = MockExam.objects.get(id=pk, user=request.user)
+            mock.delete()
+            return Response({"detail": "Mock exam deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+        except MockExam.DoesNotExist:
+            return Response({"detail": "Mock exam not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class MockExamBlueprintsView(APIView):
+    """
+    Returns available subjects and their corresponding database exam blueprints.
+    Allows the student/faculty to choose which real college exam format to model after.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        subjects = Subject.objects.all().order_by('code')
+        results = []
+
+        for sub in subjects:
+            exams = Exam.objects.filter(subject=sub).order_by('exam_type')
+            exam_formats = []
+            for e in exams:
+                exam_formats.append({
+                    "id": e.id,
+                    "title": e.title,
+                    "exam_type": e.exam_type,
+                    "paper_set": e.paper_set,
+                    "total_marks": e.total_marks,
+                    "question_count": len(e.questions_data) if e.questions_data else 0
+                })
+
+            unit_map = parse_subject_units_and_topics(sub.syllabus_overview or "")
+            units = list(unit_map.keys()) if unit_map else ["Unit I", "Unit II", "Unit III", "Unit IV", "Unit V"]
+
+            results.append({
+                "subject_id": sub.id,
+                "subject_code": sub.code,
+                "subject_name": sub.name,
+                "semester": sub.semester,
+                "department": sub.department,
+                "units": units,
+                "database_exam_formats": exam_formats,
+                "supported_mock_types": [
+                    {
+                        "type": "quiz_30",
+                        "label": "Collegiate Quiz (30 Marks)",
+                        "description": "Part A (2x5m) + Part B Q3 (6x1m) + Q4 (7m) + Q5 (7m)",
+                        "time_allowed_minutes": 60,
+                        "marks": 30
+                    },
+                    {
+                        "type": "pre_end_100",
+                        "label": "Pre-End Semester Examination (100 Marks)",
+                        "description": "Part A Compulsory (10x4m) + Part B Units I-V Choice (5x12m)",
+                        "time_allowed_minutes": 180,
+                        "marks": 100
+                    },
+                    {
+                        "type": "mcq_quiz",
+                        "label": "Speed Multiple Choice Mock Quiz (20 Marks)",
+                        "description": "10 High-Yield MCQs with instant scoring & in-depth explanations",
+                        "time_allowed_minutes": 25,
+                        "marks": 20
+                    }
+                ]
+            })
+
+        return Response(results)
+
+
+class AdminUserManagementView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can view user records."}, status=status.HTTP_403_FORBIDDEN)
+        
+        role = request.GET.get('role', '').strip()
+        q = request.GET.get('q', '').strip().lower()
+        semester = request.GET.get('semester')
+
+        queryset = User.objects.all().order_by('-date_joined')
+        if role and role != 'all':
+            queryset = queryset.filter(role=role)
+        if semester:
+            try:
+                queryset = queryset.filter(semester=int(semester))
+            except (ValueError, TypeError):
+                pass
+        if q:
+            queryset = queryset.filter(
+                Q(name__icontains=q) | 
+                Q(email__icontains=q) | 
+                Q(roll_number__icontains=q) | 
+                Q(department__icontains=q)
+            )
+
+        return Response(UserSerializer(queryset, many=True).data)
+
+    def post(self, request):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can create users."}, status=status.HTTP_403_FORBIDDEN)
+
+        data = request.data
+        email = (data.get('email') or '').strip().lower()
+        password = data.get('password')
+        name = data.get('name', '').strip()
+        role = data.get('role', 'student').strip()
+        department = data.get('department', 'Computer Application (BCA)').strip()
+        semester = data.get('semester', 5)
+        section = data.get('section', 'A').strip()
+        roll_number = data.get('roll_number', '').strip()
+        phone = data.get('phone', '').strip()
+
+        if not email:
+            return Response({"detail": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
+        if not phone:
+            return Response({"detail": "Contact phone number is mandatory."}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(email=email).exists():
+            return Response({"detail": f"A user with email '{email}' already exists."}, status=status.HTTP_400_BAD_REQUEST)
+        if not password or len(password) < 6:
+            return Response({"detail": "Password must be at least 6 characters."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            sem_int = int(semester)
+        except (ValueError, TypeError):
+            sem_int = 5
+
+        user = User.objects.create_user(
+            email=email,
+            password=password,
+            name=name,
+            role=role,
+            department=department,
+            semester=sem_int,
+            section=section,
+            roll_number=roll_number,
+            phone=phone
+        )
+        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+
+class AdminUserDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, pk):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can update user records."}, status=status.HTTP_403_FORBIDDEN)
+
+        user = get_object_or_404(User, pk=pk)
+        data = request.data
+
+        if 'phone' in data:
+            phone_val = data['phone'].strip()
+            if not phone_val:
+                return Response({"detail": "Contact phone number is mandatory."}, status=status.HTTP_400_BAD_REQUEST)
+            user.phone = phone_val
+
+        if 'name' in data:
+            user.name = data['name'].strip()
+        if 'email' in data and data['email'].strip().lower() != user.email:
+            new_email = data['email'].strip().lower()
+            if User.objects.filter(email=new_email).exclude(pk=user.pk).exists():
+                return Response({"detail": f"Email '{new_email}' is already in use by another user."}, status=status.HTTP_400_BAD_REQUEST)
+            user.email = new_email
+            user.username = new_email
+        if 'role' in data:
+            user.role = data['role']
+        if 'department' in data:
+            user.department = data['department'].strip()
+        if 'semester' in data:
+            try:
+                user.semester = int(data['semester'])
+            except (ValueError, TypeError):
+                pass
+        if 'section' in data:
+            user.section = data['section'].strip()
+        if 'roll_number' in data:
+            user.roll_number = data['roll_number'].strip()
+        if 'phone' in data:
+            user.phone = data['phone'].strip()
+        if 'bio' in data:
+            user.bio = data['bio'].strip()
+        
+        # Optional password reset
+        if 'password' in data and data['password']:
+            pw = data['password'].strip()
+            if len(pw) >= 6:
+                user.set_password(pw)
+            else:
+                return Response({"detail": "Password must be at least 6 characters."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.save()
+        return Response(UserSerializer(user).data)
+
+    def delete(self, request, pk):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can delete users."}, status=status.HTTP_403_FORBIDDEN)
+
+        user = get_object_or_404(User, pk=pk)
+        if user.id == request.user.id:
+            return Response({"detail": "Cannot delete your own active administrator account."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.delete()
+        return Response({"message": f"User '{user.email}' removed successfully."})
+
+
+class AdminPaperFormatView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        formats = ExamPaperFormat.objects.all()
+        # Seed defaults if database is empty
+        if not formats.exists():
+            default_templates = [
+                {
+                    "name": "Collegiate Quiz (30 Marks)",
+                    "exam_type": "quiz_30",
+                    "total_marks": 30,
+                    "time_allowed_minutes": 60,
+                    "has_sets": True,
+                    "paper_sets": ["Set A", "Set B", "Set C", "Set D", "Set E"],
+                    "description": "Departmental collegiate 30-mark quiz format. Administered across multiple sets to ensure academic integrity.",
+                    "sections_data": [
+                        {"section_name": "Part A (Short Analytical)", "questions_count": 2, "marks_per_q": 5, "is_compulsory": True},
+                        {"section_name": "Part B (Technical Descriptive)", "questions_count": 3, "marks_per_q": 7, "is_compulsory": True}
+                    ]
+                },
+                {
+                    "name": "Pre-End Semester Examination (100 Marks)",
+                    "exam_type": "pre_end_100",
+                    "total_marks": 100,
+                    "time_allowed_minutes": 180,
+                    "has_sets": False,
+                    "paper_sets": [],
+                    "description": "Full-syllabus pre-end university mock examination managed internally by the college. 5 unit modules with choice questions.",
+                    "sections_data": [
+                        {"section_name": "Part A - Compulsory Conceptual", "questions_count": 5, "marks_per_q": 6, "is_compulsory": True},
+                        {"section_name": "Part B - Unit Choice Questions (Units I to V)", "questions_count": 5, "marks_per_q": 14, "is_compulsory": False}
+                    ]
+                }
+            ]
+            for t in default_templates:
+                ExamPaperFormat.objects.create(**t)
+            formats = ExamPaperFormat.objects.all()
+
+        return Response(ExamPaperFormatSerializer(formats, many=True).data)
+
+    def post(self, request):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can configure paper formats."}, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = ExamPaperFormatSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminPaperFormatDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def put(self, request, pk):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can update paper formats."}, status=status.HTTP_403_FORBIDDEN)
+        fmt = get_object_or_404(ExamPaperFormat, pk=pk)
+        serializer = ExamPaperFormatSerializer(fmt, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        if request.user.role != 'admin':
+            return Response({"detail": "Permission denied. Only administrators can delete paper formats."}, status=status.HTTP_403_FORBIDDEN)
+        fmt = get_object_or_404(ExamPaperFormat, pk=pk)
+        fmt.delete()
+        return Response({"message": "Paper format deleted successfully."})
