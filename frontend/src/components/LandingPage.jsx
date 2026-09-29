@@ -10,10 +10,10 @@ import ThemeToggle from './ThemeToggle';
 const EXPLANATION_MODES = [
   { 
     id: 'assist', 
-    title: 'Assist (Guided Research)', 
+    title: 'Assist (Guiding Nudge)', 
     icon: HelpCircle, 
     color: 'from-amber-500 to-orange-500',
-    desc: 'Points you directly to what topic to study and hints without spoiling answers.' 
+    desc: 'Single-line Socratic hint pointing to what command or topic to research.' 
   },
   { 
     id: 'detailed', 
@@ -197,57 +197,48 @@ export default function LandingPage({ user, onLoginSuccess, onOpenAuthModal, onG
           {/* Interactive Response Demonstration Box */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm space-y-3">
             <div className="text-[11px] text-indigo-700 font-semibold flex items-center justify-between">
-              <span>Question: "How do AVL Tree double rotations restore height balance?"</span>
-              <span className="text-slate-500 font-mono">BCA-501 • Data Structures</span>
+              <span>Question: "How do I read a text file backwards using command line in Linux?"</span>
+              <span className="text-slate-500 font-mono">NBCA-5053 • UNIX Operating System</span>
             </div>
 
-            {activeModeDemo === 'eli5' && (
-              <div className="space-y-2 text-slate-900 leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <p className="font-bold text-purple-950 dark:text-purple-300 flex items-center gap-1.5 text-xs pb-2 border-b border-slate-200 dark:border-slate-800">
-                  <span className="bg-purple-100 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-700/60 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5">
-                    🎈 <span>Explain Like I'm 5 Analogy:</span>
+            {activeModeDemo === 'assist' && (
+              <div className="text-slate-900 leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <div className="flex items-center gap-1.5 pb-2 mb-2.5 border-b border-slate-100 dark:border-slate-800">
+                  <span className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5 text-xs">
+                    <HelpCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                    <span>Assist Mode (Guiding Nudge)</span>
                   </span>
-                </p>
-                <p className="text-slate-900 dark:text-slate-100 font-normal text-xs sm:text-sm">Imagine a playground seesaw with three kids: one on the left, one on the right, and one sitting right in the zigzag bend.</p>
-                <p className="text-slate-900 dark:text-slate-100 font-normal text-xs sm:text-sm">If the seesaw tips too much in a zigzag shape, you can't balance it with just one push. First, you straighten the zigzag so everyone is in a straight line (First Rotation), and then you tilt the middle child to the pivot center (Second Rotation). Now the seesaw is perfectly balanced!</p>
+                </div>
+                <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/80 dark:border-amber-800/60 text-xs sm:text-sm">
+                  <span className="text-amber-600 dark:text-amber-400 shrink-0 font-bold text-base">💡</span>
+                  <p className="text-slate-900 dark:text-slate-100 font-medium leading-relaxed">
+                    Maybe research the <code className="px-1.5 py-0.5 rounded bg-amber-100/90 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-mono text-xs font-semibold">tac</code> command for Linux terminal to print and read file contents in reverse order.
+                  </p>
+                </div>
               </div>
             )}
 
-            {activeModeDemo === 'assist' && (
-              <div className="space-y-3 text-slate-900 leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <div className="flex items-center gap-1.5 pb-2 border-b border-slate-200 dark:border-slate-800">
-                  <span className="font-bold text-amber-950 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 text-xs shadow-2xs">
-                    <HelpCircle className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
-                    <span>Assist Mode (Guided Socratic Research)</span>
-                  </span>
-                </div>
-                <div className="p-3 rounded-lg bg-amber-50/90 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/60 text-xs shadow-2xs">
-                  <p className="font-bold text-amber-950 dark:text-amber-200 mb-1">🎯 Understanding Validation:</p>
-                  <p className="text-slate-900 dark:text-slate-100 font-normal">You correctly recognized that a single rotation does not restore the AVL height invariant because the heavy grandchild lies on the inner subtree (a zigzag path).</p>
-                </div>
-                <div className="p-3 rounded-lg bg-indigo-50/90 dark:bg-indigo-950/30 border border-indigo-300 dark:border-indigo-700/60 text-xs shadow-2xs">
-                  <p className="font-bold text-indigo-950 dark:text-indigo-200 mb-1">📚 What to Study & Research:</p>
-                  <p className="text-slate-900 dark:text-slate-100 font-normal">Research <strong className="font-bold text-indigo-950 dark:text-white">"AVL Tree Left-Right (LR) Double Rotation Decomposition"</strong> and the <strong className="font-bold text-indigo-950 dark:text-white">Balance Factor sign inversion rule</strong> in Unit 3 of your Data Structures syllabus.</p>
-                </div>
-                <div className="p-3 rounded-lg bg-emerald-50/90 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-700/60 text-xs shadow-2xs">
-                  <p className="font-bold text-emerald-950 dark:text-emerald-200 mb-1">💡 Guiding Clue:</p>
-                  <p className="text-slate-900 dark:text-slate-100 font-normal">Notice what happens when you rotate the child node first: how does that transform a zigzag branch into a straight linear line?</p>
-                </div>
-                <div className="p-3 rounded-lg bg-purple-50/90 dark:bg-purple-950/30 border border-purple-300 dark:border-purple-700/60 text-xs shadow-2xs">
-                  <p className="font-bold text-purple-950 dark:text-purple-200 mb-1">🔍 Checkpoint Challenge:</p>
-                  <p className="text-slate-900 dark:text-slate-100 font-normal">Sketch a 3-node tree with keys 30 &rarr; 10 &rarr; 20 on scratch paper. Try rotating 10 left. What does the tree look like now?</p>
-                </div>
+            {activeModeDemo === 'eli5' && (
+              <div className="space-y-2 text-slate-900 leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                <p className="font-bold text-purple-900 dark:text-purple-300 flex items-center gap-1.5 text-xs pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <Lightbulb className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>ELI5 Analogy:</span>
+                </p>
+                <p className="text-slate-900 dark:text-slate-100 font-normal text-xs sm:text-sm">
+                  Think of reading normal files like walking down stairs from step 1 to 10 with <code className="px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 font-mono text-xs font-semibold">cat</code>. Reading it backwards is like walking from step 10 back up to step 1 with <code className="px-1.5 py-0.5 rounded bg-purple-50 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 font-mono text-xs font-semibold">tac</code> (which is literally "cat" spelled backwards!).
+                </p>
               </div>
             )}
 
             {activeModeDemo === 'detailed' && (
               <div className="space-y-2 text-slate-900 leading-relaxed bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-                <p className="font-bold text-indigo-950 dark:text-indigo-300 flex items-center gap-1.5 text-xs pb-2 border-b border-slate-200 dark:border-slate-800">
-                  <span className="bg-indigo-100 dark:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-700/60 px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5">
-                    🎓 <span>Comprehensive Academic Explanation:</span>
-                  </span>
+                <p className="font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5 text-xs pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <GraduationCap className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Comprehensive Academic Explanation:</span>
                 </p>
-                <p className="text-slate-900 dark:text-slate-100 font-normal text-xs sm:text-sm">An AVL Tree is a strictly self-balancing Binary Search Tree named after inventors Adelson-Velsky and Landis. Double rotations (LR and RL) resolve zigzag structural imbalances that single rotations cannot fix, maintaining strict O(log N) lookup and insertion invariants.</p>
+                <p className="text-slate-900 dark:text-slate-100 font-normal text-xs sm:text-sm">
+                  In UNIX and Linux systems, the standard <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-mono text-xs font-semibold">cat</code> utility concatenates and prints files in sequential line order. To display files in reverse line order, GNU coreutils provides the <code className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-mono text-xs font-semibold">tac</code> utility, which buffers records and streams lines starting from the last newline delimiter.
+                </p>
               </div>
             )}
           </div>

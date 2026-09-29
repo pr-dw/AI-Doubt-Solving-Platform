@@ -13,7 +13,7 @@ import { generateNotesPDF } from '../utils/pdfGenerator';
 const EXPLANATION_MODES = [
   { id: 'detailed', label: 'Detailed Explanation', icon: GraduationCap, desc: 'In-depth academic concepts & theoretical principles' },
   { id: 'eli5', label: "Explain Like I'm 5 (ELI5)", icon: Lightbulb, desc: 'Everyday analogies & simple conceptual metaphors' },
-  { id: 'assist', label: 'Assist Mode (Guided Research)', icon: HelpCircle, desc: 'Directs what to study & hints without spoiling direct answers' },
+  { id: 'assist', label: 'Assist Mode (Guiding Nudge)', icon: HelpCircle, desc: 'Single-line Socratic hint pointing to what command or topic to research' },
 ];
 
 const QUICK_PROMPTS = [
@@ -394,7 +394,7 @@ export default function DoubtSolver({
     return codeParts.map((part, i) => {
       if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
         return (
-          <code key={i} className="px-1.5 py-0.5 rounded bg-slate-200/90 dark:bg-slate-800 text-indigo-950 dark:text-indigo-300 font-mono text-[11px] font-semibold border border-slate-300 dark:border-slate-700">
+          <code key={i} className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 font-mono text-[11px] font-semibold border border-slate-200 dark:border-slate-700">
             {part.slice(1, -1)}
           </code>
         );
@@ -420,19 +420,19 @@ export default function DoubtSolver({
         const code = lines.slice(1).join('\n') || lines[0];
 
         return (
-          <div key={index} className="my-3 rounded-xl overflow-hidden border border-slate-700 bg-slate-950 font-mono text-xs shadow-md">
-            <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-900 border-b border-slate-800 text-slate-300">
+          <div key={index} className="my-2.5 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100/90 dark:bg-slate-900 font-mono text-xs shadow-2xs">
+            <div className="flex items-center justify-between px-3.5 py-1.5 bg-slate-200/70 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
               <span className="text-[11px] font-semibold uppercase tracking-wider">{language || 'code'}</span>
               <button
                 type="button"
                 onClick={() => handleCopy(code, `code-${index}-${Math.random()}`)}
-                className="hover:text-white flex items-center gap-1 text-[11px] cursor-pointer"
+                className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1 text-[11px] cursor-pointer"
               >
-                {copiedId?.startsWith('code-') ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                {copiedId?.startsWith('code-') ? <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
                 <span>Copy Code</span>
               </button>
             </div>
-            <pre className="p-3.5 overflow-x-auto text-emerald-400 leading-relaxed text-xs">
+            <pre className="p-3.5 overflow-x-auto text-slate-800 dark:text-emerald-300 leading-relaxed text-xs">
               <code>{code}</code>
             </pre>
           </div>
@@ -758,7 +758,7 @@ export default function DoubtSolver({
         </div>
 
         {/* Message Thread History */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 rounded-xl bg-slate-100/70 dark:bg-slate-950/40 border border-slate-200/90 dark:border-slate-800/80 shadow-2xs">
+        <div className="flex-1 overflow-y-auto py-4 space-y-4 pr-1">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 max-w-lg mx-auto">
               <div className="h-16 w-16 rounded-3xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 mb-4 shadow-xs">
@@ -781,7 +781,7 @@ export default function DoubtSolver({
                     <div
                       key={idx}
                       onClick={() => handleAskDoubt(null, qp.text)}
-                      className="p-3 rounded-xl bg-white hover:bg-indigo-50/80 border border-slate-200 hover:border-indigo-300 cursor-pointer transition-all group shadow-2xs"
+                      className="p-3 rounded-xl bg-slate-50 hover:bg-indigo-50/80 border border-slate-200 hover:border-indigo-300 cursor-pointer transition-all group shadow-2xs"
                     >
                       <div className="text-[11px] font-bold text-indigo-900 group-hover:text-indigo-950">
                         {qp.title}
@@ -805,47 +805,51 @@ export default function DoubtSolver({
                   <div className={`h-8 w-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold ${
                     msg.is_error 
                       ? 'bg-rose-100 text-rose-600 border border-rose-200' 
-                      : 'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-600/20'
+                      : (msg.mode_used || selectedMode) === 'assist'
+                        ? 'bg-gradient-to-tr from-amber-500 to-amber-600 text-white shadow-sm shadow-amber-600/20'
+                        : 'bg-gradient-to-tr from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-600/20'
                   }`}>
-                    {msg.is_error ? <AlertTriangle className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                    {msg.is_error ? <AlertTriangle className="h-4 w-4" /> : (msg.mode_used || selectedMode) === 'assist' ? <HelpCircle className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
                   </div>
                 )}
 
                 <div
-                  className={`max-w-3xl rounded-2xl p-4 sm:p-5 text-xs sm:text-sm ${
+                  className={`max-w-3xl rounded-2xl p-4 text-xs sm:text-sm ${
                     msg.sender === 'user'
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-none ml-12 shadow-sm'
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white rounded-br-none ml-12 shadow-xs'
                       : msg.is_error
-                        ? 'bg-rose-50/90 border border-rose-300 dark:border-rose-900/60 text-rose-950 dark:text-rose-100 rounded-bl-none mr-8 shadow-xs'
-                        : 'bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-700/80 text-slate-900 dark:text-slate-100 rounded-bl-none mr-8 shadow-sm'
+                        ? 'bg-rose-50 border border-rose-200 text-rose-950 dark:text-rose-100 rounded-bl-none mr-8'
+                        : (msg.mode_used || selectedMode) === 'assist'
+                          ? 'bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/90 dark:border-amber-800/60 text-slate-900 dark:text-slate-100 rounded-bl-none mr-8 shadow-2xs'
+                          : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-bl-none mr-8 shadow-xs'
                   }`}
                 >
                   {/* AI Message metadata header */}
                   {msg.sender === 'ai' && (
-                    <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-200 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
+                    <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-200/80 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
                       <div className="flex items-center gap-2">
                         {msg.is_error ? (
                           <span className="font-bold text-rose-700 dark:text-rose-400 flex items-center gap-1">
                             Engine Communication Error
                           </span>
                         ) : (msg.mode_used || selectedMode) === 'assist' ? (
-                          <span className="font-bold text-amber-950 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
-                            <HelpCircle className="h-3.5 w-3.5 text-amber-700 dark:text-amber-400" />
-                            <span>Assist Mode (Guided Socratic Research)</span>
+                          <span className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                            <HelpCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                            <span>Assist Mode (Guiding Nudge)</span>
                           </span>
                         ) : (msg.mode_used || selectedMode) === 'eli5' ? (
-                          <span className="font-bold text-purple-950 dark:text-purple-300 bg-purple-100/90 dark:bg-purple-950/60 border border-purple-300 dark:border-purple-700/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
-                            <Lightbulb className="h-3.5 w-3.5 text-purple-700 dark:text-purple-400" />
+                          <span className="font-bold text-purple-900 dark:text-purple-300 flex items-center gap-1.5">
+                            <Lightbulb className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
                             <span>ELI5 Mode</span>
                           </span>
                         ) : (
-                          <span className="font-bold text-indigo-950 dark:text-indigo-300 bg-indigo-100/90 dark:bg-indigo-950/60 border border-indigo-300 dark:border-indigo-700/60 px-2.5 py-0.5 rounded-full flex items-center gap-1.5 shadow-2xs">
-                            <GraduationCap className="h-3.5 w-3.5 text-indigo-700 dark:text-indigo-400" />
-                            <span>Detailed Academic Mode</span>
+                          <span className="font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-1.5">
+                            <GraduationCap className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                            <span>Detailed Mode</span>
                           </span>
                         )}
                         {msg.model_used && (
-                          <span className="text-[10px] text-slate-700 dark:text-slate-300 font-mono font-medium bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded">
+                          <span className="text-[10px] text-slate-600 dark:text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-1.5 py-0.5 rounded">
                             {msg.model_used}
                           </span>
                         )}
@@ -853,7 +857,7 @@ export default function DoubtSolver({
                       {!msg.is_error && (
                         <button
                           onClick={() => handleCopy(msg.message_text, `msg-${msg.id}`)}
-                          className="hover:text-indigo-600 text-slate-600 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium hover:bg-slate-100 dark:hover:bg-slate-800 px-2 py-1 rounded-md transition-colors"
+                          className="hover:text-indigo-600 text-slate-500 dark:text-slate-400 dark:hover:text-white flex items-center gap-1 cursor-pointer font-medium hover:bg-slate-100 dark:hover:bg-slate-800 px-2 py-0.5 rounded transition-colors"
                           title="Copy answer"
                         >
                           {copiedId === `msg-${msg.id}` ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
@@ -869,6 +873,11 @@ export default function DoubtSolver({
                     <div className="space-y-1">
                       <p className="font-semibold text-rose-950 leading-relaxed">{msg.message_text}</p>
                       <p className="text-[11px] text-rose-700">The AI reasoning service did not return an academic response.</p>
+                    </div>
+                  ) : (msg.mode_used || selectedMode) === 'assist' ? (
+                    <div className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-900 dark:text-slate-100 font-medium leading-relaxed">
+                      <span className="text-amber-600 dark:text-amber-400 shrink-0 font-bold mt-0.5">💡</span>
+                      <div className="flex-1">{renderFormattedText(msg.message_text)}</div>
                     </div>
                   ) : (
                     <div>{renderFormattedText(msg.message_text)}</div>
